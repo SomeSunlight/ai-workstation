@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# Stable command-line interface for AI Workstation.
+set -Eeuo pipefail
+IFS=$'\n\t'
+
+readonly ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+readonly UV_BIN="${HOME}/.local/bin/uv"
+readonly STATE_DIR="${HOME}/.local/state/ai-workstation"
+readonly LOG_DIR="${STATE_DIR}/logs"
+readonly ANSIBLE_CONFIG_FILE="${ROOT}/ansible/ansible.cfg"
+readonly INVENTORY_FILE="${ROOT}/ansible/inventory/localhost.yml"
+readonly ROLES_DIR="${ROOT}/ansible/roles"
+readonly COLLECTIONS_DIR="${ROOT}/.ansible/collections"
+
+usage() {
+    cat <<'EOF'
+AI Workstation command line
+
+Usage:
+  aiw status
+  aiw install
+  aiw verify
+  aiw update
+  aiw playbook PLAYBOOK [ANSIBLE ARGUMENTS...]
+
+Reserved for the Goose phase:
+  aiw start
+  aiw stop
+  aiw logs
+EOF
+}
+
+fail() {
+    printf '[XX] %s\n' "$*" >&2
+    exit 1
+}
+
+require_runtime() {
+    [[ -x "$UV_BIN" ]] || fail "uv is not installed. Run ./install.sh first."
+    [[ -f "${ROOT}/uv.lock" ]] || fail "uv.lock is missing. See docs/repository-setup.md."
+    [[ -x "${ROOT}/.venv/bin/ansible-playbook" ]] || fail ".venv is missing. Run ./install.sh first."
+}
+
+run_playbook() {
+    local playbook="$1"
+    shift
+
+    require_runtime
+    if [[ "$playbook" != /* ]]; then
+        playbook="${ROOT}/${playbook}"
+    fi
+    [[ -f "$playbook" ]] || fail "Playbook not found: $playbook"
+
+    mkdir -p "$LOG_DIR"
+    cd "$ROOT"
+
+    export ANSIBLE_CONFIG="$ANSIBLE_CONFIG_FILE"
+    export ANSIBLE_INVENTORY="$INVENTORY_FILE"
+    export ANSIBLE_ROLES_PATH="$ROLES_DIR"
+    export ANSIBLE_COLLECTIONS_PATH="$COLLECTIONS_DIR"
+    export AIW_REPOSITORY_ROOT="$ROOT"
+    export AIW_USER="$(id -un)"
+    export AIW_HOME="$HOME"
+    export AIW_PRIMARY_GROUP="$(id -gn)"
+
+    "$UV_BIN" run --frozen ansible-playbook "$playbook" "$@"
+}
+
+keep_sudo_alive() {
+    sudo -v
+    (
+        while true; do
+            sudo -n true
+            sleep 50
+            kill -0 "$$" 2>/dev/null || exit
+        done
+    ) 2>/dev/null &
+    SUDO_KEEPALIVE_PID=$!
+    trap 'kill "${SUDO_KEEPALIVE_PID:-}" 2>/dev/null || true' EXIT
+}
+
+show_status() {
+    printf 'Repository           : %s\n' "$ROOT"
+    printf 'Repository mode      : %s\n' "$(stat -c '%a' "$ROOT" 2>/dev/null || printf 'unknown')"
+    printf 'uv                   : %s\n' "$([[ -x "$UV_BIN" ]] && "$UV_BIN" --version || printf 'not installed')"
+    printf 'uv.lock              : %s\n' "$([[ -f "${ROOT}/uv.lock" ]] && printf 'present' || printf 'missing')"
+    printf 'Ansible environment  : %s\n' "$([[ -x "${ROOT}/.venv/bin/ansible-playbook" ]] && printf 'present' || printf 'missing')"
+
+    if command -v docker >/dev/null 2>&1; then
+        printf 'Docker client        : %s\n' "$(docker version --format '{{.Client.Version}}' 2>/dev/null || printf 'installed, unavailable')"
+        printf 'Docker server        : %s\n' "$(docker version --format '{{.Server.Version}}' 2>/dev/null || printf 'unavailable')"
+        printf 'Docker Compose       : %s\n' "$(docker compose version --short 2>/dev/null || printf 'unavailable')"
+        printf 'Docker Buildx        : %s\n' "$(docker buildx version 2>/dev/null | awk '{print $2}' || printf 'unavailable')"
+    else
+        printf 'Docker               : not installed\n'
+    fi
+}
+
+update_repository() {
+    command -v git >/dev/null 2>&1 || fail "git is not installed."
+    [[ -d "${ROOT}/.git" ]] || fail "This checkout is not a Git repository."
+    cd "$ROOT"
+    git diff --quiet && git diff --cached --quiet || fail "Repository has uncommitted changes."
+    git pull --ff-only
+    exec "${ROOT}/install.sh" install --yes
+}
+
+command_name="${1:-help}"
+shift || true
+
+case "$command_name" in
+    status)
+        show_status
+        ;;
+    install)
+        keep_sudo_alive
+        run_playbook "${ROOT}/ansible/playbooks/workstation.yml"
+        run_playbook "${ROOT}/ansible/playbooks/verify.yml"
+        ;;
+    verify)
+        keep_sudo_alive
+        run_playbook "${ROOT}/ansible/playbooks/verify.yml"
+        ;;
+    update)
+        update_repository
+        ;;
+    playbook)
+        (($# > 0)) || fail "A playbook path is required."
+        run_playbook "$@"
+        ;;
+    start|stop|logs)
+        fail "Container services are not defined yet. This command becomes active in the Goose phase."
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac

@@ -1,0 +1,23 @@
+---
+- name: Verify the AI Workstation host
+  hosts: localhost
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../../config/versions.json
+
+  tasks:
+    - name: Verify base system
+      ansible.builtin.include_role:
+        name: base_system
+        tasks_from: verify
+
+    - name: Verify project directories
+      ansible.builtin.include_role:
+        name: project_directories
+        tasks_from: verify
+
+    - name: Verify Docker Engine
+      ansible.builtin.include_role:
+        name: docker_engine
+        tasks_from: verify

@@ -1,0 +1,22 @@
+---
+- name: Create user-owned AI Workstation directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ai_workstation_user }}"
+    group: "{{ ai_workstation_group }}"
+    mode: "0755"
+  loop:
+    - "{{ ai_workstation_home }}/projects"
+    - "{{ ai_workstation_home }}/.local/bin"
+    - "{{ ai_workstation_home }}/.config/ai-workstation"
+    - "{{ ai_workstation_home }}/.local/state/ai-workstation"
+
+- name: Install stable aiw command
+  ansible.builtin.file:
+    src: "{{ ai_workstation_repo }}/bin/aiw"
+    dest: "{{ ai_workstation_home }}/.local/bin/aiw"
+    state: link
+    owner: "{{ ai_workstation_user }}"
+    group: "{{ ai_workstation_group }}"
+    force: true

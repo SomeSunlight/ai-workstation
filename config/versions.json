@@ -1,0 +1,25 @@
+{
+  "versions": {
+    "project": "0.3.0",
+    "ubuntu": {
+      "distribution": "Ubuntu-24.04",
+      "release": "24.04",
+      "python": "3.12",
+      "wsl_image_url": "https://releases.ubuntu.com/24.04/ubuntu-24.04.4-wsl-amd64.wsl",
+      "wsl_image_sha256": "9b2f7730dc68227dd04a9f3e5eab86ad85caf556b8606ad94f1f29ff5c4fd3f5"
+    },
+    "uv": "0.11.26",
+    "ansible": {
+      "core": "2.21.1",
+      "lint": "26.6.0",
+      "community_docker": "5.2.1"
+    },
+    "docker": {
+      "engine_package": "5:29.6.1-1~ubuntu.24.04~noble",
+      "cli_package": "5:29.6.1-1~ubuntu.24.04~noble",
+      "containerd_package": "2.2.5-1~ubuntu.24.04~noble",
+      "buildx_package": "0.35.0-1~ubuntu.24.04~noble",
+      "compose_package": "5.3.0-1~ubuntu.24.04~noble"
+    }
+  }
+}

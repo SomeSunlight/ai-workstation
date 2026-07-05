@@ -1,0 +1,33 @@
+---
+- name: Read AI Workstation directory metadata
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ ai_workstation_home }}/projects"
+    - "{{ ai_workstation_home }}/.local/bin"
+    - "{{ ai_workstation_home }}/.config/ai-workstation"
+    - "{{ ai_workstation_home }}/.local/state/ai-workstation"
+  register: aiw_directory_stats
+
+- name: Verify AI Workstation directories
+  ansible.builtin.assert:
+    that:
+      - item.stat.isdir
+      - item.stat.pw_name == ai_workstation_user
+    quiet: true
+  loop: "{{ aiw_directory_stats.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Read aiw command link
+  ansible.builtin.stat:
+    path: "{{ ai_workstation_home }}/.local/bin/aiw"
+    follow: false
+  register: aiw_command_link
+
+- name: Verify aiw command link
+  ansible.builtin.assert:
+    that:
+      - aiw_command_link.stat.islnk
+      - aiw_command_link.stat.lnk_source == ai_workstation_repo + '/bin/aiw'
+    quiet: true

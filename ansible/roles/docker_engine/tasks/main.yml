@@ -1,0 +1,99 @@
+---
+- name: Run Docker preflight checks
+  ansible.builtin.import_tasks: preflight.yml
+
+- name: Install Docker repository prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create APT keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download Docker repository signing key
+  ansible.builtin.get_url:
+    url: "{{ docker_apt_key_url }}"
+    dest: "{{ docker_apt_key_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
+
+- name: Configure the official Docker repository
+  ansible.builtin.template:
+    src: docker.sources.j2
+    dest: "{{ docker_apt_source_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  register: docker_repository
+
+- name: Refresh APT metadata after repository change
+  ansible.builtin.apt:
+    update_cache: true
+  when: docker_repository.changed
+
+- name: Install pinned Docker packages
+  ansible.builtin.apt:
+    name:
+      - "docker-ce={{ versions.docker.engine_package }}"
+      - "docker-ce-cli={{ versions.docker.cli_package }}"
+      - "containerd.io={{ versions.docker.containerd_package }}"
+      - "docker-buildx-plugin={{ versions.docker.buildx_package }}"
+      - "docker-compose-plugin={{ versions.docker.compose_package }}"
+    state: present
+    allow_downgrade: false
+    install_recommends: false
+
+- name: Create Docker configuration directory
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure bounded local container logging
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart Docker
+
+- name: Ensure docker group exists
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Add workstation user to docker group
+  ansible.builtin.user:
+    name: "{{ ai_workstation_user }}"
+    groups:
+      - docker
+    append: true
+
+- name: Enable and start containerd
+  ansible.builtin.systemd_service:
+    name: containerd
+    enabled: true
+    state: started
+
+- name: Enable and start Docker
+  ansible.builtin.systemd_service:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Apply pending Docker restart
+  ansible.builtin.meta: flush_handlers

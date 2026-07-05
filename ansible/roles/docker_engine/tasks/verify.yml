@@ -1,0 +1,122 @@
+---
+- name: Gather installed Docker package facts
+  ansible.builtin.package_facts:
+    manager: apt
+
+- name: Verify required Docker packages are installed
+  ansible.builtin.assert:
+    that:
+      - item in ansible_facts.packages
+    fail_msg: "Required Docker package is missing: {{ item }}"
+    quiet: true
+  loop:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    - docker-buildx-plugin
+    - docker-compose-plugin
+
+- name: Verify pinned Docker package versions
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.packages['docker-ce'][0].version == versions.docker.engine_package
+      - ansible_facts.packages['docker-ce-cli'][0].version == versions.docker.cli_package
+      - ansible_facts.packages['containerd.io'][0].version == versions.docker.containerd_package
+      - ansible_facts.packages['docker-buildx-plugin'][0].version == versions.docker.buildx_package
+      - ansible_facts.packages['docker-compose-plugin'][0].version == versions.docker.compose_package
+    quiet: true
+
+- name: Read Docker service state
+  ansible.builtin.systemd_service:
+    name: docker
+  register: docker_service
+  changed_when: false
+
+- name: Read containerd service state
+  ansible.builtin.systemd_service:
+    name: containerd
+  register: containerd_service
+  changed_when: false
+
+- name: Verify Docker services
+  ansible.builtin.assert:
+    that:
+      - docker_service.status.ActiveState == "active"
+      - docker_service.status.UnitFileState == "enabled"
+      - containerd_service.status.ActiveState == "active"
+      - containerd_service.status.UnitFileState == "enabled"
+    quiet: true
+
+- name: Verify Docker Engine API as root
+  ansible.builtin.command:
+    argv:
+      - docker
+      - info
+      - --format
+      - "{{ '{{' }}.ServerVersion{{ '}}' }}"
+  register: docker_server_version
+  changed_when: false
+
+- name: Verify Docker Compose plugin
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - version
+      - --short
+  register: docker_compose_version
+  changed_when: false
+
+- name: Verify Docker Buildx plugin
+  ansible.builtin.command:
+    argv:
+      - docker
+      - buildx
+      - version
+  register: docker_buildx_version
+  changed_when: false
+
+- name: Read docker group membership
+  ansible.builtin.getent:
+    database: group
+    key: docker
+
+- name: Verify workstation user belongs to docker group
+  ansible.builtin.assert:
+    that:
+      - ai_workstation_user in ansible_facts.getent_group['docker'][2].split(',')
+    quiet: true
+
+- name: Verify non-root Docker socket access
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - --user
+      - "{{ ai_workstation_user }}"
+      - --group
+      - docker
+      - --
+      - docker
+      - info
+      - --format
+      - "{{ '{{' }}.ServerVersion{{ '}}' }}"
+  register: docker_non_root_version
+  changed_when: false
+
+- name: Run hello-world smoke test
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - --rm
+      - hello-world
+  changed_when: false
+  when: docker_enable_hello_world_test | bool
+
+- name: Report Docker versions
+  ansible.builtin.debug:
+    msg:
+      - "Docker Server: {{ docker_server_version.stdout }}"
+      - "Docker Compose: {{ docker_compose_version.stdout }}"
+      - "Docker Buildx: {{ docker_buildx_version.stdout }}"
+      - "Non-root socket test: {{ docker_non_root_version.stdout }}"

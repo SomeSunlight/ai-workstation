@@ -1,0 +1,27 @@
+---
+- name: Verify the local automation environment
+  hosts: localhost
+  gather_facts: true
+  become: false
+  vars_files:
+    - ../../config/versions.json
+
+  tasks:
+    - name: Verify Ubuntu release
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == "Ubuntu"
+          - ansible_facts.distribution_version == versions.ubuntu.release
+        quiet: true
+
+    - name: Verify systemd
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.service_mgr == "systemd"
+        quiet: true
+
+    - name: Verify local Python interpreter
+      ansible.builtin.assert:
+        that:
+          - ansible_playbook_python == ansible_python.executable
+        quiet: true

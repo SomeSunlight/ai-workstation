@@ -1,0 +1,5 @@
+---
+ai_workstation_user: "{{ lookup('ansible.builtin.env', 'AIW_USER') }}"
+ai_workstation_group: "{{ lookup('ansible.builtin.env', 'AIW_PRIMARY_GROUP') }}"
+ai_workstation_home: "{{ lookup('ansible.builtin.env', 'AIW_HOME') }}"
+ai_workstation_repo: "{{ lookup('ansible.builtin.env', 'AIW_REPOSITORY_ROOT') }}"

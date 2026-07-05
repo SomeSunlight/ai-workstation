@@ -1,0 +1,12 @@
+[project]
+name = "ai-workstation-automation"
+version = "0.1.0"
+description = "Reproducible WSL and container provisioning for local AI agents"
+requires-python = "==3.12.*"
+dependencies = [
+    "ansible-core==2.21.1",
+    "ansible-lint==26.6.0",
+]
+
+[tool.uv]
+package = false

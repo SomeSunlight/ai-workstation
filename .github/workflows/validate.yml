@@ -1,0 +1,62 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.26"
+
+      - name: Verify repository files
+        run: |
+          test -f uv.lock
+          bash -n install.sh bootstrap/linux/install.sh bin/aiw tools/*.sh tests/smoke/*.sh
+          python -m json.tool config/versions.json >/dev/null
+          python tools/check-version-consistency.py
+          ./tests/smoke/repository-layout.sh
+
+      - name: Synchronize locked environment
+        run: uv sync --frozen
+
+      - name: Install Ansible collection
+        run: |
+          mkdir -p .ansible/collections
+          ANSIBLE_CONFIG="$PWD/ansible/ansible.cfg" \
+            uv run --frozen ansible-galaxy collection install \
+              --requirements-file ansible/requirements.yml \
+              --collections-path .ansible/collections
+
+      - name: Lint Ansible
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
+          ANSIBLE_INVENTORY: ${{ github.workspace }}/ansible/inventory/localhost.yml
+          ANSIBLE_ROLES_PATH: ${{ github.workspace }}/ansible/roles
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
+        run: uv run --frozen ansible-lint --config-file ansible/.ansible-lint ansible/playbooks
+
+      - name: Check playbook syntax
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
+          ANSIBLE_INVENTORY: ${{ github.workspace }}/ansible/inventory/localhost.yml
+          ANSIBLE_ROLES_PATH: ${{ github.workspace }}/ansible/roles
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
+        run: |
+          uv run --frozen ansible-playbook ansible/playbooks/workstation.yml --syntax-check
+          uv run --frozen ansible-playbook ansible/playbooks/verify.yml --syntax-check

@@ -1,0 +1,12 @@
+---
+- name: Configure the AI Workstation host
+  hosts: localhost
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../../config/versions.json
+
+  roles:
+    - role: base_system
+    - role: project_directories
+    - role: docker_engine
