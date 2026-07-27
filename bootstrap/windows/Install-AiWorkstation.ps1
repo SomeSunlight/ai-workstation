@@ -338,7 +338,10 @@ function Ensure-Distro {
     if ($DistroName -in $existingDistros) {
         $basePath = Get-DistroBasePath -Name $DistroName
         if ($null -ne $basePath) {
-            $normalizedBasePath = ([string]$basePath) -replace '^\\\?\', ''
+            $normalizedBasePath = [string]$basePath
+            if ($normalizedBasePath.StartsWith('\\?\')) {
+                $normalizedBasePath = $normalizedBasePath.Substring(4)
+            }
             $expected = [IO.Path]::GetFullPath($InstallLocation).TrimEnd('\')
             $actual = [IO.Path]::GetFullPath($normalizedBasePath).TrimEnd('\')
             if ($actual -ine $expected) {

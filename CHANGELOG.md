@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.4
+
+- Fix Windows installer path normalization for existing WSL distributions by replacing an invalid regular expression with explicit `StartsWith` / `Substring` logic.
+
 ## 0.4.3
 
 - Fix `install.ps1 -Action Status` when WSL returns a single distribution name.
