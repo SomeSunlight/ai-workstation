@@ -3,17 +3,14 @@
 Reproducible WSL 2 and Docker foundation for local AI agents on Windows.
 
 > **Current scope:** Ubuntu 24.04, a locked Ansible runtime and Docker Engine.
-> The Goose runtime image and Compose services are the next phase.
+> The Goose runtime image, Compose services, OpenRouter configuration and local
+> model integration are not included yet. They are the next phase after the
+> installer has passed a clean-room rebuild.
 
 ## Quick start
 
-These commands apply after the public GitHub repository has been created. The
-maintainer bootstrap is documented in [Repository setup](docs/repository-setup.md).
-
-### Windows
-
-Clone the repository on Windows, then open **PowerShell 7 as Administrator**
-in that checkout:
+Clone the repository on Windows, then open **PowerShell 7 as Administrator** in
+that checkout:
 
 ```powershell
 git clone https://github.com/SomeSunlight/ai-workstation.git
@@ -27,22 +24,36 @@ The installer may request:
 2. a Linux password for the `moresunlight` user;
 3. the Linux sudo password during host installation.
 
-It installs the Linux checkout directly at:
+The installer is designed to be rerun until everything is present. It does not
+unregister or delete existing WSL distributions.
+
+## Where to find it later
+
+After installation, start AI Workstation from Windows:
+
+```text
+Start Menu -> AI Workstation
+```
+
+A Desktop shortcut with the same name is created as well. The shortcut opens the
+correct WSL distribution directly inside:
 
 ```text
 /home/moresunlight/ai-workstation
 ```
 
-### Linux-only rerun
+Fallback commands, if the shortcut is ever missing:
+
+```powershell
+wsl -l -v
+wsl -d Ubuntu-24.04
+```
 
 Inside Ubuntu:
 
 ```bash
 cd ~/ai-workstation
-./install.sh
 ```
-
-Both entry points are idempotent and may be run again after an interruption.
 
 ## Daily commands
 
@@ -60,6 +71,22 @@ aiw stop
 aiw logs
 ```
 
+## Rerun the installer
+
+Windows side:
+
+```powershell
+.\install.ps1
+```
+
+Linux side, after opening the AI Workstation shortcut:
+
+```bash
+./install.sh
+```
+
+Both entry points are idempotent and may be run again after an interruption.
+
 ## Clean-room installation
 
 A second Ubuntu distribution can be used without modifying or unregistering the
@@ -71,7 +98,26 @@ working reference distribution:
   -InstallLocation C:\WSL\Ubuntu-24.04-Test
 ```
 
+This creates a separate Windows shortcut named:
+
+```text
+AI Workstation (Ubuntu-24.04-Test)
+```
+
 See [Clean-room test](docs/clean-room-test.md).
+
+## Local reset for a reinstall test
+
+To test the installer again inside an existing WSL distribution, delete only the
+Linux checkouts, not the distribution:
+
+```bash
+cd ~
+rm -rf ai-workstation ai-workstation-next
+```
+
+Then run the Windows installer again from a Windows checkout. It will clone the
+repository back into Linux.
 
 ## Repository layout
 
@@ -79,7 +125,7 @@ See [Clean-room test](docs/clean-room-test.md).
 install.ps1             Windows entry point
 install.sh              Linux entry point
 bin/aiw                 Stable operational CLI
-bootstrap/windows/      WSL and Windows implementation
+bootstrap/windows/      WSL, Windows shortcuts and Windows implementation
 bootstrap/linux/        Minimal Linux bootstrap
 ansible/                Host configuration and verification
 config/                 Central version definitions

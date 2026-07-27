@@ -1,14 +1,17 @@
 # Changelog
 
-## 0.3.0 - 2026-07-05
+## 0.4.0
 
-- Reorganized the prototype into a public repository layout.
-- Added stable Windows and Linux entry points.
-- Added the `aiw` operational command.
-- Centralized component versions.
-- Consolidated Ubuntu, Ansible and Docker configuration.
-- Added clean-room WSL installation parameters.
-- Added repository smoke tests and GitHub validation.
-- Added safe adoption of the tested prototype lockfile.
-- Added cross-file version consistency checks.
-- Fixed clean-room Linux user, group and PowerShell entry-point handling.
+- Add automatic Windows Desktop and Start Menu shortcuts for the WSL checkout.
+- Add a standalone shortcut repair script.
+- Document how to find the installed workstation after weeks away from the setup.
+- Document safe local reinstall testing by deleting only Linux checkouts.
+- Document WSL/GitHub lessons from the first prototype installation.
+- Keep the installer idempotent and rerunnable on both Windows and Linux.
+
+## 0.3.0
+
+- Consolidate the prototype into a public English repository structure.
+- Add Windows and Linux entry points.
+- Add locked Ansible runtime, Docker Engine role and verification.
+- Add clean-room test documentation.

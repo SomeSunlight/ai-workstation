@@ -25,6 +25,8 @@ param(
     [string]$WslMemory = '48GB',
     [ValidatePattern('^\d+(MB|GB)$')]
     [string]$WslSwap = '8GB',
+    [string]$ShortcutName = 'AI Workstation',
+    [switch]$NoShortcuts,
 
     [switch]$NoAutomaticRestart,
     [switch]$SkipLinuxInstall,
@@ -151,8 +153,13 @@ function Get-InvocationArguments {
         ('"{0}"' -f $WslMemory)
         '-WslSwap'
         ('"{0}"' -f $WslSwap)
+        '-ShortcutName'
+        ('"{0}"' -f $ShortcutName)
     )
 
+    if ($NoShortcuts) {
+        $arguments += '-NoShortcuts'
+    }
     if ($NoAutomaticRestart) {
         $arguments += '-NoAutomaticRestart'
     }
@@ -552,8 +559,63 @@ function Merge-WslConfig {
     Write-Step "Updated $path with memory=$WslMemory and swap=$WslSwap." Ok
 }
 
+function Get-LinuxRepositoryPath {
+    return "/home/$LinuxUser/ai-workstation"
+}
+
+function Get-ShortcutDisplayName {
+    if ($DistroName -eq 'Ubuntu-24.04') {
+        return $ShortcutName
+    }
+
+    return "$ShortcutName ($DistroName)"
+}
+
+function New-AiwShortcut {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$DisplayName
+    )
+
+    $wslExe = Join-Path $env:WINDIR 'System32\wsl.exe'
+    if (-not (Test-Path -LiteralPath $wslExe -PathType Leaf)) {
+        throw "wsl.exe not found at $wslExe"
+    }
+
+    $parent = Split-Path -Parent $Path
+    New-Item -ItemType Directory -Path $parent -Force | Out-Null
+
+    $linuxPath = Get-LinuxRepositoryPath
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($Path)
+    $shortcut.TargetPath = $wslExe
+    $shortcut.Arguments = ('--distribution "{0}" --cd "{1}"' -f $DistroName, $linuxPath)
+    $shortcut.WorkingDirectory = $env:USERPROFILE
+    $shortcut.IconLocation = "$wslExe,0"
+    $shortcut.Description = "Open $DisplayName in WSL at $linuxPath"
+    $shortcut.Save()
+}
+
+function Ensure-WindowsShortcuts {
+    if ($NoShortcuts) {
+        Write-Step 'Windows shortcuts were skipped by request.' Warning
+        return
+    }
+
+    $displayName = Get-ShortcutDisplayName
+    $shortcutFileName = "$displayName.lnk"
+    $desktop = [Environment]::GetFolderPath('Desktop')
+    $startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
+
+    New-AiwShortcut -Path (Join-Path $desktop $shortcutFileName) -DisplayName $displayName
+    New-AiwShortcut -Path (Join-Path $startMenu $shortcutFileName) -DisplayName $displayName
+
+    Write-Step "Created Windows shortcuts: $displayName" Ok
+    Write-Step "Start later from the Windows Start Menu: $displayName"
+}
+
 function Ensure-LinuxRepository {
-    $repositoryPath = "/home/$LinuxUser/ai-workstation"
+    $repositoryPath = Get-LinuxRepositoryPath
     $repositoryLiteral = ConvertTo-BashLiteral -Value $repositoryPath
     $urlLiteral = ConvertTo-BashLiteral -Value $RepositoryUrl
     $refLiteral = ConvertTo-BashLiteral -Value $RepositoryRef
@@ -612,6 +674,12 @@ function Show-Status {
 
     $distros = Get-Distros
     Write-Step "Distributions: $(if ($distros.Count) { $distros -join ', ' } else { 'none' })"
+
+    $displayName = Get-ShortcutDisplayName
+    $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) "$displayName.lnk"
+    $startMenuShortcut = Join-Path (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs') "$displayName.lnk"
+    Write-Step "Desktop shortcut: $(if (Test-Path -LiteralPath $desktopShortcut) { 'present' } else { 'missing' })"
+    Write-Step "Start Menu shortcut: $(if (Test-Path -LiteralPath $startMenuShortcut) { 'present' } else { 'missing' })"
 
     if ($DistroName -in $distros) {
         Invoke-Wsl -Arguments @(
@@ -681,6 +749,7 @@ try {
             Ensure-LinuxPrerequisites
             Ensure-LinuxUser
             Ensure-LinuxRepository
+            Ensure-WindowsShortcuts
             Invoke-LinuxInstall
             Write-Step 'AI Workstation installation completed successfully.' Ok
         }

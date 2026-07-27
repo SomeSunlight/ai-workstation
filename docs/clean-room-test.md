@@ -19,7 +19,13 @@ may update the shared WSL platform and merge the global `.wslconfig`, but it doe
 not change the reference distribution's Linux filesystem. If custom distribution
 names are unsupported, it stops before creating the test distribution.
 
-After the test succeeds:
+After the test succeeds, start it from Windows:
+
+```text
+Start Menu -> AI Workstation (Ubuntu-24.04-Test)
+```
+
+Fallback:
 
 ```powershell
 wsl -d Ubuntu-24.04-Test
@@ -31,3 +37,22 @@ Inside Linux:
 aiw status
 aiw verify
 ```
+
+## Reinstall test inside an existing distribution
+
+To test the repository clone and Linux installer again without deleting the WSL
+distribution, delete only the Linux checkouts:
+
+```bash
+cd ~
+rm -rf ai-workstation ai-workstation-next
+```
+
+Then rerun the Windows installer from the Windows checkout:
+
+```powershell
+.\install.ps1
+```
+
+The installer clones the public repository into `/home/moresunlight/ai-workstation`
+and recreates the Windows shortcuts.

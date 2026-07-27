@@ -3,7 +3,7 @@ set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 required=(
   README.md LICENSE install.ps1 install.sh bin/aiw config/versions.json
-  bootstrap/windows/Install-AiWorkstation.ps1 bootstrap/linux/install.sh
+  bootstrap/windows/Install-AiWorkstation.ps1 bootstrap/windows/Create-Shortcuts.ps1 bootstrap/linux/install.sh
   tools/adopt-prototype-lock.sh tools/check-version-consistency.py
   ansible/ansible.cfg ansible/requirements.yml
   ansible/playbooks/workstation.yml ansible/playbooks/verify.yml
