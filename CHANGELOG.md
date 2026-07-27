@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- Fix a PowerShell parser error in the WSL error message path by delimiting `${code}` before a colon.
+- Keep the Windows installer startable under PowerShell 7.6.x.
+
 ## 0.4.0
 
 - Add automatic Windows Desktop and Start Menu shortcuts for the WSL checkout.

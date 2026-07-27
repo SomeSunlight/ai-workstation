@@ -191,7 +191,7 @@ function Invoke-Wsl {
     $code = $LASTEXITCODE
 
     if (-not $AllowFailure -and $code -ne 0) {
-        throw "wsl.exe failed with exit code $code: $($Arguments -join ' ')"
+        throw "wsl.exe failed with exit code ${code}: $($Arguments -join ' ')"
     }
 
     if ($AllowFailure) {
