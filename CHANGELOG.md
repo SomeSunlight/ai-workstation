@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3
+
+- Fix `install.ps1 -Action Status` when WSL returns a single distribution name.
+- Make Windows administrator/elevation behavior explicit in README and troubleshooting.
+- Clarify that `Status` and `Verify` do not normally require an elevated shell.
+
 ## 0.4.2
 
 - Keep the elevated Windows installer window open so progress and errors remain visible.

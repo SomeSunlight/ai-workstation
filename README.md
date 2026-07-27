@@ -9,27 +9,19 @@ Reproducible WSL 2 and Docker foundation for local AI agents on Windows.
 
 ## Quick start
 
-## Check the current installation state
-
-At any time from the Windows checkout:
-
-```powershell
-.\install.ps1 -Action Status
-```
-
-The installer may open a separate elevated PowerShell window. Watch that
-elevated window; it stays open after the installer finishes so errors and the
-log path remain visible.
-
-
-Clone the repository on Windows, then open **PowerShell 7 as Administrator** in
-that checkout:
+Clone the repository on Windows, then run the installer from PowerShell 7:
 
 ```powershell
 git clone https://github.com/SomeSunlight/ai-workstation.git
 cd ai-workstation
 .\install.ps1
 ```
+
+`Install` needs administrator rights for WSL setup and host-level changes. If
+PowerShell is not already elevated, the installer opens a UAC prompt and starts
+a separate elevated PowerShell window. Watch that elevated window; it stays open
+after the installer finishes so progress, errors and the log path remain
+visible.
 
 The installer may request:
 
@@ -39,6 +31,16 @@ The installer may request:
 
 The installer is designed to be rerun until everything is present. It does not
 unregister or delete existing WSL distributions.
+
+## Check the current installation state
+
+`Status` and `Verify` do not require an elevated PowerShell window for ordinary
+use:
+
+```powershell
+.\install.ps1 -Action Status
+.\install.ps1 -Action Verify
+```
 
 ## Where to find it later
 

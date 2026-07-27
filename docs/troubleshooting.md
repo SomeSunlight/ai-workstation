@@ -126,3 +126,20 @@ Windows logs are written below:
 The command `wsl --update` can take several minutes and may produce little or no
 output. The installer now announces this explicitly and prints a completion
 message when the check returns.
+
+
+## Which actions need administrator rights?
+
+`Install` may need administrator rights and therefore opens a UAC prompt when
+started from a normal PowerShell window. This is expected.
+
+For ordinary inspection, use these commands without opening an administrator
+shell:
+
+```powershell
+.\install.ps1 -Action Status
+.\install.ps1 -Action Verify
+```
+
+If `Install` elevates itself, the original PowerShell session may return to the
+prompt while a separate elevated window continues the installation.

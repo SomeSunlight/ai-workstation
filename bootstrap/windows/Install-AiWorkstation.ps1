@@ -334,7 +334,8 @@ function Ensure-UbuntuImage {
 }
 
 function Ensure-Distro {
-    if ($DistroName -in (Get-Distros)) {
+    $existingDistros = @(Get-Distros)
+    if ($DistroName -in $existingDistros) {
         $basePath = Get-DistroBasePath -Name $DistroName
         if ($null -ne $basePath) {
             $normalizedBasePath = ([string]$basePath) -replace '^\\\?\', ''
@@ -382,7 +383,8 @@ function Ensure-Distro {
     Write-Step "Installing the pinned Ubuntu image as '$DistroName' in $InstallLocation."
     Invoke-Wsl -Arguments $arguments | Out-Null
 
-    if ($DistroName -notin (Get-Distros)) {
+    $registeredDistros = @(Get-Distros)
+    if ($DistroName -notin $registeredDistros) {
         throw "Distribution '$DistroName' was not registered."
     }
 
@@ -681,8 +683,8 @@ function Show-Status {
     Write-Step "PowerShell: $($PSVersionTable.PSVersion)"
     Write-Step "WSL platform: $(if (Test-WslPlatform) { 'available' } else { 'missing' })"
 
-    $distros = Get-Distros
-    Write-Step "Distributions: $(if ($distros.Count) { $distros -join ', ' } else { 'none' })"
+    $distros = @(Get-Distros)
+    Write-Step "Distributions: $(if ($distros.Count -gt 0) { $distros -join ', ' } else { 'none' })"
 
     $displayName = Get-ShortcutDisplayName
     $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) "$displayName.lnk"
@@ -707,7 +709,8 @@ function Verify-All {
         throw 'WSL platform is missing.'
     }
 
-    if ($DistroName -notin (Get-Distros)) {
+    $distros = @(Get-Distros)
+    if ($DistroName -notin $distros) {
         throw "Distribution '$DistroName' is missing."
     }
 
