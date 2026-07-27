@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.7
+
+- Prompt once for the Linux sudo password during `install.sh install` and pass it to Ansible through a temporary become-password file.
+- Keep sudo alive using the same temporary credential path.
+- Allow the Windows installer to drive the Linux host installation without Ansible failing on missing sudo input.
+
 ## 0.4.6
 
 - Fix ansible-lint variable naming violations in the `project_directories` role.

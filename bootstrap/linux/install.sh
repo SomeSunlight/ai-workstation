@@ -12,6 +12,8 @@ readonly LOG_DIR="${STATE_DIR}/logs"
 readonly RUN_ID="$(date '+%Y%m%d-%H%M%S')"
 readonly LOG_FILE="${LOG_DIR}/install-${RUN_ID}.log"
 
+BECOME_PASSWORD_FILE=""
+
 ACTION="install"
 ASSUME_YES="false"
 
@@ -62,12 +64,19 @@ on_error() {
     exit "$code"
 }
 
+cleanup_secrets() {
+    if [[ -n "${BECOME_PASSWORD_FILE:-}" && -f "$BECOME_PASSWORD_FILE" ]]; then
+        rm -f "$BECOME_PASSWORD_FILE"
+    fi
+}
+
 setup_logging() {
     mkdir -p "$LOG_DIR"
     touch "$LOG_FILE"
     chmod 0600 "$LOG_FILE"
     exec > >(tee -a "$LOG_FILE") 2>&1
     trap on_error ERR
+    trap cleanup_secrets EXIT
 }
 
 json_value() {
@@ -147,6 +156,26 @@ This installer may:
 EOF
     read -r -p 'Continue? [y/N]: ' answer
     case "${answer,,}" in y|yes) ;; *) fail "Installation cancelled." ;; esac
+}
+
+prepare_become_password() {
+    section 'Linux sudo authentication'
+
+    BECOME_PASSWORD_FILE="$(mktemp)"
+    chmod 0600 "$BECOME_PASSWORD_FILE"
+
+    local password
+    read -r -s -p "Linux sudo password for $(id -un): " password
+    printf '\n'
+    printf '%s\n' "$password" > "$BECOME_PASSWORD_FILE"
+    unset password
+
+    if ! sudo -S -v < "$BECOME_PASSWORD_FILE"; then
+        fail "Linux sudo authentication failed."
+    fi
+
+    export AIW_BECOME_PASSWORD_FILE="$BECOME_PASSWORD_FILE"
+    ok "Linux sudo password accepted."
 }
 
 install_base_packages() {
@@ -267,7 +296,7 @@ main() {
             normalize_permissions
             preflight
             confirm_install
-            sudo -v
+            prepare_become_password
             install_base_packages
             install_uv
             sync_automation_runtime
@@ -278,6 +307,7 @@ main() {
         verify)
             preflight
             bootstrap_verify
+            prepare_become_password
             "${ROOT}/bin/aiw" verify
             ;;
     esac

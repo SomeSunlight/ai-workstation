@@ -63,14 +63,30 @@ run_playbook() {
     export AIW_HOME="$HOME"
     export AIW_PRIMARY_GROUP="$(id -gn)"
 
-    "$UV_BIN" run --frozen ansible-playbook "$playbook" "$@"
+    local become_args=()
+    if [[ -n "${AIW_BECOME_PASSWORD_FILE:-}" ]]; then
+        [[ -r "$AIW_BECOME_PASSWORD_FILE" ]] || fail "Become password file is not readable."
+        become_args+=(--become-password-file "$AIW_BECOME_PASSWORD_FILE")
+    fi
+
+    "$UV_BIN" run --frozen ansible-playbook "$playbook" "${become_args[@]}" "$@"
 }
 
 keep_sudo_alive() {
-    sudo -v
+    if [[ -n "${AIW_BECOME_PASSWORD_FILE:-}" ]]; then
+        [[ -r "$AIW_BECOME_PASSWORD_FILE" ]] || fail "Become password file is not readable."
+        sudo -S -v < "$AIW_BECOME_PASSWORD_FILE"
+    else
+        sudo -v
+    fi
+
     (
         while true; do
-            sudo -n true
+            if [[ -n "${AIW_BECOME_PASSWORD_FILE:-}" && -r "$AIW_BECOME_PASSWORD_FILE" ]]; then
+                sudo -S -n true < "$AIW_BECOME_PASSWORD_FILE"
+            else
+                sudo -n true
+            fi
             sleep 50
             kill -0 "$$" 2>/dev/null || exit
         done
