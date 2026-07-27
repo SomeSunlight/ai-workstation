@@ -5,7 +5,7 @@
       - ansible_facts.distribution == "Ubuntu"
       - ansible_facts.distribution_version == versions.ubuntu.release
       - ansible_facts.service_mgr == "systemd"
-      - ansible_facts.architecture in docker_architecture_map
+      - ansible_facts.architecture in docker_engine_architecture_map
     quiet: true
 
 - name: Gather installed package facts
@@ -14,9 +14,9 @@
 
 - name: Determine installed conflicting packages
   ansible.builtin.set_fact:
-    docker_installed_conflicts: >-
+    docker_engine_installed_conflicts: >-
       {{
-        docker_conflicting_packages
+        docker_engine_conflicting_packages
         | select('in', ansible_facts.packages)
         | list
       }}
@@ -24,9 +24,9 @@
 - name: Refuse destructive conflict removal
   ansible.builtin.assert:
     that:
-      - docker_installed_conflicts | length == 0
+      - docker_engine_installed_conflicts | length == 0
     fail_msg: >-
       Conflicting packages are installed:
-      {{ docker_installed_conflicts | join(', ') }}.
+      {{ docker_engine_installed_conflicts | join(', ') }}.
       They are not removed automatically.
     quiet: true

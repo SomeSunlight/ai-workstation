@@ -100,3 +100,29 @@ git merge origin/main --allow-unrelated-histories
 ```
 
 If `LICENSE` conflicts, resolve the conflict, commit the merge and push.
+
+
+## The installer returns to the prompt immediately
+
+When administrator rights are required, `install.ps1` starts a separate
+elevated PowerShell window. Continue watching that elevated window. The original
+PowerShell session can return to the prompt while the elevated installer is
+still running.
+
+To inspect the current state later:
+
+```powershell
+.\install.ps1 -Action Status
+```
+
+Windows logs are written below:
+
+```text
+%LOCALAPPDATA%\AiWorkstationBootstrap\logs
+```
+
+## WSL update check looks idle
+
+The command `wsl --update` can take several minutes and may produce little or no
+output. The installer now announces this explicitly and prints a completion
+message when the check returns.

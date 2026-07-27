@@ -14,7 +14,7 @@
     - /usr/bin/curl
     - /usr/bin/git
     - /usr/bin/python3
-  register: base_executable_stats
+  register: base_system_executable_stats
 
 - name: Verify required executables
   ansible.builtin.assert:
@@ -22,6 +22,6 @@
       - item.stat.exists
       - item.stat.executable
     quiet: true
-  loop: "{{ base_executable_stats.results }}"
+  loop: "{{ base_system_executable_stats.results }}"
   loop_control:
     label: "{{ item.item }}"

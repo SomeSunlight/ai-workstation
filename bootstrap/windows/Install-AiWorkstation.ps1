@@ -177,7 +177,15 @@ function Restart-Elevated {
     Stage-Installer
 
     $pwsh = (Get-Process -Id $PID).Path
-    Start-Process -FilePath $pwsh -ArgumentList (Get-InvocationArguments) -Verb RunAs | Out-Null
+    $arguments = @('-NoExit') + (Get-InvocationArguments)
+
+    Write-Host ''
+    Write-Host '[..] Administrator rights are required.' -ForegroundColor Yellow
+    Write-Host '[..] An elevated PowerShell window will open and stay open after the installer finishes.' -ForegroundColor Yellow
+    Write-Host '[..] Continue watching that elevated window. This original shell can return to the prompt.' -ForegroundColor Yellow
+    Write-Host ''
+
+    Start-Process -FilePath $pwsh -ArgumentList $arguments -Verb RunAs | Out-Null
     exit 0
 }
 
@@ -243,8 +251,9 @@ function Register-ResumeAndRestart {
 function Ensure-WslPlatform {
     if (Test-WslPlatform) {
         Write-Step 'WSL platform is available.' Ok
-        Write-Step 'Checking for WSL updates.'
-        Invoke-Wsl -Arguments @('--update') | Out-Null
+        Write-Step 'Checking for WSL updates. This can take several minutes and may produce little output.'
+        Invoke-Wsl -Arguments @('--update')
+        Write-Step 'WSL update check completed.' Ok
         return
     }
 
@@ -752,6 +761,7 @@ try {
             Ensure-WindowsShortcuts
             Invoke-LinuxInstall
             Write-Step 'AI Workstation installation completed successfully.' Ok
+            Write-Step 'Run ".\install.ps1 -Action Status" to show the current installation state.'
         }
     }
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2
+
+- Keep the elevated Windows installer window open so progress and errors remain visible.
+- Make the WSL update check explicitly visible as a potentially long-running step.
+- Add a final Windows status hint after successful installation.
+- Fix Ansible lint failures by using role-prefixed variables and moving the Docker APT refresh into a handler.
+
 ## 0.4.1
 
 - Fix a PowerShell parser error in the WSL error message path by delimiting `${code}` before a colon.

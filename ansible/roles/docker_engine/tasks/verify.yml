@@ -29,22 +29,22 @@
 - name: Read Docker service state
   ansible.builtin.systemd_service:
     name: docker
-  register: docker_service
+  register: docker_engine_service
   changed_when: false
 
 - name: Read containerd service state
   ansible.builtin.systemd_service:
     name: containerd
-  register: containerd_service
+  register: docker_engine_containerd_service
   changed_when: false
 
 - name: Verify Docker services
   ansible.builtin.assert:
     that:
-      - docker_service.status.ActiveState == "active"
-      - docker_service.status.UnitFileState == "enabled"
-      - containerd_service.status.ActiveState == "active"
-      - containerd_service.status.UnitFileState == "enabled"
+      - docker_engine_service.status.ActiveState == "active"
+      - docker_engine_service.status.UnitFileState == "enabled"
+      - docker_engine_containerd_service.status.ActiveState == "active"
+      - docker_engine_containerd_service.status.UnitFileState == "enabled"
     quiet: true
 
 - name: Verify Docker Engine API as root
@@ -54,7 +54,7 @@
       - info
       - --format
       - "{{ '{{' }}.ServerVersion{{ '}}' }}"
-  register: docker_server_version
+  register: docker_engine_server_version
   changed_when: false
 
 - name: Verify Docker Compose plugin
@@ -64,7 +64,7 @@
       - compose
       - version
       - --short
-  register: docker_compose_version
+  register: docker_engine_compose_version
   changed_when: false
 
 - name: Verify Docker Buildx plugin
@@ -73,7 +73,7 @@
       - docker
       - buildx
       - version
-  register: docker_buildx_version
+  register: docker_engine_buildx_version
   changed_when: false
 
 - name: Read docker group membership
@@ -100,7 +100,7 @@
       - info
       - --format
       - "{{ '{{' }}.ServerVersion{{ '}}' }}"
-  register: docker_non_root_version
+  register: docker_engine_non_root_version
   changed_when: false
 
 - name: Run hello-world smoke test
@@ -111,12 +111,12 @@
       - --rm
       - hello-world
   changed_when: false
-  when: docker_enable_hello_world_test | bool
+  when: docker_engine_enable_hello_world_test | bool
 
 - name: Report Docker versions
   ansible.builtin.debug:
     msg:
-      - "Docker Server: {{ docker_server_version.stdout }}"
-      - "Docker Compose: {{ docker_compose_version.stdout }}"
-      - "Docker Buildx: {{ docker_buildx_version.stdout }}"
-      - "Non-root socket test: {{ docker_non_root_version.stdout }}"
+      - "Docker Server: {{ docker_engine_server_version.stdout }}"
+      - "Docker Compose: {{ docker_engine_compose_version.stdout }}"
+      - "Docker Buildx: {{ docker_engine_buildx_version.stdout }}"
+      - "Non-root socket test: {{ docker_engine_non_root_version.stdout }}"

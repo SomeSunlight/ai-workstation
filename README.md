@@ -9,6 +9,19 @@ Reproducible WSL 2 and Docker foundation for local AI agents on Windows.
 
 ## Quick start
 
+## Check the current installation state
+
+At any time from the Windows checkout:
+
+```powershell
+.\install.ps1 -Action Status
+```
+
+The installer may open a separate elevated PowerShell window. Watch that
+elevated window; it stays open after the installer finishes so errors and the
+log path remain visible.
+
+
 Clone the repository on Windows, then open **PowerShell 7 as Administrator** in
 that checkout:
 

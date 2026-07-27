@@ -1,13 +1,13 @@
 ---
-docker_apt_key_url: https://download.docker.com/linux/ubuntu/gpg
-docker_apt_key_path: /etc/apt/keyrings/docker.asc
-docker_apt_source_path: /etc/apt/sources.list.d/docker.sources
+docker_engine_apt_key_url: https://download.docker.com/linux/ubuntu/gpg
+docker_engine_apt_key_path: /etc/apt/keyrings/docker.asc
+docker_engine_apt_source_path: /etc/apt/sources.list.d/docker.sources
 
-docker_architecture_map:
+docker_engine_architecture_map:
   x86_64: amd64
   aarch64: arm64
 
-docker_conflicting_packages:
+docker_engine_conflicting_packages:
   - docker.io
   - docker-compose
   - docker-compose-v2
@@ -16,4 +16,4 @@ docker_conflicting_packages:
   - containerd
   - runc
 
-docker_enable_hello_world_test: true
+docker_engine_enable_hello_world_test: true
