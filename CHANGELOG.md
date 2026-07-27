@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.6
+
+- Fix ansible-lint variable naming violations in the `project_directories` role.
+- Replace deprecated injected Ansible fact usage in `bootstrap-verify.yml`.
+
 ## 0.4.5
 
 - Normalize PowerShell here-string line endings before sending Bash snippets to WSL.

@@ -23,5 +23,5 @@
     - name: Verify local Python interpreter
       ansible.builtin.assert:
         that:
-          - ansible_playbook_python == ansible_python.executable
+          - ansible_playbook_python == ansible_facts.python.executable
         quiet: true
