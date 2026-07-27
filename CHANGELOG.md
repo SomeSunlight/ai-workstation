@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.5
+
+- Normalize PowerShell here-string line endings before sending Bash snippets to WSL.
+- Replace `echo` with `printf` for base64 payload transfer into WSL.
+
 ## 0.4.4
 
 - Fix Windows installer path normalization for existing WSL distributions by replacing an invalid regular expression with explicit `StartsWith` / `Substring` logic.

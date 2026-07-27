@@ -411,7 +411,13 @@ function Invoke-Bash {
         [string]$User = 'root'
     )
 
-    $bytes = [Text.Encoding]::UTF8.GetBytes($Script)
+    # PowerShell files are checked out with CRLF on Windows. Here-strings then
+    # carry CRLF into the base64 payload. Bash treats the carriage return as
+    # part of option names, for example `pipefail\r`, so normalize before WSL.
+    $normalizedScript = $Script -replace "`r`n", "`n"
+    $normalizedScript = $normalizedScript -replace "`r", "`n"
+
+    $bytes = [Text.Encoding]::UTF8.GetBytes($normalizedScript)
     $encoded = [Convert]::ToBase64String($bytes)
 
     Invoke-Wsl -Arguments @(
@@ -422,7 +428,7 @@ function Invoke-Bash {
         '--'
         'bash'
         '-lc'
-        "echo $encoded | base64 -d | bash"
+        "printf '%s' '$encoded' | base64 -d | bash"
     ) | Out-Null
 }
 
