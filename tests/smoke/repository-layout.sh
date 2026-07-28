@@ -13,4 +13,15 @@ for item in "${required[@]}"; do
   [[ -e "$ROOT/$item" ]] || { printf 'Missing: %s\n' "$item" >&2; exit 1; }
 done
 [[ "$ROOT" != /mnt/* ]] || { echo 'Repository must not be operated from /mnt.' >&2; exit 1; }
+
+temp_home="$(mktemp -d)"
+trap 'rm -rf "$temp_home"' EXIT
+mkdir -p "$temp_home/.local/bin"
+ln -s "$ROOT/bin/aiw" "$temp_home/.local/bin/aiw"
+symlink_status="$(HOME="$temp_home" "$temp_home/.local/bin/aiw" status)"
+grep -Fq "Repository           : $ROOT" <<< "$symlink_status" || {
+  echo 'aiw did not resolve the repository root through its installed symlink.' >&2
+  exit 1
+}
+
 printf 'Repository layout is valid.\n'

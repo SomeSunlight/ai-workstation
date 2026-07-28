@@ -1,5 +1,16 @@
 # Changelog
 
+<<<<<<< HEAD
+=======
+## 0.5.1
+
+- Resolve the real `bin/aiw` path before deriving the repository root, so the installed `~/.local/bin/aiw` symlink works correctly.
+- Validate Git worktrees with `git rev-parse` instead of requiring `.git` to be a directory.
+- Add a smoke test for invoking `aiw` through its installed symlink.
+- Document that `aiw update`, not Ansible, performs the Linux-side Git pull.
+- Document the Linux-first maintainer patch workflow.
+
+>>>>>>> d25a635 (Add Dockerized Goose runtime and fix aiw symlink resolution)
 ## 0.5.0
 
 - Add a pinned Docker Compose runtime for Goose `v1.44.0` with OpenRouter configuration from a Git-ignored `.env` file.

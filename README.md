@@ -123,6 +123,25 @@ To update the Git checkout and rerun the idempotent Linux installation:
 aiw update
 ```
 
+<<<<<<< HEAD
+=======
+`aiw update` performs `git pull --ff-only` in the Linux checkout and then reruns
+`install.sh`. Ansible configures the host; it does not update the repository.
+
+Maintainer patches should be applied and committed from the Linux checkout. This
+preserves LF line endings and executable file modes without depending on Windows
+ZIP extraction behavior:
+
+```bash
+cd ~/ai-workstation
+git apply --check /mnt/c/Users/<windows-user>/Downloads/ai-workstation-vX.Y.Z.patch
+git apply /mnt/c/Users/<windows-user>/Downloads/ai-workstation-vX.Y.Z.patch
+./tools/normalize-permissions.sh
+git diff --check
+git status
+```
+
+>>>>>>> d25a635 (Add Dockerized Goose runtime and fix aiw symlink resolution)
 If `.env` is missing, run `aiw goose init` and restore the API key and model.
 
 ## Where to find it later
