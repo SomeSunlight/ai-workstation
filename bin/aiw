@@ -2,12 +2,8 @@
 # Stable command-line interface for AI Workstation.
 set -Eeuo pipefail
 IFS=$'\n\t'
-<<<<<<< HEAD
-readonly ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
-=======
 readonly SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
 readonly ROOT="$(cd -- "$(dirname -- "$SCRIPT_PATH")/.." && pwd -P)"
->>>>>>> d25a635 (Add Dockerized Goose runtime and fix aiw symlink resolution)
 readonly UV_BIN="${HOME}/.local/bin/uv"
 readonly STATE_DIR="${HOME}/.local/state/ai-workstation"
 readonly LOG_DIR="${STATE_DIR}/logs"

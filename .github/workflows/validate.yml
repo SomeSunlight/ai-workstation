@@ -29,13 +29,8 @@ jobs:
           bash -n install.sh bootstrap/linux/install.sh bin/aiw tools/*.sh tests/smoke/*.sh
           python -m json.tool config/versions.json >/dev/null
           python tools/check-version-consistency.py
-<<<<<<< HEAD
-          ./tests/smoke/repository-layout.sh
-          ./tests/smoke/goose-runtime.sh
-=======
           bash tests/smoke/repository-layout.sh
           bash tests/smoke/goose-runtime.sh
->>>>>>> d25a635 (Add Dockerized Goose runtime and fix aiw symlink resolution)
 
       - name: Synchronize locked environment
         run: uv sync --frozen
