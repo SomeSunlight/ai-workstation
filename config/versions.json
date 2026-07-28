@@ -1,6 +1,6 @@
 {
   "versions": {
-    "project": "0.4.7",
+    "project": "0.5.0",
     "ubuntu": {
       "distribution": "Ubuntu-24.04",
       "release": "24.04",
@@ -20,6 +20,10 @@
       "containerd_package": "2.2.5-1~ubuntu.24.04~noble",
       "buildx_package": "0.35.0-1~ubuntu.24.04~noble",
       "compose_package": "5.3.0-1~ubuntu.24.04~noble"
+    },
+    "goose": {
+      "version": "1.44.0",
+      "image": "ghcr.io/aaif-goose/goose:v1.44.0"
     }
   }
 }

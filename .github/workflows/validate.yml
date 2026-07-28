@@ -23,7 +23,6 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           version: "0.11.26"
-
       - name: Verify repository files
         run: |
           test -f uv.lock
@@ -31,10 +30,10 @@ jobs:
           python -m json.tool config/versions.json >/dev/null
           python tools/check-version-consistency.py
           ./tests/smoke/repository-layout.sh
+          ./tests/smoke/goose-runtime.sh
 
       - name: Synchronize locked environment
         run: uv sync --frozen
-
       - name: Install Ansible collection
         run: |
           mkdir -p .ansible/collections
@@ -42,7 +41,6 @@ jobs:
             uv run --frozen ansible-galaxy collection install \
               --requirements-file ansible/requirements.yml \
               --collections-path .ansible/collections
-
       - name: Lint Ansible
         env:
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
@@ -50,7 +48,6 @@ jobs:
           ANSIBLE_ROLES_PATH: ${{ github.workspace }}/ansible/roles
           ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}/.ansible/collections
         run: uv run --frozen ansible-lint --config-file ansible/.ansible-lint ansible/playbooks
-
       - name: Check playbook syntax
         env:
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg

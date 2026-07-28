@@ -2,7 +2,6 @@
 # Stable command-line interface for AI Workstation.
 set -Eeuo pipefail
 IFS=$'\n\t'
-
 readonly ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 readonly UV_BIN="${HOME}/.local/bin/uv"
 readonly STATE_DIR="${HOME}/.local/state/ai-workstation"
@@ -11,23 +10,42 @@ readonly ANSIBLE_CONFIG_FILE="${ROOT}/ansible/ansible.cfg"
 readonly INVENTORY_FILE="${ROOT}/ansible/inventory/localhost.yml"
 readonly ROLES_DIR="${ROOT}/ansible/roles"
 readonly COLLECTIONS_DIR="${ROOT}/.ansible/collections"
+readonly GOOSE_COMPOSE_FILE="${ROOT}/compose/goose.yml"
+readonly GOOSE_ENV_FILE="${ROOT}/.env"
+readonly GOOSE_ENV_EXAMPLE="${ROOT}/.env.example"
 
 usage() {
-    cat <<'EOF'
+    cat <<'EOF_USAGE'
 AI Workstation command line
-
 Usage:
   aiw status
   aiw install
   aiw verify
   aiw update
   aiw playbook PLAYBOOK [ANSIBLE ARGUMENTS...]
+  aiw goose COMMAND [ARGUMENTS...]
 
-Reserved for the Goose phase:
-  aiw start
-  aiw stop
-  aiw logs
-EOF
+Goose shortcuts:
+  aiw start                 Alias for: aiw goose up
+  aiw stop                  Alias for: aiw goose down
+  aiw logs                  Alias for: aiw goose logs
+EOF_USAGE
+}
+
+goose_usage() {
+    cat <<'EOF_USAGE'
+Goose runtime commands
+Usage:
+  aiw goose init            Create .env from .env.example if missing
+  aiw goose status          Show configuration and container state
+  aiw goose pull            Pull the pinned Goose image
+  aiw goose up              Start the Goose utility container
+  aiw goose down            Stop the container; keep persistent volumes
+  aiw goose logs            Follow container lifecycle logs
+  aiw goose session [ARGS]  Start an interactive Goose CLI session
+  aiw goose run [ARGS]      Run a non-interactive Goose command
+  aiw goose version         Print the containerized Goose version
+EOF_USAGE
 }
 
 fail() {
@@ -41,10 +59,15 @@ require_runtime() {
     [[ -x "${ROOT}/.venv/bin/ansible-playbook" ]] || fail ".venv is missing. Run ./install.sh first."
 }
 
+require_docker() {
+    command -v docker >/dev/null 2>&1 || fail "Docker is not installed. Run ./install.sh first."
+    docker compose version >/dev/null 2>&1 || fail "Docker Compose is unavailable. Run ./install.sh first."
+    docker info >/dev/null 2>&1 || fail "Docker Engine is unavailable. Start WSL/systemd and retry."
+}
+
 run_playbook() {
     local playbook="$1"
     shift
-
     require_runtime
     if [[ "$playbook" != /* ]]; then
         playbook="${ROOT}/${playbook}"
@@ -53,7 +76,6 @@ run_playbook() {
 
     mkdir -p "$LOG_DIR"
     cd "$ROOT"
-
     export ANSIBLE_CONFIG="$ANSIBLE_CONFIG_FILE"
     export ANSIBLE_INVENTORY="$INVENTORY_FILE"
     export ANSIBLE_ROLES_PATH="$ROLES_DIR"
@@ -62,7 +84,6 @@ run_playbook() {
     export AIW_USER="$(id -un)"
     export AIW_HOME="$HOME"
     export AIW_PRIMARY_GROUP="$(id -gn)"
-
     local become_args=()
     if [[ -n "${AIW_BECOME_PASSWORD_FILE:-}" ]]; then
         [[ -r "$AIW_BECOME_PASSWORD_FILE" ]] || fail "Become password file is not readable."
@@ -79,7 +100,6 @@ keep_sudo_alive() {
     else
         sudo -v
     fi
-
     (
         while true; do
             if [[ -n "${AIW_BECOME_PASSWORD_FILE:-}" && -r "$AIW_BECOME_PASSWORD_FILE" ]]; then
@@ -95,13 +115,202 @@ keep_sudo_alive() {
     trap 'kill "${SUDO_KEEPALIVE_PID:-}" 2>/dev/null || true' EXIT
 }
 
+env_value() {
+    local key="$1"
+    local file="$2"
+    awk -v key="$key" '
+        $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
+            value = $0
+            sub("^[[:space:]]*" key "[[:space:]]*=[[:space:]]*", "", value)
+            sub(/[[:space:]]+$/, "", value)
+            if ((substr(value, 1, 1) == "\"" && substr(value, length(value), 1) == "\"") ||
+                (substr(value, 1, 1) == "\047" && substr(value, length(value), 1) == "\047")) {
+                value = substr(value, 2, length(value) - 2)
+            }
+            print value
+            exit
+        }
+    ' "$file"
+}
+
+goose_compose_env_file() {
+    if [[ -f "$GOOSE_ENV_FILE" ]]; then
+        printf '%s\n' "$GOOSE_ENV_FILE"
+    elif [[ -f "$GOOSE_ENV_EXAMPLE" ]]; then
+        printf '%s\n' "$GOOSE_ENV_EXAMPLE"
+    else
+        fail "Neither .env nor .env.example exists."
+    fi
+}
+
+goose_compose() {
+    local env_file
+    env_file="$(goose_compose_env_file)"
+    docker compose \
+        --project-name ai-workstation \
+        --env-file "$env_file" \
+        --file "$GOOSE_COMPOSE_FILE" \
+        "$@"
+}
+
+goose_init() {
+    [[ -f "$GOOSE_ENV_EXAMPLE" ]] || fail ".env.example is missing."
+    if [[ -f "$GOOSE_ENV_FILE" ]]; then
+        chmod 600 "$GOOSE_ENV_FILE"
+        printf '[OK] Existing configuration kept: %s\n' "$GOOSE_ENV_FILE"
+    else
+        cp "$GOOSE_ENV_EXAMPLE" "$GOOSE_ENV_FILE"
+        chmod 600 "$GOOSE_ENV_FILE"
+        printf '[OK] Created: %s\n' "$GOOSE_ENV_FILE"
+    fi
+    printf '[..] Set OPENROUTER_API_KEY and GOOSE_MODEL before starting Goose.\n'
+}
+
+require_goose_configuration() {
+    [[ -f "$GOOSE_ENV_FILE" ]] || fail "Goose configuration is missing. Run: aiw goose init"
+    chmod 600 "$GOOSE_ENV_FILE"
+
+    local provider model api_key
+    provider="$(env_value GOOSE_PROVIDER "$GOOSE_ENV_FILE")"
+    model="$(env_value GOOSE_MODEL "$GOOSE_ENV_FILE")"
+    api_key="$(env_value OPENROUTER_API_KEY "$GOOSE_ENV_FILE")"
+
+    [[ "${provider:-openrouter}" == "openrouter" ]] || fail "This runtime layer currently supports GOOSE_PROVIDER=openrouter only."
+    [[ -n "$model" ]] || fail "GOOSE_MODEL is empty in .env. Set an OpenRouter model ID."
+    [[ -n "$api_key" ]] || fail "OPENROUTER_API_KEY is empty in .env."
+}
+
+goose_is_running() {
+    local services
+    services="$(goose_compose ps --status running --services 2>/dev/null || true)"
+    grep -Fxq goose <<< "$services"
+}
+
+show_goose_status() {
+    local config_status="missing"
+    local container_status="unavailable"
+    local model="not configured"
+
+    if [[ -f "$GOOSE_ENV_FILE" ]]; then
+        if [[ -n "$(env_value OPENROUTER_API_KEY "$GOOSE_ENV_FILE")" && -n "$(env_value GOOSE_MODEL "$GOOSE_ENV_FILE")" ]]; then
+            config_status="configured"
+        else
+            config_status="incomplete"
+        fi
+        model="$(env_value GOOSE_MODEL "$GOOSE_ENV_FILE")"
+        [[ -n "$model" ]] || model="not configured"
+    fi
+
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+        if goose_is_running; then
+            container_status="running"
+        elif goose_compose ps --all --services 2>/dev/null | grep -Fxq goose; then
+            container_status="stopped"
+        else
+            container_status="not created"
+        fi
+    fi
+
+    printf 'Goose Compose        : %s\n' "$([[ -f "$GOOSE_COMPOSE_FILE" ]] && printf 'present' || printf 'missing')"
+    printf 'Goose configuration  : %s\n' "$config_status"
+    printf 'Goose model          : %s\n' "$model"
+    printf 'Goose container      : %s\n' "$container_status"
+}
+
+goose_up() {
+    require_docker
+    require_goose_configuration
+    goose_compose up --detach --remove-orphans goose
+}
+
+goose_ensure_running() {
+    if ! goose_is_running; then
+        goose_up
+    fi
+}
+
+goose_down() {
+    require_docker
+    goose_compose down
+}
+
+goose_logs() {
+    require_docker
+    goose_compose logs --follow --tail 200 goose
+}
+
+goose_pull() {
+    require_docker
+    goose_compose pull goose
+}
+
+goose_session() {
+    require_docker
+    require_goose_configuration
+    goose_ensure_running
+    goose_compose exec goose goose session "$@"
+}
+
+goose_run() {
+    require_docker
+    require_goose_configuration
+    (($# > 0)) || fail "Arguments for 'goose run' are required."
+    goose_ensure_running
+    goose_compose exec --no-TTY goose goose run "$@"
+}
+
+goose_version() {
+    require_docker
+    goose_compose run --rm --no-deps --entrypoint goose goose --version
+}
+
+goose_command() {
+    local subcommand="${1:-help}"
+    shift || true
+    case "$subcommand" in
+        init)
+            goose_init
+            ;;
+        status)
+            show_goose_status
+            ;;
+        pull)
+            goose_pull
+            ;;
+        up|start)
+            goose_up
+            ;;
+        down|stop)
+            goose_down
+            ;;
+        logs)
+            goose_logs
+            ;;
+        session)
+            goose_session "$@"
+            ;;
+        run)
+            goose_run "$@"
+            ;;
+        version)
+            goose_version
+            ;;
+        help|-h|--help)
+            goose_usage
+            ;;
+        *)
+            goose_usage >&2
+            exit 2
+            ;;
+    esac
+}
+
 show_status() {
     printf 'Repository           : %s\n' "$ROOT"
     printf 'Repository mode      : %s\n' "$(stat -c '%a' "$ROOT" 2>/dev/null || printf 'unknown')"
     printf 'uv                   : %s\n' "$([[ -x "$UV_BIN" ]] && "$UV_BIN" --version || printf 'not installed')"
     printf 'uv.lock              : %s\n' "$([[ -f "${ROOT}/uv.lock" ]] && printf 'present' || printf 'missing')"
     printf 'Ansible environment  : %s\n' "$([[ -x "${ROOT}/.venv/bin/ansible-playbook" ]] && printf 'present' || printf 'missing')"
-
     if command -v docker >/dev/null 2>&1; then
         printf 'Docker client        : %s\n' "$(docker version --format '{{.Client.Version}}' 2>/dev/null || printf 'installed, unavailable')"
         printf 'Docker server        : %s\n' "$(docker version --format '{{.Server.Version}}' 2>/dev/null || printf 'unavailable')"
@@ -110,6 +319,7 @@ show_status() {
     else
         printf 'Docker               : not installed\n'
     fi
+    show_goose_status
 }
 
 update_repository() {
@@ -123,7 +333,6 @@ update_repository() {
 
 command_name="${1:-help}"
 shift || true
-
 case "$command_name" in
     status)
         show_status
@@ -144,8 +353,17 @@ case "$command_name" in
         (($# > 0)) || fail "A playbook path is required."
         run_playbook "$@"
         ;;
-    start|stop|logs)
-        fail "Container services are not defined yet. This command becomes active in the Goose phase."
+    goose)
+        goose_command "$@"
+        ;;
+    start)
+        goose_up
+        ;;
+    stop)
+        goose_down
+        ;;
+    logs)
+        goose_logs
         ;;
     help|-h|--help)
         usage
