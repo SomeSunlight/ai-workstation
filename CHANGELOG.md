@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.8
+
+- Fix `install.ps1 -Action Verify` when native WSL output is empty or scalar by normalizing command output before calling `.Trim()`.
+- Add clearer errors when Windows cannot read the Ubuntu release or default Linux user from WSL.
+
 ## 0.4.7
 
 - Prompt once for the Linux sudo password during `install.sh install` and pass it to Ansible through a temporary become-password file.

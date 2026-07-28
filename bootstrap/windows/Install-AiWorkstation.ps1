@@ -502,10 +502,18 @@ PY
     Invoke-Wsl -Arguments @('--terminate', $DistroName) | Out-Null
     Start-Sleep -Seconds 2
 
-    $actual = (
+    $actualOutput = @(
         & wsl.exe --distribution $DistroName -- bash -lc 'id -un' 2>$null |
             Select-Object -First 1
-    ).Trim()
+    )
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to read default Linux user from '$DistroName'."
+    }
+
+    $actual = ($actualOutput -join "`n").Trim()
+    if (-not $actual) {
+        throw "Failed to read default Linux user from '$DistroName': command returned no output."
+    }
 
     if ($actual -ne $LinuxUser) {
         throw "Expected default Linux user '$LinuxUser', found '$actual'."
@@ -723,9 +731,17 @@ function Verify-All {
         throw "Distribution '$DistroName' is missing."
     }
 
-    $release = (
+    $releaseOutput = @(
         & wsl.exe --distribution $DistroName -- bash -lc '. /etc/os-release; printf %s "$VERSION_ID"'
-    ).Trim()
+    )
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to read Ubuntu release from '$DistroName'."
+    }
+
+    $release = ($releaseOutput -join "`n").Trim()
+    if (-not $release) {
+        throw "Failed to read Ubuntu release from '$DistroName': command returned no output."
+    }
 
     if ($release -ne '24.04') {
         throw "Expected Ubuntu 24.04, found '$release'."
