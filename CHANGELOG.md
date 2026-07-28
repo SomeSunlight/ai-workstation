@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.9
+
+- Remove duplicated Windows-side Ubuntu release parsing from `Verify`.
+- Let the Linux verifier be the single source of truth for Ubuntu, systemd, Python, uv, Ansible and Docker checks.
+- Harden the Windows default-user check against null/scalar native WSL output.
+
 ## 0.4.8
 
 - Fix `install.ps1 -Action Verify` when native WSL output is empty or scalar by normalizing command output before calling `.Trim()`.

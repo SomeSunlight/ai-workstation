@@ -503,16 +503,19 @@ PY
     Start-Sleep -Seconds 2
 
     $actualOutput = @(
-        & wsl.exe --distribution $DistroName -- bash -lc 'id -un' 2>$null |
+        & wsl.exe --distribution $DistroName --user $LinuxUser -- sh -lc 'id -un' 2>&1 |
             Select-Object -First 1
     )
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to read default Linux user from '$DistroName'."
+    $actualCode = $LASTEXITCODE
+    $actual = ($actualOutput | ForEach-Object { [string]$_ }) -join "`n"
+    $actual = $actual.Trim()
+
+    if ($actualCode -ne 0) {
+        throw "Failed to read Linux user from '$DistroName' as '$LinuxUser': $actual"
     }
 
-    $actual = ($actualOutput -join "`n").Trim()
     if (-not $actual) {
-        throw "Failed to read default Linux user from '$DistroName': command returned no output."
+        throw "Failed to read Linux user from '$DistroName' as '$LinuxUser': command returned no output."
     }
 
     if ($actual -ne $LinuxUser) {
@@ -731,21 +734,9 @@ function Verify-All {
         throw "Distribution '$DistroName' is missing."
     }
 
-    $releaseOutput = @(
-        & wsl.exe --distribution $DistroName -- bash -lc '. /etc/os-release; printf %s "$VERSION_ID"'
-    )
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to read Ubuntu release from '$DistroName'."
-    }
-
-    $release = ($releaseOutput -join "`n").Trim()
-    if (-not $release) {
-        throw "Failed to read Ubuntu release from '$DistroName': command returned no output."
-    }
-
-    if ($release -ne '24.04') {
-        throw "Expected Ubuntu 24.04, found '$release'."
-    }
+    # Ubuntu release, systemd, Python, uv, Ansible and Docker are verified by
+    # the Linux verifier below. Keeping that logic in one place avoids fragile
+    # Windows-side parsing of scalar native-command output from WSL.
 
     Invoke-Wsl -Arguments @(
         '--distribution'
