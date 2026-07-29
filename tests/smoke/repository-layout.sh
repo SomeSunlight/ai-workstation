@@ -7,7 +7,8 @@ required=(
   tools/adopt-prototype-lock.sh tools/check-version-consistency.py
   ansible/ansible.cfg ansible/requirements.yml
   ansible/playbooks/workstation.yml ansible/playbooks/verify.yml
-  compose/goose.yml containers/goose/README.md tests/smoke/goose-runtime.sh
+  compose/goose.yml compose/open-webui.yml containers/goose/README.md
+  tests/smoke/goose-runtime.sh tests/smoke/open-webui-runtime.sh tests/smoke/interactive-menu.sh
 )
 for item in "${required[@]}"; do
   [[ -e "$ROOT/$item" ]] || { printf 'Missing: %s\n' "$item" >&2; exit 1; }

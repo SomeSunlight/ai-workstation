@@ -2,56 +2,113 @@
 # Stable command-line interface for AI Workstation.
 set -Eeuo pipefail
 IFS=$'\n\t'
+
 readonly SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
 readonly ROOT="$(cd -- "$(dirname -- "$SCRIPT_PATH")/.." && pwd -P)"
 readonly UV_BIN="${HOME}/.local/bin/uv"
+readonly CONFIG_DIR="${HOME}/.config/ai-workstation"
 readonly STATE_DIR="${HOME}/.local/state/ai-workstation"
 readonly LOG_DIR="${STATE_DIR}/logs"
+readonly GOOSE_WORKSPACES_DIR="${CONFIG_DIR}/goose-workspaces"
 readonly ANSIBLE_CONFIG_FILE="${ROOT}/ansible/ansible.cfg"
 readonly INVENTORY_FILE="${ROOT}/ansible/inventory/localhost.yml"
 readonly ROLES_DIR="${ROOT}/ansible/roles"
 readonly COLLECTIONS_DIR="${ROOT}/.ansible/collections"
+readonly RUNTIME_ENV_FILE="${AIW_RUNTIME_ENV_FILE:-${ROOT}/.env}"
+readonly RUNTIME_ENV_EXAMPLE="${AIW_RUNTIME_ENV_EXAMPLE:-${ROOT}/.env.example}"
 readonly GOOSE_COMPOSE_FILE="${ROOT}/compose/goose.yml"
-readonly GOOSE_ENV_FILE="${ROOT}/.env"
-readonly GOOSE_ENV_EXAMPLE="${ROOT}/.env.example"
+readonly OPEN_WEBUI_COMPOSE_FILE="${ROOT}/compose/open-webui.yml"
+readonly DEFAULT_OPEN_WEBUI_IMAGE="ghcr.io/open-webui/open-webui:v0.11.0"
+readonly DEFAULT_OPEN_WEBUI_PORT="3000"
 
 usage() {
     cat <<'EOF_USAGE'
 AI Workstation command line
+
 Usage:
-  aiw status
-  aiw install
-  aiw verify
-  aiw update
+  aiw                         Open the interactive menu
+  aiw status                  Show the complete workstation status
+  aiw install                 Run installation and verification
+  aiw verify                  Run verification
+  aiw update                  Pull the Git repository and rerun installation
+  aiw welcome [--force]       Show the WSL startup hint
   aiw playbook PLAYBOOK [ANSIBLE ARGUMENTS...]
   aiw goose COMMAND [ARGUMENTS...]
+  aiw open-webui COMMAND [ARGUMENTS...]
 
-Goose shortcuts:
-  aiw start                 Alias for: aiw goose up
-  aiw stop                  Alias for: aiw goose down
-  aiw logs                  Alias for: aiw goose logs
+Discover commands without memorizing them:
+  aiw
+  aiw goose help
+  aiw open-webui help
 EOF_USAGE
 }
 
 goose_usage() {
     cat <<'EOF_USAGE'
-Goose runtime commands
+Goose commands
+
 Usage:
-  aiw goose init            Create .env from .env.example if missing
-  aiw goose status          Show configuration and container state
-  aiw goose pull            Pull the pinned Goose image
-  aiw goose up              Start the Goose utility container
-  aiw goose down            Stop the container; keep persistent volumes
-  aiw goose logs            Follow container lifecycle logs
-  aiw goose session [ARGS]  Start an interactive Goose CLI session
-  aiw goose run [ARGS]      Run a non-interactive Goose command
-  aiw goose version         Print the containerized Goose version
+  aiw goose init
+  aiw goose status
+  aiw goose pull
+  aiw goose session [WORKSPACE] [GOOSE ARGUMENTS...]
+  aiw goose run WORKSPACE [GOOSE RUN ARGUMENTS...]
+  aiw goose version
+  aiw goose workspace add NAME [PATH]
+  aiw goose workspace list
+  aiw goose workspace remove NAME
+  aiw goose help
+
+Notes:
+  - A session container is created only for the selected workspace.
+  - Exactly that workspace is mounted read-write into the container.
+  - Run `aiw` for an interactive workspace chooser and quick help.
+EOF_USAGE
+}
+
+open_webui_usage() {
+    cat <<'EOF_USAGE'
+Open WebUI commands
+
+Usage:
+  aiw open-webui init         Prepare the shared .env file
+  aiw open-webui status       Show service status and browser URL
+  aiw open-webui pull         Pull the pinned image
+  aiw open-webui up           Start or recreate the service
+  aiw open-webui restart      Restart the service
+  aiw open-webui down         Stop the service; keep all data
+  aiw open-webui logs         Follow service logs
+  aiw open-webui open         Start if needed and open the Windows browser
+  aiw open-webui help
 EOF_USAGE
 }
 
 fail() {
     printf '[XX] %s\n' "$*" >&2
     exit 1
+}
+
+warn() {
+    printf '[!!] %s\n' "$*" >&2
+}
+
+pause_menu() {
+    printf '\nPress Enter to continue...'
+    read -r _ || true
+}
+
+confirm() {
+    local prompt="$1"
+    local reply
+    read -r -p "$prompt [Y/n] " reply || return 1
+    [[ -z "$reply" || "$reply" =~ ^[Yy]$ ]]
+}
+
+run_menu_action() {
+    if ! "$@"; then
+        printf '\n[XX] The command failed. Review the message above.\n' >&2
+    fi
+    pause_menu
 }
 
 require_runtime() {
@@ -119,6 +176,7 @@ keep_sudo_alive() {
 env_value() {
     local key="$1"
     local file="$2"
+    [[ -f "$file" ]] || return 0
     awk -v key="$key" '
         $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
             value = $0
@@ -134,110 +192,269 @@ env_value() {
     ' "$file"
 }
 
-goose_compose_env_file() {
-    if [[ -f "$GOOSE_ENV_FILE" ]]; then
-        printf '%s\n' "$GOOSE_ENV_FILE"
-    elif [[ -f "$GOOSE_ENV_EXAMPLE" ]]; then
-        printf '%s\n' "$GOOSE_ENV_EXAMPLE"
+runtime_env_file() {
+    if [[ -f "$RUNTIME_ENV_FILE" ]]; then
+        printf '%s\n' "$RUNTIME_ENV_FILE"
+    elif [[ -f "$RUNTIME_ENV_EXAMPLE" ]]; then
+        printf '%s\n' "$RUNTIME_ENV_EXAMPLE"
     else
         fail "Neither .env nor .env.example exists."
     fi
 }
 
-goose_compose() {
+runtime_init() {
+    [[ -f "$RUNTIME_ENV_EXAMPLE" ]] || fail ".env.example is missing."
+    if [[ -f "$RUNTIME_ENV_FILE" ]]; then
+        chmod 600 "$RUNTIME_ENV_FILE"
+        printf '[OK] Existing configuration kept: %s\n' "$RUNTIME_ENV_FILE"
+    else
+        cp "$RUNTIME_ENV_EXAMPLE" "$RUNTIME_ENV_FILE"
+        chmod 600 "$RUNTIME_ENV_FILE"
+        printf '[OK] Created: %s\n' "$RUNTIME_ENV_FILE"
+    fi
+}
+
+compose_for() {
+    local project_name="$1"
+    local compose_file="$2"
+    shift 2
     local env_file
-    env_file="$(goose_compose_env_file)"
+    env_file="$(runtime_env_file)"
     docker compose \
-        --project-name ai-workstation \
+        --project-name "$project_name" \
         --env-file "$env_file" \
-        --file "$GOOSE_COMPOSE_FILE" \
+        --file "$compose_file" \
         "$@"
 }
 
-goose_init() {
-    [[ -f "$GOOSE_ENV_EXAMPLE" ]] || fail ".env.example is missing."
-    if [[ -f "$GOOSE_ENV_FILE" ]]; then
-        chmod 600 "$GOOSE_ENV_FILE"
-        printf '[OK] Existing configuration kept: %s\n' "$GOOSE_ENV_FILE"
-    else
-        cp "$GOOSE_ENV_EXAMPLE" "$GOOSE_ENV_FILE"
-        chmod 600 "$GOOSE_ENV_FILE"
-        printf '[OK] Created: %s\n' "$GOOSE_ENV_FILE"
+# Goose workspaces -----------------------------------------------------------
+
+ensure_goose_workspaces_dir() {
+    mkdir -p "$GOOSE_WORKSPACES_DIR"
+    chmod 700 "$CONFIG_DIR" "$GOOSE_WORKSPACES_DIR" 2>/dev/null || true
+}
+
+validate_workspace_name() {
+    local name="$1"
+    [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || \
+        fail "Invalid workspace name '$name'. Use letters, numbers, dots, underscores or hyphens."
+}
+
+reject_broad_workspace() {
+    local path="$1"
+    case "$path" in
+        /|/home|"$HOME"|/mnt|/mnt/c|/mnt/c/Users)
+            fail "Refusing broad workspace path: $path"
+            ;;
+    esac
+}
+
+goose_workspace_exists() {
+    local name="$1"
+    [[ -L "${GOOSE_WORKSPACES_DIR}/${name}" && -d "${GOOSE_WORKSPACES_DIR}/${name}" ]]
+}
+
+goose_workspace_path() {
+    local name="$1"
+    goose_workspace_exists "$name" || fail "Unknown or unavailable Goose workspace: $name"
+    readlink -f -- "${GOOSE_WORKSPACES_DIR}/${name}"
+}
+
+goose_workspace_add() {
+    local name="${1:-}"
+    local path="${2:-$PWD}"
+    [[ -n "$name" ]] || fail "Workspace name is required."
+    validate_workspace_name "$name"
+    [[ -d "$path" ]] || fail "Workspace directory does not exist: $path"
+
+    local canonical_path
+    canonical_path="$(realpath -e -- "$path")"
+    reject_broad_workspace "$canonical_path"
+    ensure_goose_workspaces_dir
+
+    local link_path="${GOOSE_WORKSPACES_DIR}/${name}"
+    if [[ -L "$link_path" ]]; then
+        local existing
+        existing="$(readlink -f -- "$link_path" 2>/dev/null || true)"
+        [[ "$existing" == "$canonical_path" ]] || \
+            fail "Workspace '$name' already points to: ${existing:-unavailable}"
+        printf '[OK] Workspace already registered: %s -> %s\n' "$name" "$canonical_path"
+        return
     fi
-    printf '[..] Set OPENROUTER_API_KEY and GOOSE_MODEL before starting Goose.\n'
+    [[ ! -e "$link_path" ]] || fail "Workspace registry entry already exists and is not a symlink: $link_path"
+    ln -s -- "$canonical_path" "$link_path"
+    printf '[OK] Registered workspace: %s -> %s\n' "$name" "$canonical_path"
+}
+
+goose_workspace_remove() {
+    local name="${1:-}"
+    [[ -n "$name" ]] || fail "Workspace name is required."
+    validate_workspace_name "$name"
+    local link_path="${GOOSE_WORKSPACES_DIR}/${name}"
+    [[ -L "$link_path" ]] || fail "Unknown Goose workspace: $name"
+    rm -- "$link_path"
+    printf '[OK] Removed workspace: %s\n' "$name"
+}
+
+goose_workspace_names() {
+    ensure_goose_workspaces_dir
+    find "$GOOSE_WORKSPACES_DIR" -mindepth 1 -maxdepth 1 -type l -printf '%f\n' | LC_ALL=C sort
+}
+
+goose_workspace_list() {
+    local names=()
+    mapfile -t names < <(goose_workspace_names)
+    if ((${#names[@]} == 0)); then
+        printf 'No Goose workspaces are registered.\n'
+        printf 'Add one with: aiw goose workspace add NAME PATH\n'
+        return
+    fi
+
+    printf '%-24s %s\n' 'NAME' 'HOST PATH'
+    printf '%-24s %s\n' '------------------------' '---------'
+    local name target
+    for name in "${names[@]}"; do
+        target="$(readlink -f -- "${GOOSE_WORKSPACES_DIR}/${name}" 2>/dev/null || true)"
+        printf '%-24s %s\n' "$name" "${target:-[unavailable]}"
+    done
+}
+
+select_goose_workspace() {
+    local result_variable="$1"
+    local names=()
+    mapfile -t names < <(goose_workspace_names)
+    if ((${#names[@]} == 0)); then
+        printf 'No Goose workspaces are registered.\n'
+        return 1
+    fi
+
+    printf '\nSelect Goose workspace\n'
+    printf '======================\n'
+    local index name target
+    for index in "${!names[@]}"; do
+        name="${names[$index]}"
+        target="$(readlink -f -- "${GOOSE_WORKSPACES_DIR}/${name}" 2>/dev/null || true)"
+        printf '%d) %s\n   %s\n' "$((index + 1))" "$name" "${target:-[unavailable]}"
+    done
+    printf 'b) Back\n'
+
+    local choice
+    read -r -p 'Select: ' choice || return 1
+    [[ "$choice" != "b" && "$choice" != "B" ]] || return 1
+    [[ "$choice" =~ ^[0-9]+$ ]] || return 1
+    ((choice >= 1 && choice <= ${#names[@]})) || return 1
+    printf -v "$result_variable" '%s' "${names[$((choice - 1))]}"
+}
+
+goose_workspace_command() {
+    local subcommand="${1:-list}"
+    shift || true
+    case "$subcommand" in
+        add)
+            goose_workspace_add "$@"
+            ;;
+        list)
+            goose_workspace_list
+            ;;
+        remove)
+            goose_workspace_remove "$@"
+            ;;
+        help|-h|--help)
+            cat <<'EOF_USAGE'
+Goose workspace commands
+
+  aiw goose workspace add NAME [PATH]
+  aiw goose workspace list
+  aiw goose workspace remove NAME
+EOF_USAGE
+            ;;
+        *)
+            fail "Unknown Goose workspace command: $subcommand"
+            ;;
+    esac
+}
+
+# Goose runtime --------------------------------------------------------------
+
+goose_compose() {
+    compose_for ai-workstation-goose "$GOOSE_COMPOSE_FILE" "$@"
+}
+
+legacy_goose_compose() {
+    compose_for ai-workstation "$GOOSE_COMPOSE_FILE" "$@"
+}
+
+cleanup_legacy_goose_runtime() {
+    legacy_goose_compose down --remove-orphans >/dev/null 2>&1 || true
+}
+
+goose_init() {
+    runtime_init
+    ensure_goose_workspaces_dir
+    if ! goose_workspace_exists ai-workstation; then
+        goose_workspace_add ai-workstation "$ROOT"
+    fi
+    if [[ -n "$(env_value AIW_GOOSE_WORKSPACE "$RUNTIME_ENV_FILE")" ]]; then
+        warn "AIW_GOOSE_WORKSPACE is obsolete and ignored. Use the Goose workspace registry instead."
+    fi
+    printf '[..] Set OPENROUTER_API_KEY and GOOSE_MODEL in %s.\n' "$RUNTIME_ENV_FILE"
 }
 
 require_goose_configuration() {
-    [[ -f "$GOOSE_ENV_FILE" ]] || fail "Goose configuration is missing. Run: aiw goose init"
-    chmod 600 "$GOOSE_ENV_FILE"
+    [[ -f "$RUNTIME_ENV_FILE" ]] || fail "Goose configuration is missing. Run: aiw goose init"
+    chmod 600 "$RUNTIME_ENV_FILE"
 
     local provider model api_key
-    provider="$(env_value GOOSE_PROVIDER "$GOOSE_ENV_FILE")"
-    model="$(env_value GOOSE_MODEL "$GOOSE_ENV_FILE")"
-    api_key="$(env_value OPENROUTER_API_KEY "$GOOSE_ENV_FILE")"
+    provider="$(env_value GOOSE_PROVIDER "$RUNTIME_ENV_FILE")"
+    model="$(env_value GOOSE_MODEL "$RUNTIME_ENV_FILE")"
+    api_key="$(env_value OPENROUTER_API_KEY "$RUNTIME_ENV_FILE")"
 
-    [[ "${provider:-openrouter}" == "openrouter" ]] || fail "This runtime layer currently supports GOOSE_PROVIDER=openrouter only."
+    [[ "${provider:-openrouter}" == "openrouter" ]] || \
+        fail "This runtime layer currently supports GOOSE_PROVIDER=openrouter only."
     [[ -n "$model" ]] || fail "GOOSE_MODEL is empty in .env. Set an OpenRouter model ID."
     [[ -n "$api_key" ]] || fail "OPENROUTER_API_KEY is empty in .env."
 }
 
-goose_is_running() {
-    local services
-    services="$(goose_compose ps --status running --services 2>/dev/null || true)"
-    grep -Fxq goose <<< "$services"
+goose_quick_help() {
+    cat <<'EOF_HELP'
+Goose quick help
+----------------
+/? or /help       Show Goose commands
+/mode approve     Confirm tool actions
+/mode auto        Allow autonomous actions
+/plan ...         Plan before making changes
+/compact          Compact a long conversation
+/exit             End the session
+
+Ctrl+C            Interrupt the current action
+Ctrl+J            Insert a line break
+EOF_HELP
 }
 
 show_goose_status() {
     local config_status="missing"
-    local container_status="unavailable"
     local model="not configured"
+    local workspace_count=0
 
-    if [[ -f "$GOOSE_ENV_FILE" ]]; then
-        if [[ -n "$(env_value OPENROUTER_API_KEY "$GOOSE_ENV_FILE")" && -n "$(env_value GOOSE_MODEL "$GOOSE_ENV_FILE")" ]]; then
+    if [[ -f "$RUNTIME_ENV_FILE" ]]; then
+        if [[ -n "$(env_value OPENROUTER_API_KEY "$RUNTIME_ENV_FILE")" && \
+              -n "$(env_value GOOSE_MODEL "$RUNTIME_ENV_FILE")" ]]; then
             config_status="configured"
         else
             config_status="incomplete"
         fi
-        model="$(env_value GOOSE_MODEL "$GOOSE_ENV_FILE")"
+        model="$(env_value GOOSE_MODEL "$RUNTIME_ENV_FILE")"
         [[ -n "$model" ]] || model="not configured"
     fi
-
-    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
-        if goose_is_running; then
-            container_status="running"
-        elif goose_compose ps --all --services 2>/dev/null | grep -Fxq goose; then
-            container_status="stopped"
-        else
-            container_status="not created"
-        fi
+    if [[ -d "$GOOSE_WORKSPACES_DIR" ]]; then
+        workspace_count="$(find "$GOOSE_WORKSPACES_DIR" -mindepth 1 -maxdepth 1 -type l | wc -l)"
     fi
 
     printf 'Goose Compose        : %s\n' "$([[ -f "$GOOSE_COMPOSE_FILE" ]] && printf 'present' || printf 'missing')"
     printf 'Goose configuration  : %s\n' "$config_status"
     printf 'Goose model          : %s\n' "$model"
-    printf 'Goose container      : %s\n' "$container_status"
-}
-
-goose_up() {
-    require_docker
-    require_goose_configuration
-    goose_compose up --detach --remove-orphans goose
-}
-
-goose_ensure_running() {
-    if ! goose_is_running; then
-        goose_up
-    fi
-}
-
-goose_down() {
-    require_docker
-    goose_compose down
-}
-
-goose_logs() {
-    require_docker
-    goose_compose logs --follow --tail 200 goose
+    printf 'Goose workspaces     : %s\n' "$workspace_count"
+    printf 'Goose container mode : isolated per session\n'
 }
 
 goose_pull() {
@@ -245,24 +462,79 @@ goose_pull() {
     goose_compose pull goose
 }
 
-goose_session() {
+goose_down() {
     require_docker
-    require_goose_configuration
-    goose_ensure_running
-    goose_compose exec goose goose session "$@"
-}
-
-goose_run() {
-    require_docker
-    require_goose_configuration
-    (($# > 0)) || fail "Arguments for 'goose run' are required."
-    goose_ensure_running
-    goose_compose exec --no-TTY goose goose run "$@"
+    goose_compose down --remove-orphans
+    cleanup_legacy_goose_runtime
+    printf '[OK] Goose session containers and the legacy utility container are stopped.\n'
 }
 
 goose_version() {
     require_docker
     goose_compose run --rm --no-deps --entrypoint goose goose --version
+}
+
+goose_resolve_workspace_argument() {
+    local result_variable="$1"
+    shift
+    if (($# > 0)) && [[ "$1" != -* ]]; then
+        goose_workspace_exists "$1" || fail "Unknown Goose workspace: $1"
+        printf -v "$result_variable" '%s' "$1"
+        return 0
+    fi
+    [[ -t 0 ]] || fail "Workspace is required for non-interactive use."
+    select_goose_workspace "$result_variable" || return 1
+}
+
+goose_run_in_workspace() {
+    local tty_mode="$1"
+    local goose_command_name="$2"
+    local workspace_name="$3"
+    shift 3
+
+    require_docker
+    require_goose_configuration
+    cleanup_legacy_goose_runtime
+    local host_path container_path
+    host_path="$(goose_workspace_path "$workspace_name")"
+    container_path="/workspaces/${workspace_name}"
+
+    printf '\nGoose workspace boundary\n'
+    printf '%s\n' '------------------------'
+    printf 'Name           : %s\n' "$workspace_name"
+    printf 'Host path      : %s\n' "$host_path"
+    printf 'Container path : %s\n' "$container_path"
+    printf 'Access         : read-write; no other host directory is mounted\n\n'
+    if [[ "$goose_command_name" == "session" ]]; then
+        goose_quick_help
+        printf '\n'
+    fi
+
+    local tty_args=()
+    [[ "$tty_mode" == "interactive" ]] || tty_args+=(--no-TTY)
+    goose_compose run --rm --no-deps "${tty_args[@]}" \
+        --entrypoint goose \
+        --volume "${host_path}:${container_path}" \
+        --workdir "$container_path" \
+        goose "$goose_command_name" "$@"
+}
+
+goose_session() {
+    local workspace_name=""
+    goose_resolve_workspace_argument workspace_name "$@" || return 0
+    if (($# > 0)) && [[ "$1" == "$workspace_name" ]]; then
+        shift
+    fi
+    goose_run_in_workspace interactive session "$workspace_name" "$@"
+}
+
+goose_run() {
+    local workspace_name="${1:-}"
+    [[ -n "$workspace_name" ]] || fail "Usage: aiw goose run WORKSPACE [GOOSE RUN ARGUMENTS...]"
+    shift
+    (($# > 0)) || fail "Arguments for 'goose run' are required."
+    goose_workspace_exists "$workspace_name" || fail "Unknown Goose workspace: $workspace_name"
+    goose_run_in_workspace noninteractive run "$workspace_name" "$@"
 }
 
 goose_command() {
@@ -278,23 +550,28 @@ goose_command() {
         pull)
             goose_pull
             ;;
-        up|start)
-            goose_up
-            ;;
-        down|stop)
-            goose_down
-            ;;
-        logs)
-            goose_logs
-            ;;
         session)
             goose_session "$@"
             ;;
         run)
             goose_run "$@"
             ;;
+        workspace)
+            goose_workspace_command "$@"
+            ;;
         version)
             goose_version
+            ;;
+        down|stop)
+            goose_down
+            ;;
+        up|start)
+            printf '[OK] Goose now uses a short-lived isolated container per session.\n'
+            printf '[..] Start it with: aiw goose session [WORKSPACE]\n'
+            ;;
+        logs)
+            printf '[..] Goose session containers are removed when sessions end.\n'
+            printf '[..] Session output is shown directly in the terminal.\n'
             ;;
         help|-h|--help)
             goose_usage
@@ -304,6 +581,377 @@ goose_command() {
             exit 2
             ;;
     esac
+}
+
+# Open WebUI -----------------------------------------------------------------
+
+open_webui_compose() {
+    compose_for ai-workstation-open-webui "$OPEN_WEBUI_COMPOSE_FILE" "$@"
+}
+
+open_webui_port() {
+    local port
+    port="$(env_value OPEN_WEBUI_PORT "$RUNTIME_ENV_FILE")"
+    port="${port:-$DEFAULT_OPEN_WEBUI_PORT}"
+    [[ "$port" =~ ^[0-9]+$ ]] || fail "OPEN_WEBUI_PORT must be numeric: $port"
+    printf '%s\n' "$port"
+}
+
+open_webui_url() {
+    printf 'http://localhost:%s\n' "$(open_webui_port)"
+}
+
+open_webui_is_running() {
+    local services
+    services="$(open_webui_compose ps --status running --services 2>/dev/null || true)"
+    grep -Fxq open-webui <<< "$services"
+}
+
+open_webui_init() {
+    runtime_init
+    if [[ -n "$(env_value OPENROUTER_API_KEY "$RUNTIME_ENV_FILE")" ]]; then
+        printf '[OK] OpenRouter key is available for Open WebUI.\n'
+    else
+        warn "OPENROUTER_API_KEY is empty. Open WebUI can start, but OpenRouter will not work until configured."
+    fi
+    printf '[OK] Browser URL: %s\n' "$(open_webui_url)"
+}
+
+show_open_webui_status() {
+    local service_status="unavailable"
+    local health_status="not checked"
+    local url image
+    url="$(open_webui_url)"
+    image="$(env_value OPEN_WEBUI_IMAGE "$RUNTIME_ENV_FILE")"
+    image="${image:-$DEFAULT_OPEN_WEBUI_IMAGE}"
+
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+        if open_webui_is_running; then
+            service_status="running"
+            if command -v curl >/dev/null 2>&1 && curl --fail --silent --max-time 2 "${url}/health" >/dev/null 2>&1; then
+                health_status="healthy"
+            else
+                health_status="starting or unavailable"
+            fi
+        elif open_webui_compose ps --all --services 2>/dev/null | grep -Fxq open-webui; then
+            service_status="stopped"
+        else
+            service_status="not created"
+        fi
+    fi
+
+    printf 'Open WebUI Compose   : %s\n' "$([[ -f "$OPEN_WEBUI_COMPOSE_FILE" ]] && printf 'present' || printf 'missing')"
+    printf 'Open WebUI image     : %s\n' "$image"
+    printf 'Open WebUI service   : %s\n' "$service_status"
+    printf 'Open WebUI health    : %s\n' "$health_status"
+    printf 'Open WebUI URL       : %s\n' "$url"
+}
+
+open_webui_pull() {
+    require_docker
+    open_webui_compose pull open-webui
+}
+
+open_webui_up() {
+    require_docker
+    [[ -f "$OPEN_WEBUI_COMPOSE_FILE" ]] || fail "Open WebUI Compose file is missing."
+    if [[ ! -f "$RUNTIME_ENV_FILE" ]]; then
+        open_webui_init
+    fi
+    open_webui_compose up --detach --remove-orphans open-webui
+    printf '[OK] Open WebUI is starting at %s\n' "$(open_webui_url)"
+}
+
+open_webui_restart() {
+    require_docker
+    open_webui_compose up --detach --force-recreate --remove-orphans open-webui
+    printf '[OK] Open WebUI restarted.\n'
+}
+
+open_webui_down() {
+    require_docker
+    open_webui_compose down --remove-orphans
+    printf '[OK] Open WebUI stopped. Persistent data was kept.\n'
+}
+
+open_webui_logs() {
+    require_docker
+    open_webui_compose logs --follow --tail 200 open-webui
+}
+
+wait_for_open_webui() {
+    local url="$1"
+    local attempt
+    command -v curl >/dev/null 2>&1 || return 0
+    printf '[..] Waiting for the Open WebUI health endpoint'
+    for attempt in {1..60}; do
+        if curl --fail --silent --max-time 2 "${url}/health" >/dev/null 2>&1; then
+            printf ' [OK]\n'
+            return 0
+        fi
+        ((attempt % 5 == 0)) && printf '.'
+        sleep 2
+    done
+    printf '\n'
+    return 1
+}
+
+open_windows_url() {
+    local url="$1"
+    if command -v powershell.exe >/dev/null 2>&1; then
+        powershell.exe -NoLogo -NoProfile -NonInteractive \
+            -Command "Start-Process '$url'" >/dev/null 2>&1
+    elif command -v cmd.exe >/dev/null 2>&1; then
+        cmd.exe /C start "" "$url" >/dev/null 2>&1
+    else
+        printf '[..] Open this URL in the Windows browser: %s\n' "$url"
+        return
+    fi
+    printf '[OK] Opened Windows browser: %s\n' "$url"
+}
+
+open_webui_open() {
+    require_docker
+    if ! open_webui_is_running; then
+        open_webui_up
+    fi
+    local url
+    url="$(open_webui_url)"
+    if ! wait_for_open_webui "$url"; then
+        warn "Open WebUI did not become healthy yet. Opening the browser anyway."
+    fi
+    open_windows_url "$url"
+}
+
+open_webui_command() {
+    local subcommand="${1:-help}"
+    shift || true
+    case "$subcommand" in
+        init)
+            open_webui_init
+            ;;
+        status)
+            show_open_webui_status
+            ;;
+        pull)
+            open_webui_pull
+            ;;
+        up|start)
+            open_webui_up
+            ;;
+        restart)
+            open_webui_restart
+            ;;
+        down|stop)
+            open_webui_down
+            ;;
+        logs)
+            open_webui_logs
+            ;;
+        open)
+            open_webui_open
+            ;;
+        help|-h|--help)
+            open_webui_usage
+            ;;
+        *)
+            open_webui_usage >&2
+            exit 2
+            ;;
+    esac
+}
+
+# Interactive menus ---------------------------------------------------------
+
+menu_add_workspace() {
+    local name path
+    printf '\nAdd Goose workspace\n'
+    printf '===================\n'
+    read -r -p 'Short name: ' name || return
+    read -r -p "Host directory [${PWD}]: " path || return
+    path="${path:-$PWD}"
+    goose_workspace_add "$name" "$path"
+}
+
+menu_remove_workspace() {
+    local workspace_name=""
+    select_goose_workspace workspace_name || return
+    confirm "Remove workspace '$workspace_name' from the list?" || return
+    goose_workspace_remove "$workspace_name"
+}
+
+menu_start_goose_session() {
+    local workspace_name=""
+    select_goose_workspace workspace_name || return
+    local host_path
+    host_path="$(goose_workspace_path "$workspace_name")"
+    printf '\nSelected workspace: %s\nHost path: %s\n' "$workspace_name" "$host_path"
+    confirm 'Start isolated Goose session?' || return
+    goose_session "$workspace_name"
+}
+
+menu_resume_goose_session() {
+    local workspace_name=""
+    select_goose_workspace workspace_name || return
+    confirm "Resume a Goose session in '$workspace_name'?" || return
+    goose_session "$workspace_name" --resume
+}
+
+menu_run_goose_task() {
+    local workspace_name="" task
+    select_goose_workspace workspace_name || return
+    printf '\nEnter one non-interactive Goose task.\n'
+    read -r -p 'Task: ' task || return
+    [[ -n "$task" ]] || return
+    confirm "Run this task in '$workspace_name'?" || return
+    goose_run "$workspace_name" --text "$task"
+}
+
+goose_workspace_menu() {
+    local choice
+    while true; do
+        cat <<'EOF_MENU'
+
+Goose workspaces
+================
+1) List workspaces
+2) Add workspace
+3) Remove workspace
+b) Back
+q) Exit
+EOF_MENU
+        read -r -p 'Select: ' choice || return
+        case "$choice" in
+            1) run_menu_action goose_workspace_list ;;
+            2) run_menu_action menu_add_workspace ;;
+            3) run_menu_action menu_remove_workspace ;;
+            b|B) return ;;
+            q|Q) exit 0 ;;
+            *) printf 'Unknown selection.\n' ;;
+        esac
+    done
+}
+
+goose_menu() {
+    local choice
+    while true; do
+        cat <<'EOF_MENU'
+
+Goose
+=====
+1) Start session
+2) Resume session
+3) Run one task
+4) Manage workspaces
+5) Show status
+6) Show quick help
+7) Pull pinned Goose image
+b) Back
+q) Exit
+EOF_MENU
+        read -r -p 'Select: ' choice || return
+        case "$choice" in
+            1) run_menu_action menu_start_goose_session ;;
+            2) run_menu_action menu_resume_goose_session ;;
+            3) run_menu_action menu_run_goose_task ;;
+            4) goose_workspace_menu ;;
+            5) run_menu_action show_goose_status ;;
+            6) run_menu_action goose_quick_help ;;
+            7) run_menu_action goose_pull ;;
+            b|B) return ;;
+            q|Q) exit 0 ;;
+            *) printf 'Unknown selection.\n' ;;
+        esac
+    done
+}
+
+open_webui_menu() {
+    local choice
+    while true; do
+        cat <<EOF_MENU
+
+Open WebUI
+==========
+Browser URL: $(open_webui_url)
+
+1) Start and open in Windows browser
+2) Start service
+3) Stop service
+4) Restart service
+5) Show status
+6) Follow logs
+7) Pull pinned image
+8) Show command help
+b) Back
+q) Exit
+EOF_MENU
+        read -r -p 'Select: ' choice || return
+        case "$choice" in
+            1) run_menu_action open_webui_open ;;
+            2) run_menu_action open_webui_up ;;
+            3) run_menu_action open_webui_down ;;
+            4) run_menu_action open_webui_restart ;;
+            5) run_menu_action show_open_webui_status ;;
+            6) run_menu_action open_webui_logs ;;
+            7) run_menu_action open_webui_pull ;;
+            8) run_menu_action open_webui_usage ;;
+            b|B) return ;;
+            q|Q) exit 0 ;;
+            *) printf 'Unknown selection.\n' ;;
+        esac
+    done
+}
+
+main_menu() {
+    local choice
+    while true; do
+        cat <<'EOF_MENU'
+
+AI Workstation
+==============
+1) Goose
+2) Open WebUI
+3) System status
+4) Update installation
+5) Command help
+q) Exit
+EOF_MENU
+        read -r -p 'Select: ' choice || return
+        case "$choice" in
+            1) goose_menu ;;
+            2) open_webui_menu ;;
+            3) run_menu_action show_status ;;
+            4)
+                if confirm 'Pull Git changes and rerun the idempotent installer?'; then
+                    run_menu_action update_repository
+                fi
+                ;;
+            5) run_menu_action usage ;;
+            q|Q) return ;;
+            *) printf 'Unknown selection.\n' ;;
+        esac
+    done
+}
+
+show_welcome() {
+    local force="${1:-}"
+    mkdir -p "$STATE_DIR"
+    local boot_id marker_file
+    boot_id="$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || printf 'unknown')"
+    marker_file="${STATE_DIR}/welcome-boot-id"
+    if [[ "$force" != "--force" && -f "$marker_file" && "$(cat "$marker_file")" == "$boot_id" ]]; then
+        return
+    fi
+    printf '%s\n' "$boot_id" > "$marker_file"
+    cat <<'EOF_WELCOME'
+
+AI Workstation ready
+
+  aiw              Open the interactive tool menu
+  aiw status       Show the complete system status
+
+Available tools: Goose, Open WebUI
+EOF_WELCOME
 }
 
 show_status() {
@@ -320,7 +968,10 @@ show_status() {
     else
         printf 'Docker               : not installed\n'
     fi
+    printf '\n'
     show_goose_status
+    printf '\n'
+    show_open_webui_status
 }
 
 update_repository() {
@@ -333,9 +984,15 @@ update_repository() {
     exec "${ROOT}/install.sh" install --yes
 }
 
-command_name="${1:-help}"
+command_name="${1:-menu}"
 shift || true
 case "$command_name" in
+    menu)
+        main_menu
+        ;;
+    welcome)
+        show_welcome "$@"
+        ;;
     status)
         show_status
         ;;
@@ -358,14 +1015,17 @@ case "$command_name" in
     goose)
         goose_command "$@"
         ;;
+    open-webui|openwebui|webui)
+        open_webui_command "$@"
+        ;;
     start)
-        goose_up
+        goose_command start
         ;;
     stop)
         goose_down
         ;;
     logs)
-        goose_logs
+        goose_command logs
         ;;
     help|-h|--help)
         usage

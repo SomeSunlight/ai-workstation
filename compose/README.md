@@ -1,18 +1,19 @@
 # Compose runtime
 
-`goose.yml` defines the first application runtime layer. It uses the pinned
-official Goose CLI image and keeps a small utility container alive so sessions
-can be launched through `docker compose exec` without rebuilding an image.
+The runtime layer contains two deliberately different service models:
+
+- `goose.yml` is a template for short-lived, isolated CLI session containers.
+  `aiw` injects exactly one selected workspace mount per session.
+- `open-webui.yml` is a persistent local web service with a named data volume and
+  a loopback-only browser port.
 
 Use the stable wrapper instead of invoking Compose directly:
 
 ```bash
-aiw goose init
-aiw goose up
-aiw goose session
-aiw goose down
+aiw
+aiw goose help
+aiw open-webui help
 ```
 
-The host and Docker installation remain independent of service definitions. A
-missing or incomplete `.env` therefore does not break installation or foundation
-verification.
+A missing or incomplete `.env` does not break host installation or foundation
+verification. Runtime commands validate the configuration they require.

@@ -12,6 +12,23 @@
     - "{{ ai_workstation_home }}/.config/ai-workstation"
     - "{{ ai_workstation_home }}/.local/state/ai-workstation"
 
+- name: Create private Goose workspace registry
+  ansible.builtin.file:
+    path: "{{ ai_workstation_home }}/.config/ai-workstation/goose-workspaces"
+    state: directory
+    owner: "{{ ai_workstation_user }}"
+    group: "{{ ai_workstation_group }}"
+    mode: "0700"
+
+- name: Register the AI Workstation repository as the default Goose workspace
+  ansible.builtin.file:
+    src: "{{ ai_workstation_repo }}"
+    dest: "{{ ai_workstation_home }}/.config/ai-workstation/goose-workspaces/ai-workstation"
+    state: link
+    owner: "{{ ai_workstation_user }}"
+    group: "{{ ai_workstation_group }}"
+    force: true
+
 - name: Install stable aiw command
   ansible.builtin.file:
     src: "{{ ai_workstation_repo }}/bin/aiw"
@@ -20,3 +37,16 @@
     owner: "{{ ai_workstation_user }}"
     group: "{{ ai_workstation_group }}"
     force: true
+
+- name: Add the AI Workstation startup hint to Bash
+  ansible.builtin.blockinfile:
+    path: "{{ ai_workstation_home }}/.bashrc"
+    marker: "# {mark} AI WORKSTATION STARTUP HINT"
+    block: |
+      if [[ $- == *i* ]] && [[ -x "$HOME/.local/bin/aiw" ]]; then
+        "$HOME/.local/bin/aiw" welcome
+      fi
+    create: true
+    owner: "{{ ai_workstation_user }}"
+    group: "{{ ai_workstation_group }}"
+    mode: "0644"

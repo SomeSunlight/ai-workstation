@@ -1,6 +1,6 @@
 {
   "versions": {
-    "project": "0.5.0",
+    "project": "0.6.0",
     "ubuntu": {
       "distribution": "Ubuntu-24.04",
       "release": "24.04",
@@ -24,6 +24,10 @@
     "goose": {
       "version": "1.44.0",
       "image": "ghcr.io/aaif-goose/goose:v1.44.0"
+    },
+    "open_webui": {
+      "version": "0.11.0",
+      "image": "ghcr.io/open-webui/open-webui:v0.11.0"
     }
   }
 }

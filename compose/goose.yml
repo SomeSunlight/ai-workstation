@@ -1,18 +1,8 @@
-name: ai-workstation
+name: ai-workstation-goose
 
 services:
   goose:
     image: "${GOOSE_IMAGE:-ghcr.io/aaif-goose/goose:v1.44.0}"
-    entrypoint:
-      - /bin/sh
-      - -lc
-    command:
-      - |
-        trap 'exit 0' TERM INT
-        while :; do
-          sleep 3600 &
-          wait $$!
-        done
     environment:
       HOME: /home/goose
       GOOSE_PROVIDER: "${GOOSE_PROVIDER:-openrouter}"
@@ -20,11 +10,7 @@ services:
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
       GOOSE_DISABLE_KEYRING: "${GOOSE_DISABLE_KEYRING:-1}"
       GOOSE_DISABLE_TELEMETRY: "${GOOSE_DISABLE_TELEMETRY:-1}"
-    working_dir: /workspace
     volumes:
-      - type: bind
-        source: "${AIW_GOOSE_WORKSPACE:-..}"
-        target: /workspace
       - type: volume
         source: goose-home
         target: /home/goose
@@ -38,12 +24,7 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "goose", "--version"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
 
 volumes:
   goose-home:
+    name: ai-workstation_goose-home

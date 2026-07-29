@@ -1,0 +1,30 @@
+name: ai-workstation-open-webui
+
+services:
+  open-webui:
+    image: "${OPEN_WEBUI_IMAGE:-ghcr.io/open-webui/open-webui:v0.11.0}"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${OPEN_WEBUI_PORT:-3000}:8080"
+    environment:
+      WEBUI_URL: "http://localhost:${OPEN_WEBUI_PORT:-3000}"
+      WEBUI_AUTH: "True"
+      ENABLE_PASSWORD_VALIDATION: "True"
+      ENABLE_OLLAMA_API: "False"
+      ENABLE_OPENAI_API: "True"
+      ENABLE_OPENAI_API_PASSTHROUGH: "False"
+      OPENAI_API_BASE_URL: "${OPEN_WEBUI_OPENAI_API_BASE_URL:-https://openrouter.ai/api/v1}"
+      OPENAI_API_KEY: "${OPENROUTER_API_KEY:-}"
+      AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST: "${OPEN_WEBUI_MODEL_LIST_TIMEOUT:-30}"
+    volumes:
+      - type: volume
+        source: open-webui-data
+        target: /app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  open-webui-data:
+    name: ai-workstation_open-webui-data

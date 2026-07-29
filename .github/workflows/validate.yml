@@ -31,6 +31,8 @@ jobs:
           python tools/check-version-consistency.py
           bash tests/smoke/repository-layout.sh
           bash tests/smoke/goose-runtime.sh
+          bash tests/smoke/open-webui-runtime.sh
+          bash tests/smoke/interactive-menu.sh
 
       - name: Synchronize locked environment
         run: uv sync --frozen

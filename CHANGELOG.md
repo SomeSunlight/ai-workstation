@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0
+
+- Make `aiw` without arguments open an interactive, discoverable tool menu.
+- Show a concise AI Workstation reminder once per WSL boot.
+- Replace the persistent Goose utility container with short-lived containers that mount exactly one registered workspace.
+- Add interactive Goose workspace registration, selection and quick command help.
+- Add pinned Open WebUI `v0.11.0` with persistent data, OpenRouter defaults and a localhost-only browser port.
+- Add `aiw open-webui` lifecycle, status, log and Windows-browser commands.
+- Add smoke tests for menus, workspace isolation and Open WebUI layout.
+
 ## 0.5.1
 
 - Resolve the real `bin/aiw` path before deriving the repository root, so the installed `~/.local/bin/aiw` symlink works correctly.
