@@ -11,7 +11,7 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('Install', 'Status', 'Verify')]
+    [ValidateSet('Install', 'Status', 'Verify', 'Shortcuts')]
     [string]$Action = 'Install',
 
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')]
@@ -408,7 +408,8 @@ function ConvertTo-BashLiteral {
 function Invoke-Bash {
     param(
         [Parameter(Mandatory)][string]$Script,
-        [string]$User = 'root'
+        [string]$User = 'root',
+        [switch]$AllowFailure
     )
 
     # PowerShell files are checked out with CRLF on Windows. Here-strings then
@@ -420,7 +421,7 @@ function Invoke-Bash {
     $bytes = [Text.Encoding]::UTF8.GetBytes($normalizedScript)
     $encoded = [Convert]::ToBase64String($bytes)
 
-    Invoke-Wsl -Arguments @(
+    $code = Invoke-Wsl -Arguments @(
         '--distribution'
         $DistroName
         '--user'
@@ -429,10 +430,31 @@ function Invoke-Bash {
         'bash'
         '-lc'
         "printf '%s' '$encoded' | base64 -d | bash"
-    ) | Out-Null
+    ) -AllowFailure:$AllowFailure
+
+    if ($AllowFailure) {
+        return $code
+    }
+}
+
+function Test-LinuxPrerequisites {
+    $code = Invoke-Bash -User 'root' -AllowFailure -Script @'
+set -e
+command -v git >/dev/null 2>&1
+command -v python3 >/dev/null 2>&1
+test -r /etc/ssl/certs/ca-certificates.crt
+'@
+
+    return $code -eq 0
 }
 
 function Ensure-LinuxPrerequisites {
+    Write-Step 'Checking minimal packages in the Ubuntu distribution.'
+    if (Test-LinuxPrerequisites) {
+        Write-Step 'Minimal Ubuntu packages are already installed.' Ok
+        return
+    }
+
     Write-Step 'Installing minimal packages in the Ubuntu distribution.'
     Invoke-Bash -Script @'
 set -euo pipefail
@@ -855,6 +877,10 @@ try {
         }
         'Verify' {
             Verify-All
+        }
+        'Shortcuts' {
+            Ensure-WindowsShortcuts
+            Write-Step 'Windows shortcuts refreshed.' Ok
         }
         'Install' {
             Ensure-WslPlatform

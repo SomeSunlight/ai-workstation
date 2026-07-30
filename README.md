@@ -240,6 +240,12 @@ This second shortcut opens:
 /home/moresunlight
 ```
 
+Refresh only the Windows shortcuts without rerunning the Linux installation:
+
+```powershell
+.\install.ps1 -Action Shortcuts
+```
+
 Fallback commands, if the shortcut is ever missing:
 
 ```powershell
