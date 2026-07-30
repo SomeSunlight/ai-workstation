@@ -220,6 +220,32 @@ function Get-Distros {
     )
 }
 
+function Get-DistroStates {
+    $lines = @(& wsl.exe --list --verbose 2>$null)
+    $states = @{}
+
+    foreach ($line in $lines) {
+        $text = ([string]$line).Trim()
+        if (-not $text) {
+            continue
+        }
+
+        $text = $text -replace '^\*', ''
+        $text = $text.Trim()
+
+        if ($text -match '^(NAME\s+STATE\s+VERSION|Name\s+State\s+Version)$') {
+            continue
+        }
+
+        if ($text -match '^(?<name>\S+)\s+(?<state>\S+)\s+(?<version>\d+)$') {
+            $states[$Matches.name] = $Matches.state
+        }
+    }
+
+    return $states
+}
+
+
 function Test-WslPlatform {
     & wsl.exe --version *> $null
     return $LASTEXITCODE -eq 0
@@ -482,6 +508,7 @@ function Ensure-LinuxUser {
 
         Write-Host ''
         Write-Host "Set the Linux password for '$LinuxUser':" -ForegroundColor Cyan
+        try {
         Invoke-Wsl -Arguments @(
             '--distribution'
             $DistroName
@@ -807,7 +834,18 @@ function Show-Status {
     Write-Step "WSL platform: $(if (Test-WslPlatform) { 'available' } else { 'missing' })"
 
     $distros = @(Get-Distros)
+    $distroStates = Get-DistroStates
     Write-Step "Distributions: $(if ($distros.Count -gt 0) { $distros -join ', ' } else { 'none' })"
+    if ($DistroName -in $distros) {
+        $state = if ($distroStates.ContainsKey($DistroName)) { $distroStates[$DistroName] } else { 'unknown' }
+        Write-Step "Distribution state: $state"
+        if ($state -eq 'Running') {
+            Write-Step 'Linux is already running.' Ok
+        }
+        elseif ($state -eq 'Stopped') {
+            Write-Step 'Linux is installed but currently stopped.'
+        }
+    }
 
     $displayName = Get-ShortcutDisplayName
     $terminalDisplayName = "$displayName Terminal"
@@ -829,6 +867,12 @@ function Show-Status {
             '-lc'
             'if [ -x ~/ai-workstation/bin/aiw ]; then ~/ai-workstation/bin/aiw status; else echo "Linux repository not installed"; fi'
         )
+        }
+        catch {
+            Write-Step "Linux status could not be read: $($_.Exception.Message)" Warning
+            Write-Step 'Windows status checks completed; WSL may be running but not accepting this status command.' Warning
+            Write-Step 'Fallback: run "wsl -l -v" and, if needed, "wsl --shutdown" from PowerShell.' Warning
+        }
         if ($linuxStatusExitCode -ne 0) {
             Write-Step "Linux status unavailable. WSL returned exit code $linuxStatusExitCode." Warning
             Write-Step 'Windows status above is still valid. Try: wsl --shutdown; then rerun Status.' Warning
