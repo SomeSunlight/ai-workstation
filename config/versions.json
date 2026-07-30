@@ -1,6 +1,6 @@
 {
   "versions": {
-    "project": "0.6.0",
+    "project": "0.6.2",
     "ubuntu": {
       "distribution": "Ubuntu-24.04",
       "release": "24.04",

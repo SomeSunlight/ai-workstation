@@ -594,6 +594,10 @@ function Get-LinuxRepositoryPath {
     return "/home/$LinuxUser/ai-workstation"
 }
 
+function Get-LinuxHomePath {
+    return "/home/$LinuxUser"
+}
+
 function Get-ShortcutDisplayName {
     if ($DistroName -eq 'Ubuntu-24.04') {
         return $ShortcutName
@@ -602,10 +606,62 @@ function Get-ShortcutDisplayName {
     return "$ShortcutName ($DistroName)"
 }
 
+function ConvertTo-SafeFileName {
+    param([Parameter(Mandatory)][string]$Value)
+
+    $safe = $Value
+    foreach ($invalid in [IO.Path]::GetInvalidFileNameChars()) {
+        $safe = $safe.Replace([string]$invalid, '_')
+    }
+
+    return $safe
+}
+
+function New-AiwLauncher {
+    param(
+        [Parameter(Mandatory)][string]$LauncherName,
+        [Parameter(Mandatory)][string]$DisplayName,
+        [Parameter(Mandatory)][string]$LinuxPath
+    )
+
+    $launcherRoot = Join-Path $script:StateRoot 'launchers'
+    New-Item -ItemType Directory -Path $launcherRoot -Force | Out-Null
+
+    $wslExe = Join-Path $env:WINDIR 'System32\wsl.exe'
+    $launcherPath = Join-Path $launcherRoot "$(ConvertTo-SafeFileName -Value $LauncherName).cmd"
+    $content = @"
+@echo off
+setlocal
+echo Starting $DisplayName
+echo WSL distribution: $DistroName
+echo Linux directory: $LinuxPath
+echo.
+"$wslExe" --distribution "$DistroName" --cd "$LinuxPath"
+set "AIW_EXIT=%ERRORLEVEL%"
+if not "%AIW_EXIT%"=="0" (
+  echo.
+  echo WSL failed with exit code %AIW_EXIT%.
+  echo.
+  echo Try from PowerShell:
+  echo   wsl --shutdown
+  echo   wsl -d $DistroName
+  echo.
+)
+echo.
+echo This window stays open so WSL messages remain visible.
+echo Type exit to close it.
+"@
+
+    Set-Content -LiteralPath $launcherPath -Value $content -Encoding ASCII
+    return $launcherPath
+}
+
 function New-AiwShortcut {
     param(
         [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][string]$DisplayName
+        [Parameter(Mandatory)][string]$DisplayName,
+        [Parameter(Mandatory)][string]$LinuxPath,
+        [Parameter(Mandatory)][string]$LauncherName
     )
 
     $wslExe = Join-Path $env:WINDIR 'System32\wsl.exe'
@@ -613,17 +669,22 @@ function New-AiwShortcut {
         throw "wsl.exe not found at $wslExe"
     }
 
+    $cmdExe = Join-Path $env:WINDIR 'System32\cmd.exe'
+    if (-not (Test-Path -LiteralPath $cmdExe -PathType Leaf)) {
+        throw "cmd.exe not found at $cmdExe"
+    }
+
     $parent = Split-Path -Parent $Path
     New-Item -ItemType Directory -Path $parent -Force | Out-Null
 
-    $linuxPath = Get-LinuxRepositoryPath
+    $launcherPath = New-AiwLauncher -LauncherName $LauncherName -DisplayName $DisplayName -LinuxPath $LinuxPath
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($Path)
-    $shortcut.TargetPath = $wslExe
-    $shortcut.Arguments = ('--distribution "{0}" --cd "{1}"' -f $DistroName, $linuxPath)
+    $shortcut.TargetPath = $cmdExe
+    $shortcut.Arguments = ('/k "{0}"' -f $launcherPath)
     $shortcut.WorkingDirectory = $env:USERPROFILE
     $shortcut.IconLocation = "$wslExe,0"
-    $shortcut.Description = "Open $DisplayName in WSL at $linuxPath"
+    $shortcut.Description = "Open $DisplayName in WSL at $LinuxPath"
     $shortcut.Save()
 }
 
@@ -634,14 +695,34 @@ function Ensure-WindowsShortcuts {
     }
 
     $displayName = Get-ShortcutDisplayName
-    $shortcutFileName = "$displayName.lnk"
+    $terminalDisplayName = "$displayName Terminal"
     $desktop = [Environment]::GetFolderPath('Desktop')
     $startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
+    $linuxRepositoryPath = Get-LinuxRepositoryPath
+    $linuxHomePath = Get-LinuxHomePath
 
-    New-AiwShortcut -Path (Join-Path $desktop $shortcutFileName) -DisplayName $displayName
-    New-AiwShortcut -Path (Join-Path $startMenu $shortcutFileName) -DisplayName $displayName
+    New-AiwShortcut `
+        -Path (Join-Path $desktop "$displayName.lnk") `
+        -DisplayName $displayName `
+        -LinuxPath $linuxRepositoryPath `
+        -LauncherName $displayName
+    New-AiwShortcut `
+        -Path (Join-Path $startMenu "$displayName.lnk") `
+        -DisplayName $displayName `
+        -LinuxPath $linuxRepositoryPath `
+        -LauncherName $displayName
+    New-AiwShortcut `
+        -Path (Join-Path $desktop "$terminalDisplayName.lnk") `
+        -DisplayName $terminalDisplayName `
+        -LinuxPath $linuxHomePath `
+        -LauncherName $terminalDisplayName
+    New-AiwShortcut `
+        -Path (Join-Path $startMenu "$terminalDisplayName.lnk") `
+        -DisplayName $terminalDisplayName `
+        -LinuxPath $linuxHomePath `
+        -LauncherName $terminalDisplayName
 
-    Write-Step "Created Windows shortcuts: $displayName" Ok
+    Write-Step "Created Windows shortcuts: $displayName and $terminalDisplayName" Ok
     Write-Step "Start later from the Windows Start Menu: $displayName"
 }
 
@@ -707,10 +788,15 @@ function Show-Status {
     Write-Step "Distributions: $(if ($distros.Count -gt 0) { $distros -join ', ' } else { 'none' })"
 
     $displayName = Get-ShortcutDisplayName
+    $terminalDisplayName = "$displayName Terminal"
     $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) "$displayName.lnk"
     $startMenuShortcut = Join-Path (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs') "$displayName.lnk"
+    $desktopTerminalShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) "$terminalDisplayName.lnk"
+    $startMenuTerminalShortcut = Join-Path (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs') "$terminalDisplayName.lnk"
     Write-Step "Desktop shortcut: $(if (Test-Path -LiteralPath $desktopShortcut) { 'present' } else { 'missing' })"
     Write-Step "Start Menu shortcut: $(if (Test-Path -LiteralPath $startMenuShortcut) { 'present' } else { 'missing' })"
+    Write-Step "Desktop terminal shortcut: $(if (Test-Path -LiteralPath $desktopTerminalShortcut) { 'present' } else { 'missing' })"
+    Write-Step "Start Menu terminal shortcut: $(if (Test-Path -LiteralPath $startMenuTerminalShortcut) { 'present' } else { 'missing' })"
 
     if ($DistroName -in $distros) {
         Invoke-Wsl -Arguments @(

@@ -195,7 +195,8 @@ aiw open-webui down
 
 ## Return after several weeks
 
-Start `AI Workstation` from the Windows Start Menu or Desktop. The WSL startup
+Start `AI Workstation` from the Windows Start Menu or Desktop. The companion
+shortcut `AI Workstation Terminal` opens a plain Ubuntu home terminal. The WSL startup
 hint reminds you that the only command you need to remember is:
 
 ```bash
@@ -226,11 +227,27 @@ correct WSL distribution directly inside:
 /home/moresunlight/ai-workstation
 ```
 
+The installer also creates:
+
+```text
+Start Menu -> AI Workstation Terminal
+Desktop    -> AI Workstation Terminal
+```
+
+This second shortcut opens:
+
+```text
+/home/moresunlight
+```
+
 Fallback commands, if the shortcut is ever missing:
 
 ```powershell
 wsl -l -v
 wsl -d Ubuntu-24.04
+wsl -d Ubuntu-24.04 --cd /home/moresunlight/ai-workstation
+wsl -d Ubuntu-24.04 --cd /home/moresunlight
+wsl --shutdown
 ```
 
 ## Daily foundation commands

@@ -1,4 +1,9 @@
 # Changelog
+## 0.6.2
+- Route Windows shortcuts through generated `cmd.exe /k` launchers so WSL errors remain visible.
+- Create a second `AI Workstation Terminal` shortcut that opens the Linux home directory.
+- Document direct WSL fallback commands and the `wsl --shutdown` recovery path.
+
 
 ## 0.6.0
 
