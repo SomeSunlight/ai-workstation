@@ -685,11 +685,17 @@ echo Starting $DisplayName
 echo WSL distribution: $DistroName
 echo Linux directory: $LinuxPath
 echo.
-"$wslExe" --distribution "$DistroName" --cd "$LinuxPath"
+"$wslExe" -d $DistroName --cd "$LinuxPath"
 set "AIW_EXIT=%ERRORLEVEL%"
 if not "%AIW_EXIT%"=="0" (
   echo.
   echo WSL failed with exit code %AIW_EXIT%.
+  echo.
+  echo Available WSL distributions:
+  "$wslExe" --list --verbose
+  echo.
+  echo If the distribution is listed as Running, WSL itself is already running
+  echo but did not accept this connection attempt.
   echo.
   echo Try from PowerShell:
   echo   wsl --shutdown
@@ -836,6 +842,7 @@ function Show-Status {
     $distros = @(Get-Distros)
     $distroStates = Get-DistroStates
     Write-Step "Distributions: $(if ($distros.Count -gt 0) { $distros -join ', ' } else { 'none' })"
+
     if ($DistroName -in $distros) {
         $state = if ($distroStates.ContainsKey($DistroName)) { $distroStates[$DistroName] } else { 'unknown' }
         Write-Step "Distribution state: $state"
@@ -867,15 +874,11 @@ function Show-Status {
             '-lc'
             'if [ -x ~/ai-workstation/bin/aiw ]; then ~/ai-workstation/bin/aiw status; else echo "Linux repository not installed"; fi'
         )
-        }
-        catch {
-            Write-Step "Linux status could not be read: $($_.Exception.Message)" Warning
-            Write-Step 'Windows status checks completed; WSL may be running but not accepting this status command.' Warning
-            Write-Step 'Fallback: run "wsl -l -v" and, if needed, "wsl --shutdown" from PowerShell.' Warning
-        }
         if ($linuxStatusExitCode -ne 0) {
             Write-Step "Linux status unavailable. WSL returned exit code $linuxStatusExitCode." Warning
-            Write-Step 'Windows status above is still valid. Try: wsl --shutdown; then rerun Status.' Warning
+            Write-Step 'Windows status above is still valid.' Warning
+            Write-Step 'If the distribution state is Running, Linux is already running but WSL did not accept this status command.' Warning
+            Write-Step 'Fallback: run "wsl -l -v" and, if needed, "wsl --shutdown" from PowerShell.' Warning
         }
     }
 }
