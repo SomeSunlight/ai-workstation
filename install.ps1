@@ -5,9 +5,8 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('Install', 'Status', 'Verify')]
+    [ValidateSet('Install', 'Status', 'Verify', 'Shortcuts')]
     [string]$Action = 'Install',
-
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')]
     [string]$DistroName = 'Ubuntu-24.04',
     [string]$InstallLocation = 'C:\WSL\Ubuntu-24.04',
@@ -21,7 +20,6 @@ param(
     [string]$WslSwap = '8GB',
     [string]$ShortcutName = 'AI Workstation',
     [switch]$NoShortcuts,
-
     [switch]$NoAutomaticRestart,
     [switch]$SkipLinuxInstall,
     [switch]$ResumeAfterReboot
