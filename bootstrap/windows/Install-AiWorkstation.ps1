@@ -821,7 +821,7 @@ function Show-Status {
     Write-Step "Start Menu terminal shortcut: $(if (Test-Path -LiteralPath $startMenuTerminalShortcut) { 'present' } else { 'missing' })"
 
     if ($DistroName -in $distros) {
-        Invoke-Wsl -Arguments @(
+        $linuxStatusExitCode = Invoke-Wsl -AllowFailure -Arguments @(
             '--distribution'
             $DistroName
             '--'
@@ -829,6 +829,10 @@ function Show-Status {
             '-lc'
             'if [ -x ~/ai-workstation/bin/aiw ]; then ~/ai-workstation/bin/aiw status; else echo "Linux repository not installed"; fi'
         )
+        if ($linuxStatusExitCode -ne 0) {
+            Write-Step "Linux status unavailable. WSL returned exit code $linuxStatusExitCode." Warning
+            Write-Step 'Windows status above is still valid. Try: wsl --shutdown; then rerun Status.' Warning
+        }
     }
 }
 
