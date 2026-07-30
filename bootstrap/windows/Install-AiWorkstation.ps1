@@ -508,7 +508,6 @@ function Ensure-LinuxUser {
 
         Write-Host ''
         Write-Host "Set the Linux password for '$LinuxUser':" -ForegroundColor Cyan
-        try {
         Invoke-Wsl -Arguments @(
             '--distribution'
             $DistroName
