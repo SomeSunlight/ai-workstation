@@ -76,6 +76,7 @@ Usage:
   aiw open-webui pull         Pull the pinned image
   aiw open-webui up           Start or recreate the service
   aiw open-webui restart      Restart the service
+  aiw open-webui recover      Reset persistent provider settings from .env
   aiw open-webui down         Stop the service; keep all data
   aiw open-webui logs         Follow service logs
   aiw open-webui open         Start if needed and open the Windows browser
@@ -668,6 +669,82 @@ open_webui_restart() {
     printf '[OK] Open WebUI restarted.\n'
 }
 
+open_webui_recover_provider_configuration() (
+    set -Eeuo pipefail
+
+    local assume_yes="${1:-}"
+    [[ -z "$assume_yes" || "$assume_yes" == "--yes" ]] || \
+        fail "Usage: aiw open-webui recover [--yes]"
+
+    require_docker
+    [[ -f "$RUNTIME_ENV_FILE" ]] || \
+        fail "Runtime configuration is missing. Run: aiw open-webui init"
+
+    chmod 600 "$RUNTIME_ENV_FILE"
+
+    local provider_url api_key recovery_file url
+    provider_url="$(env_value OPEN_WEBUI_OPENAI_API_BASE_URL "$RUNTIME_ENV_FILE")"
+    provider_url="${provider_url:-https://openrouter.ai/api/v1}"
+    api_key="$(env_value OPENROUTER_API_KEY "$RUNTIME_ENV_FILE")"
+
+    [[ -n "$api_key" ]] || \
+        fail "OPENROUTER_API_KEY is empty in .env."
+
+    cat <<EOF_RECOVERY
+
+Open WebUI provider recovery
+============================
+Provider from runtime configuration:
+  $provider_url
+
+This resets persistent Open WebUI Admin configuration to the values from
+.env and Compose defaults. Accounts, chats, uploaded files and the persistent
+Open WebUI data volume are kept.
+EOF_RECOVERY
+
+    if [[ "$assume_yes" != "--yes" ]]; then
+        confirm "Continue with provider recovery?" || {
+            printf '[..] Recovery cancelled.\n'
+            return 0
+        }
+    fi
+
+    recovery_file="$(mktemp "${TMPDIR:-/tmp}/aiw-open-webui-recovery.XXXXXX.yml")"
+    trap 'rm -f -- "$recovery_file"' EXIT
+    url="$(open_webui_url)"
+
+    cat > "$recovery_file" <<'EOF_OVERRIDE'
+services:
+  open-webui:
+    environment:
+      RESET_CONFIG_ON_START: "True"
+      AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST: "5"
+EOF_OVERRIDE
+
+    printf '[..] Stopping Open WebUI.\n'
+    open_webui_compose down --remove-orphans
+
+    printf '[..] Starting one-time recovery container.\n'
+    open_webui_compose \
+        --file "$recovery_file" \
+        up --detach --force-recreate --remove-orphans open-webui
+
+    if ! wait_for_open_webui "$url"; then
+        warn "The recovery container did not become healthy before the timeout."
+    fi
+
+    printf '[..] Recreating Open WebUI without recovery flags.\n'
+    open_webui_compose \
+        up --detach --force-recreate --remove-orphans open-webui
+
+    if wait_for_open_webui "$url"; then
+        printf '[OK] Open WebUI provider configuration was restored from .env.\n'
+        printf '[OK] Browser URL: %s\n' "$url"
+    else
+        fail "Open WebUI was reset but did not become healthy. Check: aiw open-webui logs"
+    fi
+)
+
 open_webui_down() {
     require_docker
     open_webui_compose down --remove-orphans
@@ -741,6 +818,9 @@ open_webui_command() {
             ;;
         restart)
             open_webui_restart
+            ;;
+        recover)
+            open_webui_recover_provider_configuration "$@"
             ;;
         down|stop)
             open_webui_down
@@ -878,10 +958,11 @@ Browser URL: $(open_webui_url)
 2) Start service
 3) Stop service
 4) Restart service
-5) Show status
-6) Follow logs
-7) Pull pinned image
-8) Show command help
+5) Recover provider configuration from .env
+6) Show status
+7) Follow logs
+8) Pull pinned image
+9) Show command help
 b) Back
 q) Exit
 EOF_MENU
@@ -891,10 +972,11 @@ EOF_MENU
             2) run_menu_action open_webui_up ;;
             3) run_menu_action open_webui_down ;;
             4) run_menu_action open_webui_restart ;;
-            5) run_menu_action show_open_webui_status ;;
-            6) run_menu_action open_webui_logs ;;
-            7) run_menu_action open_webui_pull ;;
-            8) run_menu_action open_webui_usage ;;
+            5) run_menu_action open_webui_recover_provider_configuration ;;
+            6) run_menu_action show_open_webui_status ;;
+            7) run_menu_action open_webui_logs ;;
+            8) run_menu_action open_webui_pull ;;
+            9) run_menu_action open_webui_usage ;;
             b|B) return ;;
             q|Q) exit 0 ;;
             *) printf 'Unknown selection.\n' ;;
