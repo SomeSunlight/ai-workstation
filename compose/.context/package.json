@@ -1,0 +1,299 @@
+{
+  "changes": [],
+  "compiler_version": "0.5.0",
+  "digests": {
+    "normalized": "74bf1306d7da7225f485ed9a63938259e2af53be41f451024d1af47fc430d7c2",
+    "package": "558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be"
+  },
+  "files": [
+    {
+      "path": "CONTEXT.md",
+      "sha256": "a9de12fb5ef275926c86721e7f472fa5cb9d83d897b9e7a93a1c56d591abf543",
+      "size": 8422
+    },
+    {
+      "path": "CONTEXT/README.md",
+      "sha256": "933428c92391d1c0429d6e3b96804b67d6e4aa1ce1ae5d82a272198a681bcbbe",
+      "size": 2088
+    },
+    {
+      "path": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/CONTEXT.md",
+      "sha256": "e3d74914f467a7c57024254488d640663ef8feb489ed1f4335d07039b9987483",
+      "size": 261
+    },
+    {
+      "path": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/SECURITY.md",
+      "sha256": "4a014e8f0d1998e36935818522440f320dd9f64efedc3569d42eba21df263d83",
+      "size": 1409
+    },
+    {
+      "path": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/repository-setup.md",
+      "sha256": "1d54e84bfb37512c7fa395f78427a4924cd1702020bddee5d7bddb6095a0becc",
+      "size": 2112
+    },
+    {
+      "path": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/troubleshooting.md",
+      "sha256": "025b723d0680d83f67d42bea2c49d50306153ffd3dad6f8ac760ed6123778cc8",
+      "size": 3138
+    },
+    {
+      "path": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md",
+      "sha256": "bbd8fff080a48458badd28f6a996f67c0b5a818ccf76a8d797763ba660abf17f",
+      "size": 9519
+    }
+  ],
+  "imports": [
+    {
+      "id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "name": "Development Workflow",
+      "normalized_digest": "360fce40e173bb58f72c25be3092771b74094ab5d428ffc615c09c2e5bb84e99",
+      "package_digest": "67392242f1cc1e305607a19b8c82b1a3a5e9fbf7f85640af5f90daaf3a992653",
+      "version": "0.2.0-draft",
+      "why": "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
+    },
+    {
+      "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "name": "ai-workstation",
+      "normalized_digest": "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5",
+      "package_digest": "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa",
+      "version": "0.1.0",
+      "why": null
+    }
+  ],
+  "node": {
+    "id": "90dd976e-8753-495b-a631-d708b13878d1",
+    "name": "Containerized application runtimes",
+    "version": "0.1.0-draft"
+  },
+  "parent": {
+    "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+    "name": "ai-workstation",
+    "normalized_digest": "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5",
+    "package_digest": "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa",
+    "version": "0.1.0",
+    "why": null
+  },
+  "removed_rules": [],
+  "rules": [
+    {
+      "group": "Recoverable planning",
+      "id": "CCW-001",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "Before starting a new coherent development block, record a short purpose and checklist in the project's durable planning surface; use `PLAN.md` when the project follows this workflow convention.",
+      "title": "Plan a coherent change block before editing",
+      "why": "Repository state must explain what work is in progress even if the chat, model session, or tool run disappears."
+    },
+    {
+      "group": "Recoverable planning",
+      "id": "CCW-002",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "When a listed step is actually complete, mark its `PLAN.md` checkbox `[x]` immediately rather than reconstructing completion at the end of a long session.",
+      "title": "Checkpoint completed plan items immediately",
+      "why": "Immediate checkpoints turn PLAN into a reliable recovery ledger instead of requiring plan archaeology after an interruption."
+    },
+    {
+      "group": "Recoverable planning",
+      "id": "CCW-003",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "Put decisions, active constraints, accepted state, and next steps needed to resume work in repository documentation such as `PLAN.md`, `STATE.md`, or the project's equivalent rather than relying on chat history or model memory.",
+      "title": "Keep recovery-critical knowledge in the repository",
+      "why": "Long conversations and agent sessions are transient; the repository is the durable shared recovery point for humans and tools."
+    },
+    {
+      "group": "Recoverable planning",
+      "id": "CCW-007",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "When the project owner resumes work after a short conversational interruption, explicitly says to continue, and reports no intervening repository changes, continue from the last established branch/PR state unless a repository operation gives evidence that it changed. Do not spend a new work cycle re-checking already established repository facts merely to prove that nothing happened.",
+      "title": "Resume recent explicit continuation without re-proving unchanged state",
+      "why": "In a controlled single-owner workflow, repeated defensive re-verification consumes the useful working window without adding evidence. Any stated or observed intervening change still invalidates this assumption."
+    },
+    {
+      "group": "Proportional verification",
+      "id": "CCW-004",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "For one coherent correction block, make the related authoring/code changes and run proportionate focused checks first; do not repeat the project's most expensive generated-output, integration, packaging, or full verification cycle after every micro-edit.",
+      "title": "Batch related edits before expensive final verification",
+      "why": "Final verification is valuable, but repeating it on superseded intermediate heads adds ceremony without increasing confidence in the candidate that will actually be reviewed or merged."
+    },
+    {
+      "group": "Proportional verification",
+      "id": "CCW-009",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "When the project owner explicitly approves a coherent implementation scope and says intermediate product review is unnecessary, mark the fast-run as active in the durable PLAN with its scope and exit condition, keep recovery checkpoints and focused verification inside bounded work blocks, and defer repeated PR-description polish, full CI, generated-output regeneration, and other review ceremony until the coherent review candidate. When the fast-run ends, record that closure before returning to ordinary review cadence.",
+      "title": "Use owner-approved fast-run blocks without weakening the final gate",
+      "why": "Explicit delegation can remove intermediate coordination cost without sacrificing recoverability. Visible start/scope/exit/closure boundaries prevent a long single-worker fast-run from becoming undocumented process state, while final human review and exact-head merge verification remain unchanged."
+    },
+    {
+      "group": "Proportional verification",
+      "id": "CCW-005",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "A coherent development block may be presented for project-owner review while understood and disclosed CI failures or generated drift remain. After explicit project-owner approval and before merging, require the exact current head to pass the project's complete merge-gate verification, including zero generated drift when generated canonical output is part of the project contract.",
+      "title": "Require exact-head green verification at the merge gate, not the first review gate",
+      "why": "Human review should happen before spending finalization effort on a candidate that may still change, while the accepted branch remains protected by a strict reproducibility gate."
+    },
+    {
+      "group": "Human review gate",
+      "id": "CCW-006",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "Keep a review PR or equivalent change set open until the project owner explicitly approves the reviewed result.",
+      "title": "Do not merge without explicit project-owner approval",
+      "why": "Green automation proves only the properties it checks; it does not prove that the product, architecture, or documentation is acceptable to its human owner."
+    },
+    {
+      "group": "Accepted baseline",
+      "id": "CCW-008",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "After a reviewed change is successfully merged into the accepted branch, reconcile the durable repository state that records the accepted baseline before starting the next coherent development block. Record the merge outcome in `PLAN.md`, update `STATE.md` or equivalent current-state documentation, and refresh README/CHANGELOG or review-status wording made stale by the merge when applicable.",
+      "title": "Close the post-merge baseline checkpoint before new development",
+      "why": "The merge itself creates project facts after the merge candidate was frozen. Without a post-merge checkpoint, the accepted code can be correct while recovery documentation still describes the pre-merge state."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-6566E6E85D48",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "The repository is the installation specification; running containers and manually modified hosts are not the source of truth.",
+      "title": "Repository is the installation specification",
+      "why": "Prevents runtime or host drift from becoming an implicit configuration authority."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-504C6A92475F",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Work inside the WSL Linux filesystem, not under `/mnt/c`.",
+      "title": "Develop inside the WSL filesystem",
+      "why": "Keeps development on the Linux filesystem the project expects."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-02E2C1B8C47B",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Update `config/versions.json`, documentation and tests together.",
+      "title": "Keep versions documentation and tests aligned",
+      "why": "Keeps declared versions, human guidance and validation in sync."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-BE08FE3A5E3D",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Run `./tools/release-check.sh` before committing.",
+      "title": "Run release check before committing",
+      "why": "Provides the project-defined pre-commit validation step."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-DCF5EB952F7D",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Secrets must not be committed, copied into images or stored in Compose files.",
+      "title": "Keep secrets out of Git images and Compose",
+      "why": "Keeps credentials out of durable repository history and built artifacts."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-C582F0CA4FCE",
+      "modifications": [],
+      "origin_node_id": "90dd976e-8753-495b-a631-d708b13878d1",
+      "origin_node_name": "Containerized application runtimes",
+      "statement": "Agent and application containers do not receive the Docker socket.",
+      "title": "Application containers do not receive the Docker socket",
+      "why": "Prevents application runtimes from gaining Docker control-plane authority."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-E7F7BAC0BF5F",
+      "modifications": [],
+      "origin_node_id": "90dd976e-8753-495b-a631-d708b13878d1",
+      "origin_node_name": "Containerized application runtimes",
+      "statement": "Runtime credentials are read from the Git-ignored `.env` file with mode `600`.",
+      "title": "Runtime credentials use the protected env file",
+      "why": "Centralizes runtime secrets in an untracked file with restrictive permissions."
+    }
+  ],
+  "schema": "contextcanon/package/v0",
+  "sources": [],
+  "topics": [
+    {
+      "condition": "When planning, resuming, checkpointing, reviewing, testing, finalizing, merging, or closing the accepted baseline for a coherent development block:",
+      "id": "CCW-TOPIC-CHANGE-WORKFLOW",
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "targets": [
+        {
+          "intent": "required",
+          "kind": "resource",
+          "locator": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md"
+        }
+      ],
+      "title": "Executing a development block"
+    },
+    {
+      "condition": "When reporting a vulnerability or checking the project security-reporting procedure, read the security document.",
+      "id": "ONB-FA47F00F43A9",
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "targets": [
+        {
+          "intent": "required",
+          "kind": "resource",
+          "locator": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/SECURITY.md"
+        }
+      ],
+      "title": "Security reporting resource"
+    },
+    {
+      "condition": "When diagnosing installation, WSL access, permissions, Docker-session, elevation or recovery problems, read the troubleshooting guide.",
+      "id": "ONB-0513F8B51242",
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "targets": [
+        {
+          "intent": "required",
+          "kind": "resource",
+          "locator": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/troubleshooting.md"
+        }
+      ],
+      "title": "Troubleshooting guide"
+    },
+    {
+      "condition": "When recreating or auditing the original public-repository setup from the tested prototype, read the repository setup guide.",
+      "id": "ONB-716FC7DB282B",
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "targets": [
+        {
+          "intent": "required",
+          "kind": "resource",
+          "locator": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/repository-setup.md"
+        }
+      ],
+      "title": "Public repository creation procedure"
+    }
+  ]
+}

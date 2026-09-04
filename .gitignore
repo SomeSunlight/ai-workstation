@@ -23,3 +23,8 @@ state/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# ContextCanon temporary/review state
+**/.context/onboarding/
+**/.context/candidates/
+contextcanon-onboarding/

@@ -1,11 +1,6 @@
 # AI Workstation
 
-Reproducible AI workstation for Windows 11, WSL 2 and Ubuntu 24.04.
-
-> **Current scope:** repeatable Windows/WSL bootstrap, locked Ansible host setup,
-> Docker Engine, isolated Goose CLI sessions using OpenRouter, and a persistent
-> Open WebUI service. Local model integration is intentionally deferred to the
-> next phase.
+AI Workstation is a reproducible workstation built around Windows/WSL bootstrap, Ansible-managed Docker host setup, isolated Goose sessions using OpenRouter, and a persistent Open WebUI service. Exact supported platforms, current runtime scope, and planned local-model integration are maintained in [Project Context](CONTEXT.md).
 
 ## Quick start
 
@@ -336,21 +331,11 @@ docs/                   Architecture and operating documentation
 
 ## Safety model
 
-- No existing WSL distribution is unregistered or deleted.
-- Conflicting Docker packages are reported, not removed automatically.
-- Docker listens only on its local Unix socket.
-- The interactive Linux user joins the powerful `docker` group.
-- Goose receives one explicitly selected writable workspace and no Docker socket.
-- Goose containers use a read-only root filesystem and are removed after use.
-- Open WebUI is bound to localhost and receives no host workspace or Docker socket.
-- Secrets stay outside Git and container images.
+AI Workstation favors non-destructive host changes, local Docker control, tightly bounded application runtimes, and secrets outside Git and images. Maintained safety invariants are in [Project Context](CONTEXT.md); vulnerability reporting remains in [Security](SECURITY.md).
 
 ## Supported host
 
-- Windows 11 with current Store WSL
-- PowerShell 7.4 or newer
-- Ubuntu 24.04 under WSL 2
-- x86-64 Windows and WSL architecture
+AI Workstation targets Windows with WSL 2 and Ubuntu. Exact supported Windows, PowerShell, Ubuntu and architecture values are maintained in [Project Context](CONTEXT.md).
 
 ## Documentation
 

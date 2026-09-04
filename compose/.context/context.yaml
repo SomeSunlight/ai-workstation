@@ -1,0 +1,111 @@
+# GENERATED ContextCanon machine state for Containerized application runtimes.
+# Humans normally read CONTEXT.src.md or CONTEXT.md instead.
+# This file is deterministic compiler output and must not be edited manually.
+
+schema: contextcanon/v0
+compiler_version: "0.5.0"
+
+# Stable logical Node identity. The filesystem path is deliberately not identity.
+node:
+  id: "90dd976e-8753-495b-a631-d708b13878d1"
+  name: "Containerized application runtimes"
+  version: "0.1.0-draft"
+
+# Accepted semantic Parent package. The locator is discovery metadata; build uses only the exact pin.
+parent:
+  id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
+  name: "ai-workstation"
+  version: "0.1.0"
+  locator: ".."
+  normalized_digest: "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5"
+  package_digest: "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa"
+
+# Accepted reusable Source packages used by this build. Both digests are exact pins.
+sources: []
+
+# Effective imported Context origins, flattened through accepted Parent/Source packages.
+imports:
+  - id: "c4c94726-3cc7-4df6-b779-72bbf9c06f40"
+    name: "Development Workflow"
+    version: "0.2.0-draft"
+    normalized_digest: "360fce40e173bb58f72c25be3092771b74094ab5d428ffc615c09c2e5bb84e99"
+    package_digest: "67392242f1cc1e305607a19b8c82b1a3a5e9fbf7f85640af5f90daaf3a992653"
+    why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
+  - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
+    name: "ai-workstation"
+    version: "0.1.0"
+    normalized_digest: "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5"
+    package_digest: "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa"
+
+# Elements authored in this Node's CONTEXT.src.md.
+local:
+  state: "<!-- contextcanon-placement-state:start -->\n<!-- cc:placement-state id=\"ONB-5475B681ADB6\" -->\n- The currently integrated application runtimes are Goose and Open WebUI.\n<!-- contextcanon-placement-state:end -->"
+  plan: "<!-- contextcanon-placement-plan:start -->\n<!-- cc:placement-plan id=\"ONB-F2E85C95052E\" -->\n- Local model integration is intentionally deferred to the next phase.\n<!-- contextcanon-placement-plan:end -->"
+  rules:
+    - {"id": "ONB-C582F0CA4FCE", "title": "Application containers do not receive the Docker socket", "group": "Onboarding placement"}
+    - {"id": "ONB-E7F7BAC0BF5F", "title": "Runtime credentials use the protected env file", "group": "Onboarding placement"}
+  changes: []
+  topics: []
+
+# Compiled effective Rule/Topic view with provenance.
+official:
+  rules:
+    - {"id": "CCW-001", "title": "Plan a coherent change block before editing", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "CCW-002", "title": "Checkpoint completed plan items immediately", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "CCW-003", "title": "Keep recovery-critical knowledge in the repository", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "CCW-007", "title": "Resume recent explicit continuation without re-proving unchanged state", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "CCW-004", "title": "Batch related edits before expensive final verification", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "CCW-009", "title": "Use owner-approved fast-run blocks without weakening the final gate", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "CCW-005", "title": "Require exact-head green verification at the merge gate, not the first review gate", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "CCW-006", "title": "Do not merge without explicit project-owner approval", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "CCW-008", "title": "Close the post-merge baseline checkpoint before new development", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "ONB-6566E6E85D48", "title": "Repository is the installation specification", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "ONB-504C6A92475F", "title": "Develop inside the WSL filesystem", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "ONB-02E2C1B8C47B", "title": "Keep versions documentation and tests aligned", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "ONB-BE08FE3A5E3D", "title": "Run release check before committing", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "ONB-DCF5EB952F7D", "title": "Keep secrets out of Git images and Compose", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "ONB-C582F0CA4FCE", "title": "Application containers do not receive the Docker socket", "origin_node_id": "90dd976e-8753-495b-a631-d708b13878d1", "origin_node_name": "Containerized application runtimes", "local": true, "overrides": []}
+    - {"id": "ONB-E7F7BAC0BF5F", "title": "Runtime credentials use the protected env file", "origin_node_id": "90dd976e-8753-495b-a631-d708b13878d1", "origin_node_name": "Containerized application runtimes", "local": true, "overrides": []}
+  removed_rules: []
+  topic_ids: ["CCW-TOPIC-CHANGE-WORKFLOW", "ONB-FA47F00F43A9", "ONB-0513F8B51242", "ONB-716FC7DB282B"]
+  resource_root: "CONTEXT/"
+
+# Topic edges are explicit: kind is resource or context-node; intent is required or optional.
+targets:
+  - topic: "CCW-TOPIC-CHANGE-WORKFLOW"
+    intent: "required"
+    kind: "resource"
+    locator: "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md"
+    target_node_id: null
+    target_node_name: null
+  - topic: "ONB-FA47F00F43A9"
+    intent: "required"
+    kind: "resource"
+    locator: "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/SECURITY.md"
+    target_node_id: null
+    target_node_name: null
+  - topic: "ONB-0513F8B51242"
+    intent: "required"
+    kind: "resource"
+    locator: "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/troubleshooting.md"
+    target_node_id: null
+    target_node_name: null
+  - topic: "ONB-716FC7DB282B"
+    intent: "required"
+    kind: "resource"
+    locator: "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/repository-setup.md"
+    target_node_id: null
+    target_node_name: null
+
+# Mapping from author-facing Resource paths to generated package paths.
+resources:
+  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/CONTEXT.md"}
+  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/SECURITY.md"}
+  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/repository-setup.md"}
+  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/troubleshooting.md"}
+  - {"source": null, "published": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md"}
+
+# Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
+package:
+  normalized_digest: "74bf1306d7da7225f485ed9a63938259e2af53be41f451024d1af47fc430d7c2"
+  package_digest: "558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be"
