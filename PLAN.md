@@ -13,13 +13,16 @@ Purpose: make the repository structure, ContextCanon Node structure, current pro
 
 ### 2. Raise the ContextCanon framework question
 
-Owner action outside this repository: create an issue in `SomeSunlight/context-canon` covering the findings from this onboarding.
+The post-onboarding findings are now tracked in ContextCanon as two separate framework issues:
 
-- [ ] Document the proposed principle that filesystem layout should, where practical, align with Context Node structure even though ContextCanon itself must not depend on that layout.
-- [ ] Clarify Context inheritance versus modification authority: a Child must see and obey Parent/ancestor Contexts, but inheritance should not implicitly grant authority to modify those Parents.
-- [ ] Clarify the expected workflow when work in a Child discovers that a Parent rule or Parent-owned decision should change: propose/escalate the cross-Node change and deliberately expand the change scope rather than silently editing upward.
+- `SomeSunlight/context-canon#14` — recommend filesystem alignment with Context Node boundaries without making filesystem layout semantic.
+- `SomeSunlight/context-canon#15` — define Parent/Child change authority so inheritance does not implicitly grant upward write scope.
+
+- [x] Document the proposed principle that filesystem layout should, where practical, align with Context Node structure even though ContextCanon itself must not depend on that layout.
+- [x] Clarify Context inheritance versus modification authority: a Child must see and obey Parent/ancestor Contexts, but inheritance should not implicitly grant authority to modify those Parents.
+- [x] Clarify the expected workflow when work in a Child discovers that a Parent rule or Parent-owned decision should change: propose/escalate the cross-Node change and deliberately expand the change scope rather than silently editing upward.
 - [ ] Record any resulting ContextCanon guidance or implementation change that AI Workstation should consume before its repository restructuring PR is finalized.
-- [ ] Add the resulting ContextCanon issue reference here.
+- [x] Add the resulting ContextCanon issue references here.
 
 ### 3. Implement the AI Workstation post-onboarding alignment in a review PR
 
