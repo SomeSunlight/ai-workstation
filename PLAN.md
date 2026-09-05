@@ -38,7 +38,7 @@ Do this only after the ContextCanon issue exists and its immediate implications 
 #### 3.2 Tighten the existing Context descriptions without redesigning the Node tree
 
 - [ ] Add a short Bootstrap overview explaining that the Node groups the full host-foundation provisioning chain: Windows/WSL lifecycle, minimal Linux bootstrap, and idempotent Ansible host configuration.
-- [ ] Expand the `aiw operator interface` overview to capture the stable UX contract: `aiw` is the discoverable/interative operator surface while direct subcommands remain stable automation entry points.
+- [ ] Expand the `aiw operator interface` overview to capture the stable UX contract: `aiw` is the discoverable/interactive operator surface while direct subcommands remain stable automation entry points.
 - [ ] Reconcile stale Child Parent labels such as `Application runtimes` versus `Containerized application runtimes` if they remain after regeneration.
 - [ ] Clean up the Development Workflow Source rationale wording without changing its intended meaning.
 - [ ] Apply any relevant ContextCanon guidance from step 2 about filesystem alignment and Parent/Child modification scope.
