@@ -4,7 +4,7 @@
 ## Parent Context Node
 
 <!-- contextcanon-placement-parent:start -->
-- [Application runtimes](..) — `0.1.0-draft`
+- [Containerized application runtimes](..) — `0.1.0-draft`
   <!-- ctx:parent id="90dd976e-8753-495b-a631-d708b13878d1" version="0.1.0-draft" normalized-digest="74bf1306d7da7225f485ed9a63938259e2af53be41f451024d1af47fc430d7c2" package-digest="558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be" -->
 <!-- contextcanon-placement-parent:end -->
 
