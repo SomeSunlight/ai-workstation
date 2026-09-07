@@ -3,7 +3,7 @@
 # This file is deterministic compiler output and must not be edited manually.
 
 schema: contextcanon/v0
-compiler_version: "0.5.0"
+compiler_version: "0.6.0"
 
 # Stable logical Node identity. The filesystem path is deliberately not identity.
 node:
@@ -11,14 +11,14 @@ node:
   name: "Ansible host configuration"
   version: "0.1.0-draft"
 
-# Accepted semantic Parent package. The locator is discovery metadata; build uses only the exact pin.
-parent:
-  id: "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
-  name: "Bootstrap"
-  version: "0.1.0-draft"
-  locator: ".."
-  normalized_digest: "f14212a032675699c05b7c2d4d7d24755b4de52b0a6fad682d6d8855f98d1eaf"
-  package_digest: "7b9d48b4239666b4dd6fbb1785eac7c6a55eb27ab1a1447d8fc09363ad8d5119"
+# Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
+parents:
+  - id: "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
+    name: "Bootstrap"
+    version: "0.1.0-draft"
+    locator: ".."
+    normalized_digest: "f14212a032675699c05b7c2d4d7d24755b4de52b0a6fad682d6d8855f98d1eaf"
+    package_digest: "7b9d48b4239666b4dd6fbb1785eac7c6a55eb27ab1a1447d8fc09363ad8d5119"
 
 # Accepted reusable Source packages used by this build. Both digests are exact pins.
 sources: []

@@ -1,5 +1,5 @@
 # ai-workstation — Local Context Source
-<!-- ctx:node id="aea56adf-2a26-43f0-b712-3bbeab7a3097" version="0.1.0" adapters="agents,goose" -->
+<!-- ctx:node id="aea56adf-2a26-43f0-b712-3bbeab7a3097" name="ai-workstation" version="0.1.0" adapters="agents,goose" -->
 
 ## Local Overview
 

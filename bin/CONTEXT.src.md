@@ -1,5 +1,5 @@
 # aiw operator interface — Local Context Source
-<!-- ctx:node id="6417ee7c-a9d0-40c7-ada3-6762d4a3900b" version="0.1.0-draft" -->
+<!-- ctx:node id="6417ee7c-a9d0-40c7-ada3-6762d4a3900b" name="aiw operator interface" version="0.1.0-draft" -->
 
 ## Parent Context Node
 

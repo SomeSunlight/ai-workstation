@@ -1,6 +1,6 @@
 {
   "changes": [],
-  "compiler_version": "0.5.0",
+  "compiler_version": "0.6.0",
   "digests": {
     "normalized": "125a37578d8e4cbf01bed76a3874c0a8d04fec88ef407474f3ebdee88f9c4812",
     "package": "88d44b76cb3ad44d74f6aaa66f38eca7144b2a062cdf9d5f03109f97b2d29478"
@@ -65,14 +65,16 @@
     "name": "aiw operator interface",
     "version": "0.1.0-draft"
   },
-  "parent": {
-    "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
-    "name": "ai-workstation",
-    "normalized_digest": "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5",
-    "package_digest": "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa",
-    "version": "0.1.0",
-    "why": null
-  },
+  "parents": [
+    {
+      "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "name": "ai-workstation",
+      "normalized_digest": "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5",
+      "package_digest": "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa",
+      "version": "0.1.0",
+      "why": null
+    }
+  ],
   "removed_rules": [],
   "rules": [
     {
@@ -216,7 +218,7 @@
       "why": "Keeps credentials out of durable repository history and built artifacts."
     }
   ],
-  "schema": "contextcanon/package/v0",
+  "schema": "contextcanon/package/v1",
   "sources": [],
   "topics": [
     {

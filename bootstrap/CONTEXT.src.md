@@ -1,5 +1,5 @@
 # Bootstrap — Local Context Source
-<!-- ctx:node id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.1.0-draft" -->
+<!-- ctx:node id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" name="Bootstrap" version="0.1.0-draft" -->
 
 ## Parent Context Node
 

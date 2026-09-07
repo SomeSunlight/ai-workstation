@@ -1,6 +1,6 @@
 {
   "changes": [],
-  "compiler_version": "0.5.0",
+  "compiler_version": "0.6.0",
   "digests": {
     "normalized": "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5",
     "package": "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa"
@@ -57,7 +57,7 @@
     "name": "ai-workstation",
     "version": "0.1.0"
   },
-  "parent": null,
+  "parents": [],
   "removed_rules": [],
   "rules": [
     {
@@ -201,7 +201,7 @@
       "why": "Keeps credentials out of durable repository history and built artifacts."
     }
   ],
-  "schema": "contextcanon/package/v0",
+  "schema": "contextcanon/package/v1",
   "sources": [
     {
       "id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",

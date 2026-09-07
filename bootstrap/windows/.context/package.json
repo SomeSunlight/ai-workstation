@@ -1,6 +1,6 @@
 {
   "changes": [],
-  "compiler_version": "0.5.0",
+  "compiler_version": "0.6.0",
   "digests": {
     "normalized": "6a92f5bbcc1875e80fd76e88f9da6e95d04a6c286a61b2097af507c554b42112",
     "package": "d3693ebce29cd5e2af05f1ee61a2933d5c2a86b47801491a7b7aa976ee70493f"
@@ -78,14 +78,16 @@
     "name": "Windows and WSL bootstrap",
     "version": "0.1.0-draft"
   },
-  "parent": {
-    "id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
-    "name": "Bootstrap",
-    "normalized_digest": "f14212a032675699c05b7c2d4d7d24755b4de52b0a6fad682d6d8855f98d1eaf",
-    "package_digest": "7b9d48b4239666b4dd6fbb1785eac7c6a55eb27ab1a1447d8fc09363ad8d5119",
-    "version": "0.1.0-draft",
-    "why": null
-  },
+  "parents": [
+    {
+      "id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
+      "name": "Bootstrap",
+      "normalized_digest": "f14212a032675699c05b7c2d4d7d24755b4de52b0a6fad682d6d8855f98d1eaf",
+      "package_digest": "7b9d48b4239666b4dd6fbb1785eac7c6a55eb27ab1a1447d8fc09363ad8d5119",
+      "version": "0.1.0-draft",
+      "why": null
+    }
+  ],
   "removed_rules": [],
   "rules": [
     {
@@ -269,7 +271,7 @@
       "why": "Protects existing Linux environments while allowing the installer to be rerun or used for clean-room testing."
     }
   ],
-  "schema": "contextcanon/package/v0",
+  "schema": "contextcanon/package/v1",
   "sources": [],
   "topics": [
     {

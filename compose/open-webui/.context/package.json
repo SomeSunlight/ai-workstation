@@ -1,6 +1,6 @@
 {
   "changes": [],
-  "compiler_version": "0.5.0",
+  "compiler_version": "0.6.0",
   "digests": {
     "normalized": "abf2022651c5775c94c62c34dc335e53b4ce235197d1ddcfc869d94b937e6fe4",
     "package": "493dd43bbade6bc1763148fc2dee8205dac78667fbfd3d9bbc2e3375b993e8b9"
@@ -73,14 +73,16 @@
     "name": "Open WebUI",
     "version": "0.1.0-draft"
   },
-  "parent": {
-    "id": "90dd976e-8753-495b-a631-d708b13878d1",
-    "name": "Containerized application runtimes",
-    "normalized_digest": "74bf1306d7da7225f485ed9a63938259e2af53be41f451024d1af47fc430d7c2",
-    "package_digest": "558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be",
-    "version": "0.1.0-draft",
-    "why": null
-  },
+  "parents": [
+    {
+      "id": "90dd976e-8753-495b-a631-d708b13878d1",
+      "name": "Containerized application runtimes",
+      "normalized_digest": "74bf1306d7da7225f485ed9a63938259e2af53be41f451024d1af47fc430d7c2",
+      "package_digest": "558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be",
+      "version": "0.1.0-draft",
+      "why": null
+    }
+  ],
   "removed_rules": [],
   "rules": [
     {
@@ -304,7 +306,7 @@
       "why": "Localhost binding is the default safety boundary; broader exposure requires compensating controls."
     }
   ],
-  "schema": "contextcanon/package/v0",
+  "schema": "contextcanon/package/v1",
   "sources": [],
   "topics": [
     {

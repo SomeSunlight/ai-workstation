@@ -1,6 +1,6 @@
 {
   "changes": [],
-  "compiler_version": "0.5.0",
+  "compiler_version": "0.6.0",
   "digests": {
     "normalized": "74bf1306d7da7225f485ed9a63938259e2af53be41f451024d1af47fc430d7c2",
     "package": "558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be"
@@ -65,14 +65,16 @@
     "name": "Containerized application runtimes",
     "version": "0.1.0-draft"
   },
-  "parent": {
-    "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
-    "name": "ai-workstation",
-    "normalized_digest": "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5",
-    "package_digest": "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa",
-    "version": "0.1.0",
-    "why": null
-  },
+  "parents": [
+    {
+      "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "name": "ai-workstation",
+      "normalized_digest": "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5",
+      "package_digest": "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa",
+      "version": "0.1.0",
+      "why": null
+    }
+  ],
   "removed_rules": [],
   "rules": [
     {
@@ -236,7 +238,7 @@
       "why": "Centralizes runtime secrets in an untracked file with restrictive permissions."
     }
   ],
-  "schema": "contextcanon/package/v0",
+  "schema": "contextcanon/package/v1",
   "sources": [],
   "topics": [
     {

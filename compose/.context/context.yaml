@@ -3,7 +3,7 @@
 # This file is deterministic compiler output and must not be edited manually.
 
 schema: contextcanon/v0
-compiler_version: "0.5.0"
+compiler_version: "0.6.0"
 
 # Stable logical Node identity. The filesystem path is deliberately not identity.
 node:
@@ -11,14 +11,14 @@ node:
   name: "Containerized application runtimes"
   version: "0.1.0-draft"
 
-# Accepted semantic Parent package. The locator is discovery metadata; build uses only the exact pin.
-parent:
-  id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
-  name: "ai-workstation"
-  version: "0.1.0"
-  locator: ".."
-  normalized_digest: "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5"
-  package_digest: "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa"
+# Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
+parents:
+  - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
+    name: "ai-workstation"
+    version: "0.1.0"
+    locator: ".."
+    normalized_digest: "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5"
+    package_digest: "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa"
 
 # Accepted reusable Source packages used by this build. Both digests are exact pins.
 sources: []

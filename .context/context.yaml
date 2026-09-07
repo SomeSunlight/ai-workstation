@@ -3,7 +3,7 @@
 # This file is deterministic compiler output and must not be edited manually.
 
 schema: contextcanon/v0
-compiler_version: "0.5.0"
+compiler_version: "0.6.0"
 
 # Stable logical Node identity. The filesystem path is deliberately not identity.
 node:
@@ -11,8 +11,8 @@ node:
   name: "ai-workstation"
   version: "0.1.0"
 
-# Accepted semantic Parent package. The locator is discovery metadata; build uses only the exact pin.
-parent: null
+# Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
+parents: []
 
 # Accepted reusable Source packages used by this build. Both digests are exact pins.
 sources:

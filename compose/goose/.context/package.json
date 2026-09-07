@@ -1,6 +1,6 @@
 {
   "changes": [],
-  "compiler_version": "0.5.0",
+  "compiler_version": "0.6.0",
   "digests": {
     "normalized": "2ba3b2c163b2eb51dcfa2a9b2941673d5848dd23dff92c17898d7abb46692ef0",
     "package": "1c19443f8fa951681b9f7e980bffbb3ae2fcc26c76a357285a329b050f403350"
@@ -73,14 +73,16 @@
     "name": "Goose",
     "version": "0.1.0-draft"
   },
-  "parent": {
-    "id": "90dd976e-8753-495b-a631-d708b13878d1",
-    "name": "Containerized application runtimes",
-    "normalized_digest": "74bf1306d7da7225f485ed9a63938259e2af53be41f451024d1af47fc430d7c2",
-    "package_digest": "558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be",
-    "version": "0.1.0-draft",
-    "why": null
-  },
+  "parents": [
+    {
+      "id": "90dd976e-8753-495b-a631-d708b13878d1",
+      "name": "Containerized application runtimes",
+      "normalized_digest": "74bf1306d7da7225f485ed9a63938259e2af53be41f451024d1af47fc430d7c2",
+      "package_digest": "558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be",
+      "version": "0.1.0-draft",
+      "why": null
+    }
+  ],
   "removed_rules": [],
   "rules": [
     {
@@ -324,7 +326,7 @@
       "why": "Keeps publication of agent-made repository changes under human control."
     }
   ],
-  "schema": "contextcanon/package/v0",
+  "schema": "contextcanon/package/v1",
   "sources": [],
   "topics": [
     {

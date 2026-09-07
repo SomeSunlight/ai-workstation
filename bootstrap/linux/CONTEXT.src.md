@@ -1,5 +1,5 @@
 # Linux bootstrap — Local Context Source
-<!-- ctx:node id="1e85ca79-6021-4b66-ae0c-4da90f78d6e9" version="0.1.0-draft" -->
+<!-- ctx:node id="1e85ca79-6021-4b66-ae0c-4da90f78d6e9" name="Linux bootstrap" version="0.1.0-draft" -->
 
 ## Parent Context Node
 

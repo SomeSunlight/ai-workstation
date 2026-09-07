@@ -1,5 +1,5 @@
 # Open WebUI — Local Context Source
-<!-- ctx:node id="dbf13d04-e686-4cda-9434-c439e23bb400" version="0.1.0-draft" -->
+<!-- ctx:node id="dbf13d04-e686-4cda-9434-c439e23bb400" name="Open WebUI" version="0.1.0-draft" -->
 
 ## Parent Context Node
 

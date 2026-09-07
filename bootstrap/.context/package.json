@@ -1,6 +1,6 @@
 {
   "changes": [],
-  "compiler_version": "0.5.0",
+  "compiler_version": "0.6.0",
   "digests": {
     "normalized": "f14212a032675699c05b7c2d4d7d24755b4de52b0a6fad682d6d8855f98d1eaf",
     "package": "7b9d48b4239666b4dd6fbb1785eac7c6a55eb27ab1a1447d8fc09363ad8d5119"
@@ -65,14 +65,16 @@
     "name": "Bootstrap",
     "version": "0.1.0-draft"
   },
-  "parent": {
-    "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
-    "name": "ai-workstation",
-    "normalized_digest": "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5",
-    "package_digest": "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa",
-    "version": "0.1.0",
-    "why": null
-  },
+  "parents": [
+    {
+      "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "name": "ai-workstation",
+      "normalized_digest": "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5",
+      "package_digest": "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa",
+      "version": "0.1.0",
+      "why": null
+    }
+  ],
   "removed_rules": [],
   "rules": [
     {
@@ -246,7 +248,7 @@
       "why": "Destructive changes require explicit human control rather than implicit installer behavior."
     }
   ],
-  "schema": "contextcanon/package/v0",
+  "schema": "contextcanon/package/v1",
   "sources": [],
   "topics": [
     {

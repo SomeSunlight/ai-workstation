@@ -1,5 +1,5 @@
 # Ansible host configuration — Local Context Source
-<!-- ctx:node id="ad9cbb59-ae04-4290-9c53-5d70cfefe434" version="0.1.0-draft" -->
+<!-- ctx:node id="ad9cbb59-ae04-4290-9c53-5d70cfefe434" name="Ansible host configuration" version="0.1.0-draft" -->
 
 ## Parent Context Node
 
