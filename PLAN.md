@@ -21,7 +21,7 @@ The post-onboarding findings are now tracked in ContextCanon as two separate fra
 - [x] Document the proposed principle that filesystem layout should, where practical, align with Context Node structure even though ContextCanon itself must not depend on that layout.
 - [x] Clarify Context inheritance versus modification authority: a Child must see and obey Parent/ancestor Contexts, but inheritance should not implicitly grant authority to modify those Parents.
 - [x] Clarify the expected workflow when work in a Child discovers that a Parent rule or Parent-owned decision should change: propose/escalate the cross-Node change and deliberately expand the change scope rather than silently editing upward.
-- [ ] Record any resulting ContextCanon guidance or implementation change that AI Workstation should consume before its repository restructuring PR is finalized.
+- [x] Record the resulting ContextCanon guidance consumed by AI Workstation: Development Workflow 0.3.0-draft is accepted at the root and all eight semantic Parent/Child relationships were reviewed and propagated with ContextCanon 0.7.3.
 - [x] Add the resulting ContextCanon issue references here.
 
 ### 3. Implement the AI Workstation post-onboarding alignment in a review PR
@@ -147,4 +147,16 @@ Purpose: keep this real-use ContextCanon project compatible with the explicit ma
 
 Checkpoint: Issue #1 records this bounded compatibility migration on branch `agent/explicit-context-node-names`. Repository inspection corrected the earlier informal count from eight to nine authored Nodes before implementation began.
 
-Issue #1 implementation checkpoint: all nine authored Nodes now carry explicit canonical `ctx:node name` metadata, generated ContextCanon output was rebuilt with the exact PR #18 head `fbca8b2f5a6bfcf2aa040917e201674562d5c983`, and `contextcanon check --all .` plus diff hygiene passed. Draft PR #2 now presents the migration for owner review; no merge is authorized.
+Issue #1 implementation checkpoint: all nine authored Nodes now carry explicit canonical `ctx:node name` metadata. PR #2 was squash-merged to `main` as `db65575c415f18a8c81db6e1bfcb32a50a56fb32` and Issue #1 closed. Before that merge, the same review branch also completed the real ContextCanon 0.7.3 maintenance step: Development Workflow advanced to 0.3.0-draft, all eight Parent/Child relationships were reviewed and propagated, generated Context was rebuilt, `contextcanon check --all .` was clean across all nine Nodes, and the resulting maintenance flow was idempotent.
+
+
+## Post-merge baseline — Issue #3
+
+Purpose: close the inherited Development Workflow post-merge checkpoint after PR #2 without starting the larger repository-alignment block.
+
+- [x] Record PR #2 squash merge `db65575c415f18a8c81db6e1bfcb32a50a56fb32` as the accepted ContextCanon migration/maintenance baseline.
+- [x] Record the completed Development Workflow 0.3.0-draft Source update and all eight reviewed Parent/Child propagation steps.
+- [x] Add a compact root `STATE.md` limited to facts proven by this maintenance run.
+- [x] Leave the richer runtime/architecture State population and repository restructuring in their existing planned blocks.
+
+Checkpoint: Issue #3 is documentation-only baseline reconciliation after PR #2; it does not change runtime or Context semantics.
