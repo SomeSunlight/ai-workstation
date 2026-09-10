@@ -8,9 +8,11 @@ The aim is **recoverability without ceremony for ceremony's sake**: the reposito
 
 Before changing implementation, context structure, or substantial documentation:
 
-1. add a short subsection to the active area of `PLAN.md` (or the project's equivalent durable planning surface);
-2. state why the block exists;
+1. ensure an Issue records why the change exists;
+2. add a short subsection to `PLAN.md` (or the equivalent) and reference the Issue;
 3. list concrete checkboxes that are small enough to show meaningful progress.
+
+The planned scope is the writable scope. Reading inherited or shared Context does not add it; expand the plan explicitly before editing broader areas.
 
 Do not make the checklist a transcript of every command. It is a recovery map for the development intent.
 

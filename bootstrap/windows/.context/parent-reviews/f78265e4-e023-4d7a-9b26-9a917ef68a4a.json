@@ -1,0 +1,146 @@
+{
+  "before": {
+    "normalized_digest": "f14212a032675699c05b7c2d4d7d24755b4de52b0a6fad682d6d8855f98d1eaf",
+    "package_digest": "7b9d48b4239666b4dd6fbb1785eac7c6a55eb27ab1a1447d8fc09363ad8d5119",
+    "version": "0.1.0-draft"
+  },
+  "candidate": {
+    "normalized_digest": "c06dc761e452dc1b5c4270ec4fabfaa3ff375163f57decfd30bfb9731033c00a",
+    "package_digest": "898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a",
+    "version": "0.1.1-draft"
+  },
+  "candidate_path": ".context/parent-candidates/898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a",
+  "consumer_node_id": "a46c5141-dcdf-4f28-9839-4053a02e04cf",
+  "diff": {
+    "after": {
+      "name": "Bootstrap",
+      "normalized_digest": "c06dc761e452dc1b5c4270ec4fabfaa3ff375163f57decfd30bfb9731033c00a",
+      "package_digest": "898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a",
+      "version": "0.1.1-draft"
+    },
+    "before": {
+      "name": "Bootstrap",
+      "normalized_digest": "f14212a032675699c05b7c2d4d7d24755b4de52b0a6fad682d6d8855f98d1eaf",
+      "package_digest": "7b9d48b4239666b4dd6fbb1785eac7c6a55eb27ab1a1447d8fc09363ad8d5119",
+      "version": "0.1.0-draft"
+    },
+    "changed": true,
+    "entries": [
+      {
+        "after": {
+          "name": "Bootstrap",
+          "version": "0.1.1-draft"
+        },
+        "before": {
+          "name": "Bootstrap",
+          "version": "0.1.0-draft"
+        },
+        "category": "node",
+        "change": "modified",
+        "changed_fields": [
+          "version"
+        ],
+        "identity": "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
+      },
+      {
+        "after": {
+          "name": "ai-workstation",
+          "normalized_digest": "d8fce480dca898b6065ff14ff1ec111b1cc4f03db80af71fc205b28d1beb4530",
+          "package_digest": "f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613",
+          "version": "0.1.1"
+        },
+        "before": {
+          "name": "ai-workstation",
+          "normalized_digest": "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5",
+          "package_digest": "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa",
+          "version": "0.1.0"
+        },
+        "category": "parent",
+        "change": "modified",
+        "changed_fields": [
+          "normalized_digest",
+          "package_digest",
+          "version"
+        ],
+        "identity": "aea56adf-2a26-43f0-b712-3bbeab7a3097"
+      },
+      {
+        "after": {
+          "group": "Recoverable planning",
+          "id": "CCW-010",
+          "modifications": [],
+          "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+          "origin_node_name": "Development Workflow",
+          "statement": "Before implementation, framework-context, or substantial documentation changes, ensure an Issue records why the change exists; it may be brief.",
+          "status": "active",
+          "title": "Back every change with an Issue",
+          "why": "Repository history should show the reason without reconstructing chat history."
+        },
+        "before": null,
+        "category": "rule",
+        "change": "added",
+        "changed_fields": [],
+        "identity": "c4c94726-3cc7-4df6-b779-72bbf9c06f40#CCW-010"
+      },
+      {
+        "after": {
+          "group": "Human review gate",
+          "id": "CCW-011",
+          "modifications": [],
+          "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+          "origin_node_name": "Development Workflow",
+          "statement": "Applicable Context constrains a task; it does not silently expand its writable scope.",
+          "status": "active",
+          "title": "Expand change scope explicitly",
+          "why": "A local task must not acquire wider impact merely because broader Context was loaded."
+        },
+        "before": null,
+        "category": "rule",
+        "change": "added",
+        "changed_fields": [],
+        "identity": "c4c94726-3cc7-4df6-b779-72bbf9c06f40#CCW-011"
+      },
+      {
+        "after": {
+          "group": "Transparent machine semantics",
+          "id": "CCW-012",
+          "modifications": [],
+          "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+          "origin_node_name": "Development Workflow",
+          "statement": "When Markdown is also parsed, compiled, extracted, or otherwise given machine-significant meaning, every field or wording whose value affects machine semantics must live in an explicitly marked machine structure rather than being inferred from ordinary presentation prose. Keep that machine significance recognizable in rendered and review surfaces; rendering may style or summarize the control structure, but must not make the machine/human boundary indistinguishable.",
+          "status": "active",
+          "title": "Mark machine-significant Markdown explicitly",
+          "why": "Humans must be able to tell which Markdown is freely editable presentation and which content participates in operational semantics; hidden parser contracts turn harmless-looking prose edits into surprising behavior."
+        },
+        "before": null,
+        "category": "rule",
+        "change": "added",
+        "changed_fields": [],
+        "identity": "c4c94726-3cc7-4df6-b779-72bbf9c06f40#CCW-012"
+      },
+      {
+        "after": {
+          "sha256": "0f1d4fd50389971c92268b6f06809d2533908b3694e27239267647725165303d",
+          "size": 9660
+        },
+        "before": {
+          "sha256": "bbd8fff080a48458badd28f6a996f67c0b5a818ccf76a8d797763ba660abf17f",
+          "size": 9519
+        },
+        "category": "resource",
+        "change": "modified",
+        "changed_fields": [
+          "sha256",
+          "size"
+        ],
+        "identity": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md"
+      }
+    ],
+    "node_id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
+    "schema": "contextcanon/diff/v0"
+  },
+  "parent_id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
+  "schema": "contextcanon/parent-review/v0",
+  "source_file_sha256": "bc5b4980665484debaa0dfb0dd12239209946fe0435fa10a4711ea1a411469bb",
+  "structural_validation": "passed"
+}

@@ -1,0 +1,117 @@
+{
+  "before": {
+    "normalized_digest": "360fce40e173bb58f72c25be3092771b74094ab5d428ffc615c09c2e5bb84e99",
+    "package_digest": "67392242f1cc1e305607a19b8c82b1a3a5e9fbf7f85640af5f90daaf3a992653",
+    "version": "0.2.0-draft"
+  },
+  "candidate": {
+    "normalized_digest": "4a341c006b9fbc49f17a814fd3dbb8a6cd4659ac0baaa9643b7fb19260297996",
+    "package_digest": "3dece5dc569c1e493cac02c2f7024e59229aca45483bbf6bc4b68b3db5213d1f",
+    "version": "0.2.0-draft"
+  },
+  "consumer_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+  "diff": {
+    "after": {
+      "name": "Development Workflow",
+      "normalized_digest": "4a341c006b9fbc49f17a814fd3dbb8a6cd4659ac0baaa9643b7fb19260297996",
+      "package_digest": "3dece5dc569c1e493cac02c2f7024e59229aca45483bbf6bc4b68b3db5213d1f",
+      "version": "0.2.0-draft"
+    },
+    "before": {
+      "name": "Development Workflow",
+      "normalized_digest": "360fce40e173bb58f72c25be3092771b74094ab5d428ffc615c09c2e5bb84e99",
+      "package_digest": "67392242f1cc1e305607a19b8c82b1a3a5e9fbf7f85640af5f90daaf3a992653",
+      "version": "0.2.0-draft"
+    },
+    "changed": true,
+    "entries": [
+      {
+        "after": {
+          "group": "Recoverable planning",
+          "id": "CCW-010",
+          "modifications": [],
+          "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+          "origin_node_name": "Development Workflow",
+          "statement": "Before implementation, framework-context, or substantial documentation changes, ensure an Issue records why the change exists; it may be brief.",
+          "status": "active",
+          "title": "Back every change with an Issue",
+          "why": "Repository history should show the reason without reconstructing chat history."
+        },
+        "before": null,
+        "category": "rule",
+        "change": "added",
+        "changed_fields": [],
+        "identity": "c4c94726-3cc7-4df6-b779-72bbf9c06f40#CCW-010"
+      },
+      {
+        "after": {
+          "group": "Human review gate",
+          "id": "CCW-011",
+          "modifications": [],
+          "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+          "origin_node_name": "Development Workflow",
+          "statement": "Applicable Context constrains a task; it does not silently expand its writable scope.",
+          "status": "active",
+          "title": "Expand change scope explicitly",
+          "why": "A local task must not acquire wider impact merely because broader Context was loaded."
+        },
+        "before": null,
+        "category": "rule",
+        "change": "added",
+        "changed_fields": [],
+        "identity": "c4c94726-3cc7-4df6-b779-72bbf9c06f40#CCW-011"
+      },
+      {
+        "after": {
+          "group": "Transparent machine semantics",
+          "id": "CCW-012",
+          "modifications": [],
+          "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+          "origin_node_name": "Development Workflow",
+          "statement": "When Markdown is also parsed, compiled, extracted, or otherwise given machine-significant meaning, every field or wording whose value affects machine semantics must live in an explicitly marked machine structure rather than being inferred from ordinary presentation prose. Keep that machine significance recognizable in rendered and review surfaces; rendering may style or summarize the control structure, but must not make the machine/human boundary indistinguishable.",
+          "status": "active",
+          "title": "Mark machine-significant Markdown explicitly",
+          "why": "Humans must be able to tell which Markdown is freely editable presentation and which content participates in operational semantics; hidden parser contracts turn harmless-looking prose edits into surprising behavior."
+        },
+        "before": null,
+        "category": "rule",
+        "change": "added",
+        "changed_fields": [],
+        "identity": "c4c94726-3cc7-4df6-b779-72bbf9c06f40#CCW-012"
+      },
+      {
+        "after": {
+          "sha256": "0f1d4fd50389971c92268b6f06809d2533908b3694e27239267647725165303d",
+          "size": 9660
+        },
+        "before": {
+          "sha256": "bbd8fff080a48458badd28f6a996f67c0b5a818ccf76a8d797763ba660abf17f",
+          "size": 9519
+        },
+        "category": "resource",
+        "change": "modified",
+        "changed_fields": [
+          "sha256",
+          "size"
+        ],
+        "identity": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md"
+      }
+    ],
+    "node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+    "schema": "contextcanon/diff/v0"
+  },
+  "schema": "contextcanon/source-review/v0",
+  "source_file_sha256": "2b2662e01a48c1707df17889a17ce5479a73f129612f3b52b4cb76c6d0047f75",
+  "source_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+  "structural_validation": "passed",
+  "transport_candidate": {
+    "candidate_ref": "fbca8b2f5a6bfcf2aa040917e201674562d5c983",
+    "discovery_ref": "fbca8b2f5a6bfcf2aa040917e201674562d5c983",
+    "kind": "git",
+    "location": "https://github.com/SomeSunlight/context-canon.git",
+    "node_path": "nodes/library/development-workflow",
+    "package_digest": "3dece5dc569c1e493cac02c2f7024e59229aca45483bbf6bc4b68b3db5213d1f",
+    "schema": "contextcanon/source-candidate-provenance/v1",
+    "source_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40"
+  }
+}

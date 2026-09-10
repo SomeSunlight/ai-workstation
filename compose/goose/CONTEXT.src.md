@@ -1,11 +1,11 @@
 # Goose — Local Context Source
-<!-- ctx:node id="3fd2ae4e-d712-4232-917a-7059b03a3cd4" version="0.1.0-draft" -->
+<!-- ctx:node id="3fd2ae4e-d712-4232-917a-7059b03a3cd4" name="Goose" version="0.1.1-draft" -->
 
 ## Parent Context Node
 
 <!-- contextcanon-placement-parent:start -->
-- [Containerized application runtimes](..) — `0.1.0-draft`
-  <!-- ctx:parent id="90dd976e-8753-495b-a631-d708b13878d1" version="0.1.0-draft" normalized-digest="74bf1306d7da7225f485ed9a63938259e2af53be41f451024d1af47fc430d7c2" package-digest="558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be" -->
+- [Containerized application runtimes](..) — `0.1.1-draft`
+  <!-- ctx:parent id="90dd976e-8753-495b-a631-d708b13878d1" version="0.1.1-draft" normalized-digest="3c8c8688e839f71a61853766e3f70a38a34bea57632b06a4d3782ba3d83e4539" package-digest="2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview

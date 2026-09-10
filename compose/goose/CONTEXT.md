@@ -8,16 +8,16 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** Goose  
-**Context version:** `0.1.0-draft`
+**Context version:** `0.1.1-draft`
 
-**Parent Context Node:** [Containerized application runtimes](.context/sources/558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be/CONTEXT.md) — `0.1.0-draft`  
-**Accepted Parent package:** `558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be`
+**Parent Context Node:** [Containerized application runtimes](.context/sources/2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa/CONTEXT.md) — `0.1.1-draft`  
+**Accepted Parent package:** `2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa`
 
 **Resulting imported Contexts:**
 
-- **Development Workflow** — `0.2.0-draft` — via Parent Context Node **Containerized application runtimes** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](.context/sources/558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be/CONTEXT.md)
-- **ai-workstation** — `0.1.0` — via Parent Context Node **Containerized application runtimes** — [inspect accepted carrier](.context/sources/558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be/CONTEXT.md)
-- **Containerized application runtimes** — `0.1.0-draft` — direct Parent Context Node — [inspect accepted carrier](.context/sources/558e628e517fabe47987e789a2117c390ffca6e69df4574311775692abd324be/CONTEXT.md)
+- **Development Workflow** — `0.3.0-draft` — via Parent Context Node **Containerized application runtimes** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](.context/sources/2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa/CONTEXT.md)
+- **ai-workstation** — `0.1.1` — via Parent Context Node **Containerized application runtimes** — [inspect accepted carrier](.context/sources/2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa/CONTEXT.md)
+- **Containerized application runtimes** — `0.1.1-draft` — direct Parent Context Node — [inspect accepted carrier](.context/sources/2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa/CONTEXT.md)
 
 ## Local Overview
 
@@ -43,6 +43,10 @@ For the current task, evaluate each Topic condition. When one matches, read ever
 
 ### Recoverable planning
 
+#### `CCW-010` — Back every change with an Issue
+
+Before implementation, framework-context, or substantial documentation changes, ensure an Issue records why the change exists; it may be brief.
+
 #### `CCW-001` — Plan a coherent change block before editing
 
 Before starting a new coherent development block, record a short purpose and checklist in the project's durable planning surface; use `PLAN.md` when the project follows this workflow convention.
@@ -59,6 +63,12 @@ Put decisions, active constraints, accepted state, and next steps needed to resu
 
 When the project owner resumes work after a short conversational interruption, explicitly says to continue, and reports no intervening repository changes, continue from the last established branch/PR state unless a repository operation gives evidence that it changed. Do not spend a new work cycle re-checking already established repository facts merely to prove that nothing happened.
 
+### Transparent machine semantics
+
+#### `CCW-012` — Mark machine-significant Markdown explicitly
+
+When Markdown is also parsed, compiled, extracted, or otherwise given machine-significant meaning, every field or wording whose value affects machine semantics must live in an explicitly marked machine structure rather than being inferred from ordinary presentation prose. Keep that machine significance recognizable in rendered and review surfaces; rendering may style or summarize the control structure, but must not make the machine/human boundary indistinguishable.
+
 ### Proportional verification
 
 #### `CCW-004` — Batch related edits before expensive final verification
@@ -74,6 +84,10 @@ When the project owner explicitly approves a coherent implementation scope and s
 A coherent development block may be presented for project-owner review while understood and disclosed CI failures or generated drift remain. After explicit project-owner approval and before merging, require the exact current head to pass the project's complete merge-gate verification, including zero generated drift when generated canonical output is part of the project contract.
 
 ### Human review gate
+
+#### `CCW-011` — Expand change scope explicitly
+
+Applicable Context constrains a task; it does not silently expand its writable scope.
 
 #### `CCW-006` — Do not merge without explicit project-owner approval
 

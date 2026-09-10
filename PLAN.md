@@ -134,3 +134,17 @@ The current working hypothesis is intentionally not yet a permanent Rule:
 - AI runtimes need not run continuously; it is acceptable for them to exist only while WSL/the AI Workstation is active.
 
 Validate this direction through the local-inference and optional-module blocks above before turning it into durable Context rules.
+
+## ContextCanon explicit Node-name migration — Issue #1
+
+Purpose: keep this real-use ContextCanon project compatible with the explicit machine-metadata boundary introduced by ContextCanon PR #18 / Issue #25 without changing any project semantics.
+
+- [x] Migrate all nine authored `CONTEXT.src.md` Nodes to explicit `ctx:node name="..."` metadata, preserving each existing H1-derived canonical name exactly.
+- [x] Leave human Markdown H1 wording unchanged and do not hand-edit compiler-managed `.context/sources/` or generated `CONTEXT/references/` copies.
+- [x] Rebuild generated ContextCanon output using exact tested ContextCanon head `fbca8b2f5a6bfcf2aa040917e201674562d5c983`.
+- [x] Require `contextcanon check --all .` and diff hygiene on the coherent candidate.
+- [x] Present the migration on a review PR; do not merge without explicit project-owner approval.
+
+Checkpoint: Issue #1 records this bounded compatibility migration on branch `agent/explicit-context-node-names`. Repository inspection corrected the earlier informal count from eight to nine authored Nodes before implementation began.
+
+Issue #1 implementation checkpoint: all nine authored Nodes now carry explicit canonical `ctx:node name` metadata, generated ContextCanon output was rebuilt with the exact PR #18 head `fbca8b2f5a6bfcf2aa040917e201674562d5c983`, and `contextcanon check --all .` plus diff hygiene passed. Draft PR #2 now presents the migration for owner review; no merge is authorized.
