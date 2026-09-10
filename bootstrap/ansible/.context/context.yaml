@@ -9,16 +9,16 @@ compiler_version: "0.6.0"
 node:
   id: "ad9cbb59-ae04-4290-9c53-5d70cfefe434"
   name: "Ansible host configuration"
-  version: "0.1.0-draft"
+  version: "0.1.1-draft"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
 parents:
   - id: "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
     name: "Bootstrap"
-    version: "0.1.0-draft"
+    version: "0.1.1-draft"
     locator: ".."
-    normalized_digest: "f14212a032675699c05b7c2d4d7d24755b4de52b0a6fad682d6d8855f98d1eaf"
-    package_digest: "7b9d48b4239666b4dd6fbb1785eac7c6a55eb27ab1a1447d8fc09363ad8d5119"
+    normalized_digest: "c06dc761e452dc1b5c4270ec4fabfaa3ff375163f57decfd30bfb9731033c00a"
+    package_digest: "898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a"
 
 # Accepted reusable Source packages used by this build. Both digests are exact pins.
 sources: []
@@ -27,20 +27,20 @@ sources: []
 imports:
   - id: "c4c94726-3cc7-4df6-b779-72bbf9c06f40"
     name: "Development Workflow"
-    version: "0.2.0-draft"
-    normalized_digest: "360fce40e173bb58f72c25be3092771b74094ab5d428ffc615c09c2e5bb84e99"
-    package_digest: "67392242f1cc1e305607a19b8c82b1a3a5e9fbf7f85640af5f90daaf3a992653"
+    version: "0.3.0-draft"
+    normalized_digest: "0ca4b977665a971dcb068c22342d6d7904e5f03a078a6c58b66fe5af3328be79"
+    package_digest: "6b2694121e5c69ed772e9b9fde7e15e71f97444a13b2f1f808190e4f7eabe0cb"
     why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.1.0"
-    normalized_digest: "529a183318232946b8201cecaf9912e9dccfba27d384e303c5f388e39a160ef5"
-    package_digest: "1c6e06d2a2c5a14edeb3df79c18673169bf4aebdd00916398b5463dc6efc7cfa"
+    version: "0.1.1"
+    normalized_digest: "d8fce480dca898b6065ff14ff1ec111b1cc4f03db80af71fc205b28d1beb4530"
+    package_digest: "f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613"
   - id: "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
     name: "Bootstrap"
-    version: "0.1.0-draft"
-    normalized_digest: "f14212a032675699c05b7c2d4d7d24755b4de52b0a6fad682d6d8855f98d1eaf"
-    package_digest: "7b9d48b4239666b4dd6fbb1785eac7c6a55eb27ab1a1447d8fc09363ad8d5119"
+    version: "0.1.1-draft"
+    normalized_digest: "c06dc761e452dc1b5c4270ec4fabfaa3ff375163f57decfd30bfb9731033c00a"
+    package_digest: "898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a"
 
 # Elements authored in this Node's CONTEXT.src.md.
 local:
@@ -56,13 +56,16 @@ local:
 # Compiled effective Rule/Topic view with provenance.
 official:
   rules:
+    - {"id": "CCW-010", "title": "Back every change with an Issue", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-001", "title": "Plan a coherent change block before editing", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-002", "title": "Checkpoint completed plan items immediately", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-003", "title": "Keep recovery-critical knowledge in the repository", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-007", "title": "Resume recent explicit continuation without re-proving unchanged state", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "CCW-012", "title": "Mark machine-significant Markdown explicitly", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-004", "title": "Batch related edits before expensive final verification", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-009", "title": "Use owner-approved fast-run blocks without weakening the final gate", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-005", "title": "Require exact-head green verification at the merge gate, not the first review gate", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
+    - {"id": "CCW-011", "title": "Expand change scope explicitly", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-006", "title": "Do not merge without explicit project-owner approval", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-008", "title": "Close the post-merge baseline checkpoint before new development", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "ONB-6566E6E85D48", "title": "Repository is the installation specification", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
@@ -117,5 +120,5 @@ resources:
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "f27419ef4be8f8957dcb3deffc0bacd5033cdda531da359cc58af2131179066c"
-  package_digest: "22e399a1107ca66decf72ea4c7a648805bf327a22d995ddc53e90f1aa84ce0e8"
+  normalized_digest: "85ef5b9cba08e5222504b28d1e1bcef0250a16ec42430bcdec64bf43cc3809b2"
+  package_digest: "d52470df4175639f8ba8ad40fc450dff9aaf689e04273bf0e8b3c41ec079575b"

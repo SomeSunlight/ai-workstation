@@ -1,5 +1,5 @@
 # ai-workstation — Local Context Source
-<!-- ctx:node id="aea56adf-2a26-43f0-b712-3bbeab7a3097" name="ai-workstation" version="0.1.0" adapters="agents,goose" -->
+<!-- ctx:node id="aea56adf-2a26-43f0-b712-3bbeab7a3097" name="ai-workstation" version="0.1.1" adapters="agents,goose" -->
 
 ## Local Overview
 
@@ -27,9 +27,9 @@
 ## Sources
 
 <!-- contextcanon-placement-sources:start -->
-- [Development Workflow](https://github.com/SomeSunlight/context-canon.git) — `0.2.0-draft`
+- [Development Workflow](https://github.com/SomeSunlight/context-canon.git) — `0.3.0-draft`
   Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here.
-  <!-- ctx:source id="c4c94726-3cc7-4df6-b779-72bbf9c06f40" version="0.2.0-draft" normalized-digest="360fce40e173bb58f72c25be3092771b74094ab5d428ffc615c09c2e5bb84e99" package-digest="67392242f1cc1e305607a19b8c82b1a3a5e9fbf7f85640af5f90daaf3a992653" transport="git" ref="1a2b9e7029150f493ca7a3fafb2cda9362416fba" node-path="nodes/library/development-workflow" -->
+  <!-- ctx:source id="c4c94726-3cc7-4df6-b779-72bbf9c06f40" version="0.3.0-draft" transport="git" ref="c213d4d492464265ff96ffb4b111193cdcf5662d" node-path="nodes/library/development-workflow" normalized-digest="0ca4b977665a971dcb068c22342d6d7904e5f03a078a6c58b66fe5af3328be79" package-digest="6b2694121e5c69ed772e9b9fde7e15e71f97444a13b2f1f808190e4f7eabe0cb" -->
 <!-- contextcanon-placement-sources:end -->
 
 ## Local Rules
