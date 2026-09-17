@@ -53,7 +53,7 @@ bash "$service" runtime configure \
 grep -Fxq "AIW_LLAMA_MODEL_ROOT=${models}" "$runtime_config"
 grep -Fxq 'AIW_DISPATCHER_INSTANCE=Laptop' "$runtime_config"
 grep -Fxq 'AIW_DISPATCHER_ENSEMBLE=thinkpad-sycl' "$runtime_config"
-if grep -Fq '^LLAMA_MODEL_ROOT=' "$runtime_config"; then
+if grep -Eq '^LLAMA_MODEL_ROOT=' "$runtime_config"; then
     echo 'Runtime config must not create a shell-level LLAMA_MODEL_ROOT variable.' >&2
     exit 1
 fi
