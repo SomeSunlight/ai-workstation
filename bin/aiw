@@ -55,6 +55,7 @@ show_help() {
 Optional local inference:
   aiw local-inference help
   aiw local-inference setup vulkan
+  aiw local-inference setup sycl
   aiw local-inference status
   aiw local-inference llama list
 
@@ -103,7 +104,9 @@ Local inference
 4) Verify selected build and Dispatcher core
 5) Configure generic Vulkan runtime
 6) Setup generic Vulkan runtime
-7) Show command help
+7) Configure Intel SYCL runtime (WSL / Ubuntu 24.04)
+8) Setup Intel SYCL runtime (WSL / Ubuntu 24.04)
+9) Show command help
 b) Back
 q) Exit
 EOF
@@ -118,7 +121,9 @@ EOF
             4) run_menu_action local_inference verify ;;
             5) run_menu_action local_inference configure vulkan ;;
             6) run_menu_action local_inference setup vulkan ;;
-            7) run_menu_action local_inference help ;;
+            7) run_menu_action local_inference configure sycl ;;
+            8) run_menu_action local_inference setup sycl ;;
+            9) run_menu_action local_inference help ;;
             b|B) return ;;
             q|Q) exit 0 ;;
             *) printf 'Unknown selection.\n' ;;
