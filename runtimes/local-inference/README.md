@@ -17,7 +17,7 @@ The layout is:
 ├── llama.cpp/
 │   ├── repository/                 # shared Git object/source cache
 │   └── builds/
-│       ├── vulkan-05f2dcfd/
+│       ├── vulkan-9e3b928f/
 │       │   ├── source/             # detached worktree at the exact commit
 │       │   ├── build/
 │       │   │   └── bin/
@@ -44,6 +44,8 @@ By default the generated name is `<backend>-<short-commit>`. A descriptive suffi
 This gives the useful combination: **recognizable names for humans, exact provenance for measurements**.
 
 ## Laptop Vulkan first run
+
+For the first ThinkPad WSL/Vulkan acceptance run, the default pin is deliberately `9e3b928fd8c9d14dbf15a8768b9fdd7e5c721d66` (llama.cpp build 9553). This is the same source revision already validated with the Laptop Dispatcher setup under Windows/Vulkan. Keeping the llama.cpp source revision constant makes the WSL/Vulkan migration the primary changed variable; newer llama.cpp revisions can then be built in parallel and compared without replacing this baseline.
 
 From an already installed AI Workstation:
 
@@ -96,13 +98,13 @@ aiw local-inference llama build \
 Select the default build used by Dispatcher commands:
 
 ```bash
-aiw local-inference llama select vulkan-05f2dcfd
+aiw local-inference llama select vulkan-9e3b928f
 ```
 
 Inspect exact provenance:
 
 ```bash
-aiw local-inference llama show vulkan-05f2dcfd
+aiw local-inference llama show vulkan-9e3b928f
 ```
 
 Build names are treated as stable identities. Rebuilding the same name is allowed only when commit, backend, and extra CMake arguments still match; otherwise a new name is required. This prevents historical benchmark labels from silently changing meaning.
