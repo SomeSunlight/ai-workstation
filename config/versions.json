@@ -6,7 +6,7 @@
       "release": "24.04",
       "python": "3.12",
       "wsl_image_url": "https://releases.ubuntu.com/24.04/ubuntu-24.04.4-wsl-amd64.wsl",
-      "wsl_image_sha256": "9b2f7730dc68227dd04a9f3e5eab86ad85caf556b8606ad94f1f29ff5c4fd3f5"
+      "wsl_image_sha256": "9b2f7730dc68227dd04a9f3e5eab86ad85caf556b8606ad94f1f29ff5c4fd3f5c4fd3f5"
     },
     "uv": "0.11.26",
     "ansible": {
@@ -39,7 +39,7 @@
     },
     "llama_dispatcher": {
       "repository": "https://github.com/SomeSunlight/Llama_Dispatcher.git",
-      "commit": "5e96951d430cf18504b61163e7375d825718747d"
+      "commit": "8f073434ebde267ccae01c025001e5e52114338a"
     }
   }
 }
