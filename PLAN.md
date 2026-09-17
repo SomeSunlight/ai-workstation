@@ -11,6 +11,7 @@ Owner-approved decisions for this block:
 - `llama.cpp` and Llama Dispatcher run directly on the WSL/Linux host, not in containers.
 - Local inference is optional; remote-only AI Workstations remain valid.
 - Llama Dispatcher continues to own profiles, ensembles, benchmark/eval execution, and metrics history.
+- Dispatcher instances under `instances/<name>` are user-owned; AI Workstation installs the generic Dispatcher runtime but does not clone, rewrite, reset or update machine-specific instances.
 - Hardware/backend choice is explicit configuration. AI Workstation verifies prerequisites but does not silently invent a backend.
 - AI Workstation pins a tested default `llama.cpp` source revision, while multiple llama.cpp revisions/build configurations may coexist for controlled comparisons.
 - llama.cpp builds use human-readable slot names plus machine-readable manifests; an existing slot name must never silently change meaning.
@@ -23,15 +24,17 @@ Implementation checklist:
 - [x] Add durable machine-local enablement/configuration for optional local inference.
 - [x] Add a pinned host-local multi-build `llama.cpp` source/build/install workflow, starting with Vulkan and leaving clean backend extension points.
 - [x] Add reproducible Llama Dispatcher checkout plus `uv` environment synchronization.
-- [x] Support attaching an instance repository at the Dispatcher's existing `instances/<name>` boundary without copying model/engine semantics into AI Workstation.
+- [x] Keep Dispatcher instance repositories at the existing user-owned `instances/<name>` boundary without copying their configuration semantics into AI Workstation.
 - [x] Expose install/status/verify/use and llama.cpp build selection through the AI Workstation operator surface.
 - [x] Keep the default/remote-only path unchanged when local inference is not enabled.
 - [x] Update central versions, local-inference documentation, smoke tests, CI and release checks together.
 - [x] Run focused verification and the repository release gate in Ubuntu 24.04 CI on the coherent review candidate.
 - [x] Present Draft PR #6 without merging; exact-head merge-gate verification remains after explicit owner approval.
-- [ ] Run the first real ThinkPad WSL/Vulkan installation and Dispatcher compile/run checks before treating the runtime as hardware-validated.
+- [x] Run the first real ThinkPad WSL/Vulkan installation: the pinned build succeeds, but WSL Vulkan exposes only Mesa `llvmpipe`; separate D3D12/OpenGL testing confirms the Intel Arc Pro itself is hardware-accelerated in WSL.
+- [x] Add a parallel WSL2/Ubuntu 24.04 Intel SYCL provisioning/build path pinned to the oneAPI 2025.3 series, while retaining the Vulkan build as a controlled baseline.
+- [ ] Run the first real ThinkPad WSL/SYCL install/device/build verification before treating the local-inference runtime as hardware-validated.
 
-Checkpoint: Issue #5 now has a software-complete review candidate in Draft PR #6. The branch contains a multi-build llama.cpp registry with per-build manifests, pinned default llama.cpp and Dispatcher revisions, a machine-local Laptop/Vulkan preset, Dispatcher instance attachment, and a thin `aiw` front controller that keeps the previous operator implementation intact as `bin/aiw-core`. Remote-only operation remains valid. GitHub CI on Ubuntu 24.04 passes repository layout, local-inference registry/routing, the repository release gate, existing Goose/Open WebUI smoke tests, interactive menu checks, uv synchronization, Ansible lint and playbook syntax. Real Intel/WSL/Vulkan hardware behavior remains intentionally unclaimed until the ThinkPad run.
+Checkpoint: Draft PR #6 now contains the generic multi-build llama.cpp registry, pinned llama.cpp/Dispatcher revisions, a user-owned Dispatcher-instance boundary, explicit Vulkan verification, and a first narrow Intel SYCL path for WSL2/Ubuntu 24.04. The initial ThinkPad Vulkan experiment proved that the pinned llama.cpp build itself works but only `llvmpipe` is available through Vulkan; D3D12/OpenGL separately sees the Intel Arc Pro with acceleration and unified memory, isolating the missing Vulkan/DZN layer. The next controlled experiment keeps the same llama.cpp commit and builds `sycl-9e3b928f` through Intel Level Zero/oneAPI. Automated Ubuntu 24.04 CI remains green for repository, configuration, registry, routing and ownership semantics; real GPU provisioning remains intentionally hardware-tested rather than mocked.
 
 ## Current focus — align the repository after ContextCanon onboarding
 
@@ -124,10 +127,12 @@ Purpose: validate the selected WSL/Linux-host implementation on the real machine
 ### Laptop validation
 
 - [ ] Establish a comparable Windows baseline on the 64 GB laptop with its Intel GPU/shared-memory constraints.
-- [ ] Run the new AI Workstation Laptop/Vulkan path under WSL and verify actual Intel GPU/device selection before assuming parity with the Windows runtime.
+- [x] Run the first AI Workstation Vulkan build under WSL: build 9553 succeeds, but `vulkaninfo` exposes only `llvmpipe`; confirm separately that the Intel Arc Pro is hardware-accelerated through WSL D3D12/OpenGL with unified memory.
+- [ ] Run the new Intel SYCL/Level Zero path under WSL with the same llama.cpp commit and verify the actual Arc Pro device before model testing.
 - [ ] Measure the largest practical model, effective shared-memory availability, throughput, context behavior, and stability through Llama Dispatcher rather than a duplicate benchmark harness.
+- [ ] Compare WSL/SYCL against the existing Windows/Vulkan result rather than assuming either backend is faster.
+- [ ] Revisit WSL/Vulkan/DZN later if useful; keep the existing Vulkan build as a reproducible baseline rather than replacing it.
 - [ ] Test whether the default WSL memory ceiling is a material limitation and, if necessary, evaluate an explicit WSL memory configuration without starving Windows.
-- [ ] Add/test SYCL as a parallel build backend only after the first Vulkan path is understood; compare through the same Dispatcher measurement history.
 
 ### Placement decision
 
