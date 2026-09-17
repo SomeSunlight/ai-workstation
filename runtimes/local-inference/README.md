@@ -17,8 +17,11 @@ The generic runtime layout is:
 │   └── builds/
 │       ├── vulkan-9e3b928f/
 │       │   ├── source/             # detached worktree at the exact commit
-│       │   ├── build/
-│       │   │   └── bin/
+│       │   ├── build/bin/
+│       │   └── manifest.json
+│       ├── sycl-9e3b928f/
+│       │   ├── source/
+│       │   ├── build/bin/
 │       │   └── manifest.json
 │       └── <other-build>/
 └── Llama_Dispatcher/
@@ -41,37 +44,57 @@ Each build gets `manifest.json`, which records at least:
 - additional CMake arguments;
 - binary path;
 - first line of `llama-server --version`;
-- build timestamp.
+- build timestamp;
+- for SYCL, the observed Intel compiler/package version as additional toolchain provenance.
 
 By default the generated name is `<backend>-<short-commit>`. A descriptive suffix can be added with `--label`; an explicit `--name` is also possible. Two materially different build specifications should use two different build names.
 
 Build names are human-oriented; the manifest is the source of truth.
 
-## First Vulkan run
+## Controlled ThinkPad baseline
 
-For the first ThinkPad WSL/Vulkan acceptance run, the default pin is deliberately `9e3b928fd8c9d14dbf15a8768b9fdd7e5c721d66` (llama.cpp build 9553). This is the same source revision already validated with the existing Dispatcher setup under Windows/Vulkan. Keeping the llama.cpp source revision constant makes the WSL/Vulkan migration the primary changed variable.
+The first ThinkPad comparison deliberately pins llama.cpp commit `9e3b928fd8c9d14dbf15a8768b9fdd7e5c721d66` (Windows build 9553), matching the source revision already validated with the existing Dispatcher setup under Windows/Vulkan. Backend experiments therefore change the hardware/runtime path without also changing llama.cpp source.
 
-From an already installed AI Workstation:
+The first WSL/Vulkan run successfully built that revision but `vulkaninfo` exposed only Mesa `llvmpipe`, so AI Workstation correctly rejects it as hardware-valid. Separate WSL testing showed the Intel Arc Pro GPU is available and accelerated through the WSL D3D12 path; the missing piece for the Vulkan experiment is a usable Vulkan-over-D3D12/DZN path. The Vulkan build is retained as a parallel baseline rather than deleted.
+
+## Vulkan setup
 
 ```bash
 aiw local-inference setup vulkan
 ```
 
-This command:
+This writes generic machine-local configuration, creates/selects the pinned Vulkan build slot, synchronizes the pinned Dispatcher checkout, enumerates Vulkan devices and verifies the Dispatcher core. It does **not** clone a Dispatcher instance.
 
-1. writes generic machine-local configuration to `~/.config/ai-workstation/local-inference.env`;
-2. builds the AI Workstation-pinned `llama.cpp` revision as a Vulkan build slot and selects it;
-3. clones Llama Dispatcher at its pinned AI Workstation revision and runs `uv sync --frozen`;
-4. enumerates llama.cpp/Vulkan devices;
-5. verifies the Dispatcher core CLI/imports.
+A Vulkan setup is not considered hardware-valid when `vulkaninfo` exposes only a CPU/software renderer such as `llvmpipe`.
 
-It does **not** clone a Dispatcher instance.
+## Intel SYCL / oneAPI setup on WSL
 
-A Vulkan setup is not considered hardware-valid when `vulkaninfo` exposes only a CPU/software renderer such as `llvmpipe`. In that case `verify` fails with an explicit diagnostic instead of claiming that the selected Vulkan runtime is usable on the GPU.
+The first automatic SYCL path is deliberately narrow: **WSL2 + Ubuntu 24.04 (noble) + Intel GPU**. It does not attempt to be a universal oneAPI installer.
+
+```bash
+aiw local-inference setup sycl
+```
+
+For the controlled ThinkPad test this command:
+
+1. keeps existing Vulkan/build slots untouched;
+2. verifies Ubuntu 24.04 under WSL and `/dev/dxg`;
+3. configures Intel's Ubuntu 24.04 client-GPU APT repository;
+4. installs the Intel user-mode Level Zero/OpenCL compute runtime inside WSL (the Windows host remains the owner of the actual GPU driver);
+5. configures Intel's oneAPI APT repository;
+6. installs the pinned `intel-deep-learning-essentials-2025.3` package series. The pinned llama.cpp SYCL documentation verifies oneAPI 2025.3.3 for Ubuntu 24.04;
+7. sources `/opt/intel/oneapi/setvars.sh` and requires `sycl-ls` to expose a Level Zero GPU;
+8. builds the same pinned llama.cpp commit as `sycl-9e3b928f` with `GGML_SYCL=ON`, `icx`, and `icpx` (FP32/default SYCL build);
+9. selects the new SYCL slot and verifies both `llama-server --list-devices` and `llama-ls-sycl-device`;
+10. verifies the pinned Dispatcher core without touching any user-owned instance.
+
+The runtime exports `UR_L0_ENABLE_RELAXED_ALLOCATION_LIMITS=1` for SYCL commands because the pinned llama.cpp SYCL launcher uses that setting for Level Zero allocations larger than 4 GiB. AI Workstation intentionally does **not** set `ONEAPI_DEVICE_SELECTOR`: choosing a specific Intel device remains explicit user/Dispatcher instance policy.
+
+`setup sycl` selects the pinned SYCL slot even when a Vulkan slot was already active. The old Vulkan build remains installed and can be selected again at any time.
 
 ## Attach your own Dispatcher instance
 
-After the generic runtime is installed, clone or create the appropriate instance yourself in the Dispatcher's expected directory. Example only:
+Only after the generic runtime/backend is healthy, clone or create the appropriate instance yourself in the Dispatcher's expected directory. Example only:
 
 ```bash
 cd ~/.local/share/ai-workstation/local-inference/Llama_Dispatcher
@@ -90,17 +113,18 @@ List installed builds; `*` marks the selected default:
 aiw local-inference llama list
 ```
 
-Build the pinned revision with Vulkan:
+Build the pinned revision explicitly with a backend:
 
 ```bash
 aiw local-inference llama build --backend vulkan
+aiw local-inference llama build --backend sycl
 ```
 
 Build another revision without touching existing builds:
 
 ```bash
 aiw local-inference llama build \
-  --backend vulkan \
+  --backend sycl \
   --commit <commit-or-ref>
 ```
 
@@ -108,24 +132,25 @@ Give a special compile variant a recognizable suffix:
 
 ```bash
 aiw local-inference llama build \
-  --backend vulkan \
+  --backend sycl \
   --commit <commit-or-ref> \
   --label experiment-a \
-  --cmake-arg -DGGML_SOME_OPTION=VALUE
+  --cmake-arg -DGGML_SYCL_F16=ON
 ```
 
-Select and inspect the baseline build:
+Select and inspect builds:
 
 ```bash
 aiw local-inference llama select vulkan-9e3b928f
-aiw local-inference llama show vulkan-9e3b928f
+aiw local-inference llama select sycl-9e3b928f
+aiw local-inference llama show sycl-9e3b928f
 ```
 
 Rebuilding the same slot name is allowed only when commit, backend, and extra CMake arguments still match; otherwise a new name is required. This prevents historical benchmark labels from silently changing meaning.
 
 ## Dispatcher use
 
-AI Workstation injects only the selected llama.cpp binary directory through the Dispatcher's `--bin-dir` override. The user supplies the Dispatcher command and instance semantics explicitly.
+AI Workstation injects only the selected llama.cpp binary directory through the Dispatcher's `--bin-dir` override and loads the backend environment required by that selected build. The user supplies the Dispatcher command and instance semantics explicitly.
 
 Examples:
 
@@ -143,7 +168,7 @@ A single run can select another installed llama.cpp build without changing the m
 
 ```bash
 aiw local-inference dispatcher \
-  --llama-build vulkan-<other-commit> \
+  --llama-build vulkan-9e3b928f \
   bench PROFILE \
   --instance Laptop
 ```
@@ -156,8 +181,9 @@ An instance may contain paths authored for another operating environment. AI Wor
 
 The llama.cpp binary path is intentionally different: AI Workstation supplies `--bin-dir` at invocation time, so the selected build can change without rewriting the instance engine configuration.
 
-## Backends
+## Backend status
 
-The first implemented backend is Vulkan. CUDA is an explicit extension point when an appropriate WSL CUDA toolkit (`nvcc`) is present. SYCL/oneAPI provisioning is deliberately deferred until that toolchain is tested under WSL, but the multi-build registry is designed for parallel backend/build variants.
-
-For Vulkan, the runtime uses upstream llama.cpp's `GGML_VULKAN=ON` switch and installs the Ubuntu build/runtime prerequisites including `libvulkan-dev`, `glslc`, `spirv-headers`, `mesa-vulkan-drivers`, and `vulkan-tools`.
+- **Vulkan**: implemented. On the first ThinkPad WSL run the build worked, but only `llvmpipe` was visible; hardware Vulkan under WSL remains unresolved and is retained for a later DZN investigation.
+- **SYCL**: implemented for the first WSL2/Ubuntu 24.04 Intel-GPU acceptance path using pinned oneAPI 2025.3-series tooling and Level Zero device verification.
+- **CUDA**: explicit extension point when a WSL CUDA toolkit (`nvcc`) already exists; automatic CUDA toolkit provisioning is not part of this block.
+- **CPU**: supported as a build backend.
