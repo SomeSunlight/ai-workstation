@@ -7,6 +7,7 @@ readonly SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
 readonly ROOT="$(cd -- "$(dirname -- "$SCRIPT_PATH")/.." && pwd -P)"
 readonly CORE="${ROOT}/bin/aiw-core"
 readonly LOCAL_INFERENCE_MANAGER="${ROOT}/runtimes/local-inference/manage.sh"
+readonly LOCAL_INFERENCE_SERVICE="${ROOT}/runtimes/local-inference/service.sh"
 readonly LOCAL_INFERENCE_CONFIG="${AIW_LOCAL_INFERENCE_CONFIG:-${HOME}/.config/ai-workstation/local-inference.env}"
 
 fail() {
@@ -34,6 +35,10 @@ require_local_inference_manager() {
     [[ -f "$LOCAL_INFERENCE_MANAGER" ]] || fail "Local-inference manager is missing: $LOCAL_INFERENCE_MANAGER"
 }
 
+require_local_inference_service() {
+    [[ -f "$LOCAL_INFERENCE_SERVICE" ]] || fail "Local-inference service manager is missing: $LOCAL_INFERENCE_SERVICE"
+}
+
 run_core() {
     require_core
     bash "$CORE" "$@"
@@ -45,7 +50,21 @@ local_inference_enabled() {
 
 local_inference() {
     require_local_inference_manager
-    bash "$LOCAL_INFERENCE_MANAGER" "$@"
+    require_local_inference_service
+    local subcommand="${1:-help}"
+    case "$subcommand" in
+        start|stop|restart|logs|autostart|runtime|service-run|render-service)
+            bash "$LOCAL_INFERENCE_SERVICE" "$@"
+            ;;
+        status)
+            bash "$LOCAL_INFERENCE_MANAGER" status
+            printf '\n'
+            bash "$LOCAL_INFERENCE_SERVICE" status
+            ;;
+        *)
+            bash "$LOCAL_INFERENCE_MANAGER" "$@"
+            ;;
+    esac
 }
 
 show_help() {
@@ -53,15 +72,19 @@ show_help() {
     cat <<'EOF'
 
 Optional local inference:
-  aiw local-inference help
-  aiw local-inference setup vulkan
   aiw local-inference setup sycl
+  aiw local-inference runtime configure
+  aiw local-inference start
+  aiw local-inference stop
   aiw local-inference status
-  aiw local-inference llama list
+  aiw local-inference autostart enable
+  aiw local-inference logs
+  aiw local-inference help
 
-`aiw local-inference` manages host-local llama.cpp builds and the pinned Llama
-Dispatcher checkout. Dispatcher instances, profiles, ensembles and their runtime
-data remain user-owned under the Dispatcher's instances/<name> directory.
+`setup` prepares llama.cpp and Llama Dispatcher. `runtime configure` records the
+machine-local model root plus the normal Dispatcher instance/ensemble. Afterwards
+`start` needs no llama.cpp path, model path, environment variable or long Dispatcher
+command. Autostart is opt-in and remains disabled until explicitly enabled.
 EOF
 }
 
@@ -98,32 +121,42 @@ local_inference_menu() {
 
 Local inference
 ===============
-1) Show status
-2) List llama.cpp builds
-3) Select active llama.cpp build
-4) Verify selected build and Dispatcher core
-5) Configure generic Vulkan runtime
-6) Setup generic Vulkan runtime
-7) Configure Intel SYCL runtime (WSL / Ubuntu 24.04)
-8) Setup Intel SYCL runtime (WSL / Ubuntu 24.04)
-9) Show command help
+1) Show complete status
+2) Configure normal Dispatcher start (model root / instance / ensemble)
+3) Start Dispatcher
+4) Stop Dispatcher
+5) Restart Dispatcher
+6) Follow Dispatcher logs
+7) Enable autostart and start now
+8) Disable autostart and stop
+9) List llama.cpp builds
+10) Select active llama.cpp build
+11) Verify selected build and Dispatcher core
+12) Setup Intel SYCL runtime (WSL / Ubuntu 24.04)
+13) Setup generic Vulkan runtime
+14) Show command help
 b) Back
 q) Exit
 EOF
         read -r -p 'Select: ' choice || return
         case "$choice" in
             1) run_menu_action local_inference status ;;
-            2) run_menu_action local_inference llama list ;;
-            3)
+            2) run_menu_action local_inference runtime configure ;;
+            3) run_menu_action local_inference start ;;
+            4) run_menu_action local_inference stop ;;
+            5) run_menu_action local_inference restart ;;
+            6) local_inference logs ;;
+            7) run_menu_action local_inference autostart enable ;;
+            8) run_menu_action local_inference autostart disable ;;
+            9) run_menu_action local_inference llama list ;;
+            10)
                 read -r -p 'Build name: ' name || continue
                 [[ -n "$name" ]] && run_menu_action local_inference llama select "$name"
                 ;;
-            4) run_menu_action local_inference verify ;;
-            5) run_menu_action local_inference configure vulkan ;;
-            6) run_menu_action local_inference setup vulkan ;;
-            7) run_menu_action local_inference configure sycl ;;
-            8) run_menu_action local_inference setup sycl ;;
-            9) run_menu_action local_inference help ;;
+            11) run_menu_action local_inference verify ;;
+            12) run_menu_action local_inference setup sycl ;;
+            13) run_menu_action local_inference setup vulkan ;;
+            14) run_menu_action local_inference help ;;
             b|B) return ;;
             q|Q) exit 0 ;;
             *) printf 'Unknown selection.\n' ;;
