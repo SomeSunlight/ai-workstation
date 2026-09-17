@@ -61,6 +61,11 @@ local_inference() {
             printf '\n'
             bash "$LOCAL_INFERENCE_SERVICE" status
             ;;
+        help|-h|--help)
+            bash "$LOCAL_INFERENCE_MANAGER" help
+            printf '\n'
+            bash "$LOCAL_INFERENCE_SERVICE" help
+            ;;
         *)
             bash "$LOCAL_INFERENCE_MANAGER" "$@"
             ;;
