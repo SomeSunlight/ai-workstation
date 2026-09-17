@@ -12,6 +12,13 @@ export HOME="$temp_home"
 export AIW_LOCAL_INFERENCE_CONFIG="$config_file"
 export AIW_LOCAL_INFERENCE_ROOT="$runtime_root"
 
+# Intel's setvars.sh owns ONEAPI_ROOT. AI Workstation must not declare that
+# vendor environment variable readonly before sourcing the Intel environment.
+if grep -Eq '^[[:space:]]*readonly[[:space:]]+ONEAPI_ROOT=' "$manager"; then
+    echo 'AI Workstation must not declare Intel-owned ONEAPI_ROOT readonly.' >&2
+    exit 1
+fi
+
 # Remote-only is a valid state and must not require any local runtime artifacts.
 remote_status="$(bash "$manager" status)"
 grep -Fq 'Local inference       : false' <<< "$remote_status"
