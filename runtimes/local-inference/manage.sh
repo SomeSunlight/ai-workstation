@@ -12,14 +12,16 @@ readonly LLAMA_REPOSITORY_DIR="${LLAMA_ROOT}/repository"
 readonly LLAMA_BUILDS_DIR="${LLAMA_ROOT}/builds"
 readonly DISPATCHER_DIR="${RUNTIME_ROOT}/Llama_Dispatcher"
 readonly UV_BIN="${HOME}/.local/bin/uv"
+readonly ONEAPI_ROOT="${AIW_ONEAPI_ROOT:-/opt/intel/oneapi}"
+readonly ONEAPI_SETVARS="${ONEAPI_ROOT}/setvars.sh"
 
 usage() {
     cat <<'USAGE'
 Host-local inference
 
 Usage:
-  aiw local-inference configure vulkan
-  aiw local-inference setup vulkan
+  aiw local-inference configure vulkan|sycl
+  aiw local-inference setup vulkan|sycl
   aiw local-inference install
   aiw local-inference status
   aiw local-inference verify
@@ -106,7 +108,7 @@ PY
 }
 
 require_config() {
-    [[ -f "$CONFIG_FILE" ]] || fail "Local inference is not configured. Run: aiw local-inference configure vulkan"
+    [[ -f "$CONFIG_FILE" ]] || fail "Local inference is not configured. Run: aiw local-inference configure vulkan|sycl"
     [[ "$(config_value AIW_LOCAL_INFERENCE_ENABLED)" == "true" ]] || \
         fail "Local inference is disabled in $CONFIG_FILE"
 }
@@ -132,15 +134,15 @@ EOF_CONFIG
 configure() {
     local preset="${1:-}"
     case "$preset" in
-        vulkan)
-            write_backend_config vulkan
+        vulkan|sycl)
+            write_backend_config "$preset"
             ;;
         laptop-vulkan|laptop|thinkpad)
             warn "Preset '$preset' is deprecated; using generic 'vulkan'. Dispatcher instance configuration is no longer managed by AI Workstation."
             write_backend_config vulkan
             ;;
         *)
-            fail "Unknown preset '${preset:-}'. Supported now: vulkan"
+            fail "Unknown preset '${preset:-}'. Supported now: vulkan, sycl"
             ;;
     esac
 }
@@ -149,6 +151,83 @@ validate_build_name() {
     local name="$1"
     [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || \
         fail "Invalid llama.cpp build name '$name'. Use letters, numbers, dots, underscores or hyphens."
+}
+
+is_wsl() {
+    grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null
+}
+
+require_ubuntu_noble_wsl() {
+    [[ -r /etc/os-release ]] || fail "Cannot identify Linux distribution."
+    # shellcheck disable=SC1091
+    source /etc/os-release
+    [[ "${ID:-}" == "ubuntu" && "${VERSION_CODENAME:-}" == "noble" ]] || \
+        fail "The first automatic SYCL provisioning path is intentionally limited to Ubuntu 24.04 (noble)."
+    is_wsl || fail "The first automatic SYCL provisioning path is intentionally limited to WSL2."
+    [[ -e /dev/dxg ]] || fail "WSL does not expose /dev/dxg. Update the Windows Intel GPU driver / WSL and restart WSL before installing SYCL."
+}
+
+configure_intel_sycl_repositories() {
+    require_ubuntu_noble_wsl
+
+    printf '[..] Configuring Intel client-GPU and oneAPI APT repositories.\n'
+    sudo apt-get update
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates gnupg gpg-agent wget
+
+    wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \
+        sudo gpg --yes --dearmor --output /usr/share/keyrings/intel-graphics.gpg
+    printf '%s\n' \
+        'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu noble client' | \
+        sudo tee /etc/apt/sources.list.d/intel-gpu-noble.list >/dev/null
+
+    wget -qO- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | \
+        gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg >/dev/null
+    printf '%s\n' \
+        'deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main' | \
+        sudo tee /etc/apt/sources.list.d/oneAPI.list >/dev/null
+}
+
+load_backend_environment() {
+    local backend="$1"
+    if [[ "$backend" != "sycl" ]]; then
+        return
+    fi
+
+    [[ -r "$ONEAPI_SETVARS" ]] || fail "oneAPI environment script is missing: $ONEAPI_SETVARS"
+
+    local restore_nounset=false
+    if [[ $- == *u* ]]; then
+        restore_nounset=true
+        set +u
+    fi
+    # shellcheck disable=SC1090
+    source "$ONEAPI_SETVARS" >/dev/null
+    [[ "$restore_nounset" == "true" ]] && set -u
+
+    # The pinned llama.cpp SYCL launcher enables this for device allocations >4 GiB.
+    export UR_L0_ENABLE_RELAXED_ALLOCATION_LIMITS="${UR_L0_ENABLE_RELAXED_ALLOCATION_LIMITS:-1}"
+}
+
+verify_sycl_hardware() {
+    load_backend_environment sycl
+    command -v icx >/dev/null 2>&1 || fail "Intel oneAPI C compiler (icx) is unavailable after loading oneAPI."
+    command -v icpx >/dev/null 2>&1 || fail "Intel oneAPI C++ compiler (icpx) is unavailable after loading oneAPI."
+    command -v sycl-ls >/dev/null 2>&1 || fail "sycl-ls is unavailable after loading oneAPI."
+
+    local devices
+    if ! devices="$(sycl-ls 2>&1)"; then
+        printf '%s\n' "$devices"
+        fail "sycl-ls failed to enumerate SYCL devices."
+    fi
+    printf '%s\n' "$devices"
+
+    if grep -Eq '\[(ext_oneapi_)?level_zero:gpu([:]|\])' <<< "$devices"; then
+        printf '[OK] Intel Level Zero GPU detected through SYCL.\n'
+        return
+    fi
+
+    fail "SYCL is installed, but no Level Zero GPU is visible. Check the Intel WSL user-mode compute runtime before building llama.cpp."
 }
 
 install_system_dependencies() {
@@ -172,7 +251,7 @@ install_system_dependencies() {
                 fail "CUDA backend requires an existing WSL CUDA toolkit (nvcc). Automatic CUDA toolkit installation is intentionally not part of this first block."
             ;;
         sycl)
-            fail "SYCL provisioning is not implemented in this first block. Keep it as a separate explicit build backend once the oneAPI/Level Zero toolchain is tested under WSL."
+            configure_intel_sycl_repositories
             ;;
         cpu)
             ;;
@@ -184,6 +263,16 @@ install_system_dependencies() {
     printf '[..] Installing host build prerequisites for backend: %s\n' "$backend"
     sudo apt-get update
     sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${packages[@]}"
+
+    if [[ "$backend" == "sycl" ]]; then
+        local oneapi_package
+        oneapi_package="$(json_value versions.intel_oneapi.deep_learning_essentials_package)"
+        printf '[..] Installing Intel WSL user-mode compute runtime and oneAPI package: %s\n' "$oneapi_package"
+        sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            libze1 intel-level-zero-gpu intel-opencl-icd clinfo libze-dev intel-ocloc
+        sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y "$oneapi_package"
+        verify_sycl_hardware
+    fi
 }
 
 ensure_llama_repository() {
@@ -231,6 +320,12 @@ default_cmake_args() {
     case "$backend" in
         vulkan) printf '%s\n' '-DGGML_VULKAN=ON' ;;
         cuda) printf '%s\n' '-DGGML_CUDA=ON' ;;
+        sycl)
+            printf '%s\n' \
+                '-DGGML_SYCL=ON' \
+                '-DCMAKE_C_COMPILER=icx' \
+                '-DCMAKE_CXX_COMPILER=icpx'
+            ;;
         cpu) ;;
         *) fail "Unsupported build backend: $backend" ;;
     esac
@@ -277,16 +372,26 @@ write_build_manifest() {
     local commit="$3"
     shift 3
     local extra_args=("$@")
-    local slot_dir source_dir build_dir bin_dir repository version_output
+    local slot_dir source_dir build_dir bin_dir repository version_output compiler_output toolchain_package
     slot_dir="$(build_dir_for "$name")"
     source_dir="${slot_dir}/source"
     build_dir="${slot_dir}/build"
     bin_dir="${build_dir}/bin"
     repository="$(json_value versions.llama_cpp.repository)"
     version_output="$("${bin_dir}/llama-server" --version 2>&1 | head -n 1 || true)"
+    compiler_output=""
+    toolchain_package=""
+
+    if [[ "$backend" == "sycl" ]]; then
+        compiler_output="$(icpx --version 2>/dev/null | head -n 1 || true)"
+        local package_name
+        package_name="$(json_value versions.intel_oneapi.deep_learning_essentials_package)"
+        toolchain_package="$(dpkg-query -W -f='${Version}' "$package_name" 2>/dev/null || true)"
+    fi
 
     python3 - "$slot_dir/manifest.json" "$name" "$repository" "$commit" "$backend" \
-        "$source_dir" "$build_dir" "$bin_dir" "$version_output" "${extra_args[@]}" <<'PY'
+        "$source_dir" "$build_dir" "$bin_dir" "$version_output" "$compiler_output" "$toolchain_package" \
+        "${extra_args[@]}" <<'PY'
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -295,7 +400,8 @@ import sys
 path = Path(sys.argv[1])
 name, repository, commit, backend = sys.argv[2:6]
 source_dir, build_dir, bin_dir, version_output = sys.argv[6:10]
-extra_args = sys.argv[10:]
+compiler_output, toolchain_package = sys.argv[10:12]
+extra_args = sys.argv[12:]
 payload = {
     "schema": 1,
     "name": name,
@@ -309,6 +415,11 @@ payload = {
     "llama_server_version": version_output,
     "built_at_utc": datetime.now(timezone.utc).isoformat(),
 }
+if compiler_output or toolchain_package:
+    payload["toolchain"] = {
+        "compiler": compiler_output,
+        "package_version": toolchain_package,
+    }
 path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 PY
 }
@@ -358,9 +469,10 @@ llama_build() {
     done
 
     [[ -n "$backend" ]] || fail "Usage: aiw local-inference llama build --backend BACKEND [...]"
-    case "$backend" in vulkan|cuda|cpu) ;; *) fail "Unsupported llama.cpp backend: $backend" ;; esac
+    case "$backend" in vulkan|cuda|sycl|cpu) ;; *) fail "Unsupported llama.cpp backend: $backend" ;; esac
 
     install_system_dependencies "$backend"
+    load_backend_environment "$backend"
 
     local commit short_commit
     commit="$(resolve_llama_commit "$requested_ref")"
@@ -537,23 +649,31 @@ resolve_requested_build() {
     fi
 }
 
+ensure_pinned_backend_build() {
+    local backend="$1"
+    local pinned commit short name
+    pinned="$(json_value versions.llama_cpp.commit)"
+    commit="$(resolve_llama_commit "$pinned")"
+    short="${commit:0:8}"
+    name="${backend}-${short}"
+    if ! build_exists "$name"; then
+        llama_build --backend "$backend" --commit "$commit" --name "$name"
+    fi
+    llama_select "$name"
+}
+
 install_all() {
     require_config
+    local requested_backend="${1:-}"
     local active backend
     active="$(config_value AIW_LLAMA_CPP_ACTIVE_BUILD)"
-    backend="$(config_value AIW_LLAMA_CPP_BOOTSTRAP_BACKEND)"
+    backend="${requested_backend:-$(config_value AIW_LLAMA_CPP_BOOTSTRAP_BACKEND)}"
     backend="${backend:-vulkan}"
 
-    if [[ -z "$active" ]]; then
-        local pinned commit short name
-        pinned="$(json_value versions.llama_cpp.commit)"
-        commit="$(resolve_llama_commit "$pinned")"
-        short="${commit:0:8}"
-        name="${backend}-${short}"
-        if ! build_exists "$name"; then
-            llama_build --backend "$backend" --commit "$commit" --name "$name"
-        fi
-        llama_select "$name"
+    if [[ -n "$requested_backend" ]]; then
+        ensure_pinned_backend_build "$backend"
+    elif [[ -z "$active" ]]; then
+        ensure_pinned_backend_build "$backend"
     elif ! build_exists "$active"; then
         fail "Configured active llama.cpp build '$active' does not exist. Build it explicitly or clear AIW_LLAMA_CPP_ACTIVE_BUILD."
     fi
@@ -564,12 +684,15 @@ install_all() {
 show_status() {
     local enabled="false"
     local active="not configured"
+    local bootstrap="not configured"
     if [[ -f "$CONFIG_FILE" ]]; then
         enabled="$(config_value AIW_LOCAL_INFERENCE_ENABLED)"
         active="$(config_value AIW_LLAMA_CPP_ACTIVE_BUILD)"
+        bootstrap="$(config_value AIW_LLAMA_CPP_BOOTSTRAP_BACKEND)"
     fi
 
     printf 'Local inference       : %s\n' "${enabled:-false}"
+    printf 'llama.cpp bootstrap   : %s\n' "${bootstrap:-not configured}"
     printf 'llama.cpp active      : %s\n' "${active:-not configured}"
     if [[ -n "${active:-}" ]] && build_exists "$active"; then
         printf 'llama.cpp backend     : %s\n' "$(manifest_value "$active" backend)"
@@ -614,6 +737,21 @@ verify_vulkan_hardware() {
     fail "Vulkan is installed, but no hardware GPU device was detected."
 }
 
+verify_sycl_build_device() {
+    local bin_dir="$1"
+    local lister="${bin_dir}/llama-ls-sycl-device"
+    [[ -x "$lister" ]] || fail "SYCL build is missing llama-ls-sycl-device: $lister"
+
+    local output
+    if ! output="$($lister 2>&1)"; then
+        printf '%s\n' "$output"
+        fail "llama.cpp SYCL device enumeration failed."
+    fi
+    printf '%s\n' "$output"
+    grep -Eq 'found [1-9][0-9]* SYCL devices' <<< "$output" || \
+        fail "oneAPI sees a GPU, but this llama.cpp SYCL build did not enumerate a SYCL device."
+}
+
 verify() {
     require_config
     local backend build bin_dir
@@ -625,12 +763,20 @@ verify() {
     [[ -d "${DISPATCHER_DIR}/.git" ]] || fail "Llama Dispatcher is missing. Run: aiw local-inference install"
     [[ -x "$UV_BIN" ]] || fail "uv is missing."
 
+    load_backend_environment "$backend"
+
     printf '[..] llama.cpp build=%s devices\n' "$build"
     "${bin_dir}/llama-server" --list-devices
 
-    if [[ "$backend" == "vulkan" ]]; then
-        verify_vulkan_hardware
-    fi
+    case "$backend" in
+        vulkan)
+            verify_vulkan_hardware
+            ;;
+        sycl)
+            verify_sycl_hardware
+            verify_sycl_build_device "$bin_dir"
+            ;;
+    esac
 
     printf '[..] Verifying Llama Dispatcher imports/CLI at the pinned revision.\n'
     (
@@ -651,11 +797,14 @@ run_dispatcher() {
     fi
     (($# > 0)) || fail "Dispatcher arguments are required."
 
-    local build bin_dir
+    local build backend bin_dir
     build="$(resolve_requested_build "$requested_build")"
+    backend="$(manifest_value "$build" backend)"
     bin_dir="$(build_bin_dir_for "$build")"
     [[ -d "${DISPATCHER_DIR}/.git" ]] || fail "Llama Dispatcher is not installed."
     [[ -x "$UV_BIN" ]] || fail "uv is missing."
+
+    load_backend_environment "$backend"
 
     printf '[..] Dispatcher using llama.cpp build: %s (%s)\n' "$build" "$bin_dir"
     (
@@ -680,7 +829,9 @@ serve() {
 setup() {
     local preset="${1:-}"
     configure "$preset"
-    install_all
+    local backend
+    backend="$(config_value AIW_LLAMA_CPP_BOOTSTRAP_BACKEND)"
+    install_all "$backend"
     verify
 }
 
@@ -691,11 +842,12 @@ show_config() {
     else
         printf '(not configured)\n'
     fi
-    printf 'Runtime root       : %s\n' "$RUNTIME_ROOT"
-    printf 'llama.cpp root     : %s\n' "$LLAMA_ROOT"
-    printf 'llama.cpp builds   : %s\n' "$LLAMA_BUILDS_DIR"
-    printf 'Dispatcher checkout: %s\n' "$DISPATCHER_DIR"
+    printf 'Runtime root        : %s\n' "$RUNTIME_ROOT"
+    printf 'llama.cpp root      : %s\n' "$LLAMA_ROOT"
+    printf 'llama.cpp builds    : %s\n' "$LLAMA_BUILDS_DIR"
+    printf 'Dispatcher checkout : %s\n' "$DISPATCHER_DIR"
     printf 'Dispatcher instances: %s/instances/<name> (user-owned)\n' "$DISPATCHER_DIR"
+    printf 'oneAPI root         : %s\n' "$ONEAPI_ROOT"
 }
 
 command_name="${1:-help}"
