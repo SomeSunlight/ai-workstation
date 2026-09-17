@@ -196,14 +196,16 @@ load_backend_environment() {
 
     [[ -r "$ONEAPI_SETVARS" ]] || fail "oneAPI environment script is missing: $ONEAPI_SETVARS"
 
-    local restore_nounset=false
-    if [[ $- == *u* ]]; then
-        restore_nounset=true
-        set +u
+    if [[ "${SETVARS_COMPLETED:-}" != "1" ]]; then
+        local restore_nounset=false
+        if [[ $- == *u* ]]; then
+            restore_nounset=true
+            set +u
+        fi
+        # shellcheck disable=SC1090
+        source "$ONEAPI_SETVARS" >/dev/null
+        [[ "$restore_nounset" == "true" ]] && set -u
     fi
-    # shellcheck disable=SC1090
-    source "$ONEAPI_SETVARS" >/dev/null
-    [[ "$restore_nounset" == "true" ]] && set -u
 
     # The pinned llama.cpp SYCL launcher enables this for device allocations >4 GiB.
     export UR_L0_ENABLE_RELAXED_ALLOCATION_LIMITS="${UR_L0_ENABLE_RELAXED_ALLOCATION_LIMITS:-1}"
