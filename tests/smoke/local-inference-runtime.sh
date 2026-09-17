@@ -19,6 +19,14 @@ if grep -Eq '^[[:space:]]*readonly[[:space:]]+ONEAPI_ROOT=' "$manager"; then
     exit 1
 fi
 
+# Intel setvars.sh marks a completed environment with SETVARS_COMPLETED. The
+# manager may enter the SYCL environment loader several times in one command,
+# so repeated sourcing must be guarded rather than relying on --force.
+grep -Fq 'if [[ "${SETVARS_COMPLETED:-}" != "1" ]]; then' "$manager" || {
+    echo 'SYCL environment loading is not guarded against repeated Intel setvars.sh sourcing.' >&2
+    exit 1
+}
+
 # Remote-only is a valid state and must not require any local runtime artifacts.
 remote_status="$(bash "$manager" status)"
 grep -Fq 'Local inference       : false' <<< "$remote_status"
