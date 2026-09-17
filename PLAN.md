@@ -12,23 +12,26 @@ Owner-approved decisions for this block:
 - Local inference is optional; remote-only AI Workstations remain valid.
 - Llama Dispatcher continues to own profiles, ensembles, benchmark/eval execution, and metrics history.
 - Hardware/backend choice is explicit configuration. AI Workstation verifies prerequisites but does not silently invent a backend.
-- `llama.cpp` is installed from a pinned source revision rather than an unbounded latest checkout.
+- AI Workstation pins a tested default `llama.cpp` source revision, while multiple llama.cpp revisions/build configurations may coexist for controlled comparisons.
+- llama.cpp builds use human-readable slot names plus machine-readable manifests; an existing slot name must never silently change meaning.
+- One shared llama.cpp Git/object cache feeds independent detached worktrees/build directories so parallel test builds do not require full duplicate clones.
 
 Implementation checklist:
 
 - [x] Create Issue #5 and branch `agent/local-inference-onboarding` from current `main`.
 - [x] Record the owner-approved placement and responsibility boundaries before implementation.
-- [ ] Add durable machine-local enablement/configuration for optional local inference.
-- [ ] Add a pinned host-local `llama.cpp` source/build/install workflow, starting with Vulkan and leaving clean backend extension points.
-- [ ] Add reproducible Llama Dispatcher checkout plus `uv` environment synchronization.
-- [ ] Support attaching an instance repository at the Dispatcher's existing `instances/<name>` boundary without copying model/engine semantics into AI Workstation.
-- [ ] Expose install/status/verify/use through the AI Workstation operator surface.
-- [ ] Keep the default/remote-only path unchanged when local inference is not enabled.
-- [ ] Update central versions, documentation, and automated checks together.
-- [ ] Run focused verification and `./tools/release-check.sh` on the coherent review candidate.
+- [x] Add durable machine-local enablement/configuration for optional local inference.
+- [x] Add a pinned host-local multi-build `llama.cpp` source/build/install workflow, starting with Vulkan and leaving clean backend extension points.
+- [x] Add reproducible Llama Dispatcher checkout plus `uv` environment synchronization.
+- [x] Support attaching an instance repository at the Dispatcher's existing `instances/<name>` boundary without copying model/engine semantics into AI Workstation.
+- [x] Expose install/status/verify/use and llama.cpp build selection through the AI Workstation operator surface.
+- [x] Keep the default/remote-only path unchanged when local inference is not enabled.
+- [x] Update central versions, local-inference documentation, smoke tests, CI and release checks together.
+- [x] Run focused verification and the repository release gate in Ubuntu 24.04 CI on the coherent review candidate.
 - [ ] Present the review PR without merging; exact-head merge-gate verification remains after explicit owner approval.
+- [ ] Run the first real ThinkPad WSL/Vulkan installation and Dispatcher compile/run checks before treating the runtime as hardware-validated.
 
-Checkpoint: Issue #5 records the bounded onboarding scope. No local-inference implementation existed when this checkpoint was written.
+Checkpoint: Issue #5 now has a software-complete review candidate. The branch contains a multi-build llama.cpp registry with per-build manifests, pinned default llama.cpp and Dispatcher revisions, a machine-local Laptop/Vulkan preset, Dispatcher instance attachment, and a thin `aiw` front controller that keeps the previous operator implementation intact as `bin/aiw-core`. Remote-only operation remains valid. GitHub CI on Ubuntu 24.04 passes repository layout, local-inference registry/routing, existing Goose/Open WebUI smoke tests, interactive menu checks, uv synchronization, Ansible lint and playbook syntax. Real Intel/WSL/Vulkan hardware behavior remains intentionally unclaimed until the ThinkPad run.
 
 ## Current focus — align the repository after ContextCanon onboarding
 
@@ -109,7 +112,7 @@ Purpose: make AI Workstation usable on machines that should not install every ru
 
 ## Next architecture block — local inference placement
 
-Purpose: decide empirically whether llama.cpp and the Llama Dispatcher should move from Windows into WSL/Linux before making Linux-first local inference an architectural rule.
+Purpose: validate the selected WSL/Linux-host implementation on the real machines before promoting it from working direction to accepted architecture, and determine the best backend/runtime details per hardware class.
 
 ### Desktop validation
 
@@ -121,15 +124,16 @@ Purpose: decide empirically whether llama.cpp and the Llama Dispatcher should mo
 ### Laptop validation
 
 - [ ] Establish a comparable Windows baseline on the 64 GB laptop with its Intel GPU/shared-memory constraints.
-- [ ] Test the appropriate llama.cpp Intel/Linux backend under WSL before assuming parity with the Windows runtime.
-- [ ] Measure the largest practical model, effective shared-memory availability, throughput, context behavior, and stability.
+- [ ] Run the new AI Workstation Laptop/Vulkan path under WSL and verify actual Intel GPU/device selection before assuming parity with the Windows runtime.
+- [ ] Measure the largest practical model, effective shared-memory availability, throughput, context behavior, and stability through Llama Dispatcher rather than a duplicate benchmark harness.
 - [ ] Test whether the default WSL memory ceiling is a material limitation and, if necessary, evaluate an explicit WSL memory configuration without starving Windows.
+- [ ] Add/test SYCL as a parallel build backend only after the first Vulkan path is understood; compare through the same Dispatcher measurement history.
 
 ### Placement decision
 
-- [ ] Decide llama.cpp placement only after both machines have comparable measurements.
-- [ ] Decide Llama Dispatcher placement; current preference is Linux/WSL unless testing reveals a concrete Windows-only advantage.
-- [ ] If Linux/WSL wins, define local inference as a first-class non-containerized or deliberately containerized runtime based on measured operational simplicity and hardware access rather than forcing everything into Compose.
+- [ ] Confirm llama.cpp WSL/Linux-host placement after the real laptop and desktop measurements.
+- [ ] Confirm Llama Dispatcher WSL/Linux-host placement unless testing reveals a concrete Windows-only advantage.
+- [ ] Keep local inference non-containerized unless measured operational evidence justifies adding a container layer.
 - [ ] If Windows-hosted inference remains supported, make Windows/WSL network discovery and firewall configuration dynamic, idempotent, and installer-owned instead of relying on manual chat instructions.
 - [ ] Add the resulting stable architecture decision to the appropriate Context Node only after it is tested and accepted.
 
