@@ -33,7 +33,7 @@ if grep -Fq 'Llama_Dispatcher_Laptop' "$config_file"; then
 fi
 
 # Create a synthetic completed build slot. Smoke tests exercise registry semantics,
-# not compilers, Vulkan drivers, network access or real model execution.
+# not compilers, GPU drivers, network access or real model execution.
 name='vulkan-deadbeef-lab'
 slot="${runtime_root}/llama.cpp/builds/${name}"
 bin_dir="${slot}/build/bin"
@@ -78,9 +78,19 @@ manifest_output="$(bash "$manager" llama show "$name")"
 grep -Fq '"extra_cmake_args": [' <<< "$manifest_output"
 grep -Fq '"-DTEST_ONLY=ON"' <<< "$manifest_output"
 
-# Re-applying a generic backend preset must preserve the explicitly selected build.
+# Re-applying a backend preset must preserve the explicitly selected build.
 bash "$manager" configure vulkan
 grep -Fxq "AIW_LLAMA_CPP_ACTIVE_BUILD=${name}" "$config_file"
+
+# SYCL is another explicit generic backend. Merely configuring it must not
+# provision hardware in CI and must not destroy/change the selected Vulkan slot.
+bash "$manager" configure sycl
+grep -Fxq 'AIW_LLAMA_CPP_BOOTSTRAP_BACKEND=sycl' "$config_file"
+grep -Fxq "AIW_LLAMA_CPP_ACTIVE_BUILD=${name}" "$config_file"
+sycl_status="$(bash "$manager" status)"
+grep -Fq 'llama.cpp bootstrap   : sycl' <<< "$sycl_status"
+grep -Fq "llama.cpp active      : ${name}" <<< "$sycl_status"
+grep -Fq 'llama.cpp backend     : vulkan' <<< "$sycl_status"
 
 # The stable aiw front controller must expose the same optional runtime.
 router_status="$("$cli" local-inference status)"
@@ -92,4 +102,4 @@ if bash "$manager" llama select does-not-exist >/dev/null 2>&1; then
     exit 1
 fi
 
-printf 'Local-inference registry, generic ownership boundary and routing are valid.\n'
+printf 'Local-inference registry, Vulkan/SYCL backend configuration, ownership boundary and routing are valid.\n'
