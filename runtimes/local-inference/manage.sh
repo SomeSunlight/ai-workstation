@@ -14,17 +14,17 @@ readonly DISPATCHER_DIR="${RUNTIME_ROOT}/Llama_Dispatcher"
 readonly UV_BIN="${HOME}/.local/bin/uv"
 
 usage() {
-    cat <<'EOF'
+    cat <<'USAGE'
 Host-local inference
 
 Usage:
-  aiw local-inference configure laptop-vulkan
-  aiw local-inference setup laptop-vulkan
+  aiw local-inference configure vulkan
+  aiw local-inference setup vulkan
   aiw local-inference install
   aiw local-inference status
   aiw local-inference verify
-  aiw local-inference serve [--llama-build NAME] [DISPATCHER ARGUMENTS...]
-  aiw local-inference dispatcher [--llama-build NAME] DISPATCHER ARGUMENTS...
+  aiw local-inference serve [--llama-build NAME] DISPATCHER_SERVE_ARGUMENTS...
+  aiw local-inference dispatcher [--llama-build NAME] DISPATCHER_ARGUMENTS...
   aiw local-inference llama build --backend BACKEND [--commit REF] [--name NAME]
                                   [--label LABEL] [--cmake-arg ARG]...
   aiw local-inference llama list
@@ -33,15 +33,17 @@ Usage:
   aiw local-inference config
   aiw local-inference help
 
-llama.cpp builds are parallel, immutable slots. A slot name is a convenient
-human label; its manifest records the exact source commit, backend and CMake
-arguments. The default generated name is BACKEND-SHORTCOMMIT, optionally with
-a descriptive suffix from --label.
+AI Workstation owns the host-local llama.cpp builds and the pinned Llama
+Dispatcher checkout. Dispatcher instances under instances/<name> are user-owned:
+AI Workstation does not clone, rewrite or update them.
 
-The laptop-vulkan preset configures the existing Laptop instance repository and
-thinkpad ensemble. Model/profile/ensemble semantics remain owned by Llama
-Dispatcher and its instance repository.
-EOF
+Examples after attaching your own Dispatcher instance:
+  aiw local-inference serve --instance Laptop --ensemble thinkpad
+  aiw local-inference dispatcher bench PROFILE --instance Laptop
+
+llama.cpp builds are parallel immutable-spec slots. The default generated name
+is BACKEND-SHORTCOMMIT, optionally followed by a descriptive --label.
+USAGE
 }
 
 fail() {
@@ -104,37 +106,41 @@ PY
 }
 
 require_config() {
-    [[ -f "$CONFIG_FILE" ]] || fail "Local inference is not configured. Run: aiw local-inference configure laptop-vulkan"
+    [[ -f "$CONFIG_FILE" ]] || fail "Local inference is not configured. Run: aiw local-inference configure vulkan"
     [[ "$(config_value AIW_LOCAL_INFERENCE_ENABLED)" == "true" ]] || \
         fail "Local inference is disabled in $CONFIG_FILE"
 }
 
-write_laptop_vulkan_config() {
+write_backend_config() {
+    local backend="$1"
     mkdir -p "$CONFIG_DIR"
     chmod 0700 "$CONFIG_DIR" 2>/dev/null || true
 
     local existing_active=""
     existing_active="$(config_value AIW_LLAMA_CPP_ACTIVE_BUILD)"
-    cat > "$CONFIG_FILE" <<EOF
+    cat > "$CONFIG_FILE" <<EOF_CONFIG
 AIW_LOCAL_INFERENCE_ENABLED=true
-AIW_LLAMA_CPP_BOOTSTRAP_BACKEND=vulkan
+AIW_LLAMA_CPP_BOOTSTRAP_BACKEND=${backend}
 AIW_LLAMA_CPP_ACTIVE_BUILD=${existing_active}
-AIW_DISPATCHER_INSTANCE=Laptop
-AIW_DISPATCHER_INSTANCE_REPOSITORY=https://github.com/SomeSunlight/Llama_Dispatcher_Laptop.git
-AIW_DISPATCHER_ENSEMBLE=thinkpad
-EOF
+EOF_CONFIG
     chmod 0600 "$CONFIG_FILE"
-    printf '[OK] Local inference preset written: %s\n' "$CONFIG_FILE"
+    printf '[OK] Local inference config written: %s\n' "$CONFIG_FILE"
+    printf '     backend: %s\n' "$backend"
+    printf '[..] Dispatcher instances remain user-owned under: %s/instances/<name>\n' "$DISPATCHER_DIR"
 }
 
 configure() {
     local preset="${1:-}"
     case "$preset" in
+        vulkan)
+            write_backend_config vulkan
+            ;;
         laptop-vulkan|laptop|thinkpad)
-            write_laptop_vulkan_config
+            warn "Preset '$preset' is deprecated; using generic 'vulkan'. Dispatcher instance configuration is no longer managed by AI Workstation."
+            write_backend_config vulkan
             ;;
         *)
-            fail "Unknown preset '${preset:-}'. Supported now: laptop-vulkan"
+            fail "Unknown preset '${preset:-}'. Supported now: vulkan"
             ;;
     esac
 }
@@ -159,7 +165,7 @@ install_system_dependencies() {
 
     case "$backend" in
         vulkan)
-            packages+=(glslc libvulkan-dev spirv-headers vulkan-tools)
+            packages+=(glslc libvulkan-dev mesa-vulkan-drivers spirv-headers vulkan-tools)
             ;;
         cuda)
             command -v nvcc >/dev/null 2>&1 || \
@@ -240,10 +246,6 @@ build_manifest_for() {
 
 build_bin_dir_for() {
     printf '%s/build/bin\n' "$(build_dir_for "$1")"
-}
-
-build_source_dir_for() {
-    printf '%s/source\n' "$(build_dir_for "$1")"
 }
 
 build_exists() {
@@ -513,27 +515,7 @@ install_dispatcher() {
     [[ -x "$UV_BIN" ]] || fail "uv is missing. Run the normal AI Workstation installer first."
     (cd "$DISPATCHER_DIR" && "$UV_BIN" sync --frozen --python /usr/bin/python3)
     printf '[OK] Llama Dispatcher environment synchronized.\n'
-}
-
-attach_instance() {
-    local instance repository target
-    instance="$(config_value AIW_DISPATCHER_INSTANCE)"
-    repository="$(config_value AIW_DISPATCHER_INSTANCE_REPOSITORY)"
-    [[ -n "$instance" ]] || fail "AIW_DISPATCHER_INSTANCE is missing from $CONFIG_FILE"
-    [[ -n "$repository" ]] || fail "AIW_DISPATCHER_INSTANCE_REPOSITORY is missing from $CONFIG_FILE"
-    target="${DISPATCHER_DIR}/instances/${instance}"
-
-    if [[ ! -d "${target}/.git" ]]; then
-        mkdir -p "${DISPATCHER_DIR}/instances"
-        git clone "$repository" "$target"
-        printf '[OK] Dispatcher instance attached: %s\n' "$target"
-        return
-    fi
-
-    local origin
-    origin="$(git -C "$target" remote get-url origin 2>/dev/null || true)"
-    [[ "$origin" == "$repository" ]] || fail "Instance '$instance' has unexpected origin: ${origin:-missing}"
-    printf '[OK] Dispatcher instance already attached; its working tree was left untouched.\n'
+    printf '[..] User-owned Dispatcher instances belong under: %s/instances/<name>\n' "$DISPATCHER_DIR"
 }
 
 active_build_name() {
@@ -577,19 +559,14 @@ install_all() {
     fi
 
     install_dispatcher
-    attach_instance
 }
 
 show_status() {
     local enabled="false"
     local active="not configured"
-    local instance="not configured"
-    local ensemble="not configured"
     if [[ -f "$CONFIG_FILE" ]]; then
         enabled="$(config_value AIW_LOCAL_INFERENCE_ENABLED)"
         active="$(config_value AIW_LLAMA_CPP_ACTIVE_BUILD)"
-        instance="$(config_value AIW_DISPATCHER_INSTANCE)"
-        ensemble="$(config_value AIW_DISPATCHER_ENSEMBLE)"
     fi
 
     printf 'Local inference       : %s\n' "${enabled:-false}"
@@ -607,45 +584,62 @@ show_status() {
     [[ -d "$LLAMA_BUILDS_DIR" ]] && build_count="$(find "$LLAMA_BUILDS_DIR" -mindepth 2 -maxdepth 2 -name manifest.json -type f | wc -l)"
     printf 'llama.cpp builds      : %s\n' "$build_count"
     printf 'Dispatcher checkout   : %s\n' "$([[ -d "${DISPATCHER_DIR}/.git" ]] && git -C "$DISPATCHER_DIR" rev-parse --short HEAD 2>/dev/null || printf 'not installed')"
-    printf 'Dispatcher instance   : %s\n' "${instance:-not configured}"
-    printf 'Dispatcher ensemble   : %s\n' "${ensemble:-not configured}"
+
+    local instance_count=0
+    if [[ -d "${DISPATCHER_DIR}/instances" ]]; then
+        instance_count="$(find "${DISPATCHER_DIR}/instances" -mindepth 2 -maxdepth 2 -name instance.yaml -type f 2>/dev/null | wc -l)"
+    fi
+    printf 'Dispatcher instances  : %s user-owned\n' "$instance_count"
+}
+
+verify_vulkan_hardware() {
+    command -v vulkaninfo >/dev/null 2>&1 || fail "vulkaninfo is unavailable although the Vulkan backend is selected."
+
+    local summary
+    if ! summary="$(vulkaninfo --summary 2>&1)"; then
+        printf '%s\n' "$summary"
+        fail "vulkaninfo could not enumerate a usable Vulkan device."
+    fi
+    printf '%s\n' "$summary"
+
+    if grep -Eq 'PHYSICAL_DEVICE_TYPE_(INTEGRATED|DISCRETE|VIRTUAL)_GPU' <<< "$summary"; then
+        printf '[OK] Vulkan hardware GPU detected.\n'
+        return
+    fi
+
+    if grep -qi 'llvmpipe' <<< "$summary" || grep -q 'PHYSICAL_DEVICE_TYPE_CPU' <<< "$summary"; then
+        fail "Vulkan is installed, but only a CPU/software renderer (for example llvmpipe) is visible. The selected Vulkan runtime is not hardware-validated."
+    fi
+
+    fail "Vulkan is installed, but no hardware GPU device was detected."
 }
 
 verify() {
     require_config
-    local backend instance ensemble build bin_dir
+    local backend build bin_dir
     build="$(active_build_name)"
     backend="$(manifest_value "$build" backend)"
-    instance="$(config_value AIW_DISPATCHER_INSTANCE)"
-    ensemble="$(config_value AIW_DISPATCHER_ENSEMBLE)"
     bin_dir="$(build_bin_dir_for "$build")"
 
     [[ -x "${bin_dir}/llama-server" ]] || fail "llama-server is missing for build '$build'."
     [[ -d "${DISPATCHER_DIR}/.git" ]] || fail "Llama Dispatcher is missing. Run: aiw local-inference install"
-    [[ -d "${DISPATCHER_DIR}/instances/${instance}/.git" ]] || fail "Dispatcher instance '$instance' is missing."
     [[ -x "$UV_BIN" ]] || fail "uv is missing."
 
     printf '[..] llama.cpp build=%s devices\n' "$build"
     "${bin_dir}/llama-server" --list-devices
 
     if [[ "$backend" == "vulkan" ]]; then
-        if command -v vulkaninfo >/dev/null 2>&1; then
-            vulkaninfo --summary || warn "vulkaninfo could not enumerate a usable Vulkan device. The build is installed, but WSL graphics support still needs attention."
-        else
-            warn "vulkaninfo is unavailable."
-        fi
+        verify_vulkan_hardware
     fi
 
-    printf '[..] Dispatcher compile-only check for instance=%s ensemble=%s build=%s\n' "$instance" "$ensemble" "$build"
+    printf '[..] Verifying Llama Dispatcher imports/CLI at the pinned revision.\n'
     (
         cd "$DISPATCHER_DIR"
-        "$UV_BIN" run --frozen python src/dispatcher.py serve \
-            --instance "$instance" \
-            --ensemble "$ensemble" \
-            --compile-only \
-            --bin-dir "$bin_dir"
+        "$UV_BIN" run --frozen python src/dispatcher.py --help >/dev/null
     )
-    printf '[OK] Host-local inference installation is structurally usable.\n'
+
+    printf '[OK] Generic host-local inference runtime is structurally usable.\n'
+    printf '[..] Dispatcher instance/profile/ensemble verification is user-owned and intentionally not part of this generic check.\n'
 }
 
 run_dispatcher() {
@@ -657,35 +651,29 @@ run_dispatcher() {
     fi
     (($# > 0)) || fail "Dispatcher arguments are required."
 
-    local instance build bin_dir
-    instance="$(config_value AIW_DISPATCHER_INSTANCE)"
+    local build bin_dir
     build="$(resolve_requested_build "$requested_build")"
     bin_dir="$(build_bin_dir_for "$build")"
-    [[ -d "$DISPATCHER_DIR" ]] || fail "Llama Dispatcher is not installed."
+    [[ -d "${DISPATCHER_DIR}/.git" ]] || fail "Llama Dispatcher is not installed."
+    [[ -x "$UV_BIN" ]] || fail "uv is missing."
 
     printf '[..] Dispatcher using llama.cpp build: %s (%s)\n' "$build" "$bin_dir"
     (
         cd "$DISPATCHER_DIR"
-        exec "$UV_BIN" run --frozen python src/dispatcher.py "$@" \
-            --instance "$instance" \
-            --bin-dir "$bin_dir"
+        exec "$UV_BIN" run --frozen python src/dispatcher.py "$@" --bin-dir "$bin_dir"
     )
 }
 
 serve() {
-    require_config
     local requested_build=""
     if (($# >= 2)) && [[ "$1" == "--llama-build" ]]; then
         requested_build="$2"
         shift 2
     fi
-    local ensemble
-    ensemble="$(config_value AIW_DISPATCHER_ENSEMBLE)"
-    [[ -n "$ensemble" ]] || fail "AIW_DISPATCHER_ENSEMBLE is missing from $CONFIG_FILE"
     if [[ -n "$requested_build" ]]; then
-        run_dispatcher --llama-build "$requested_build" serve --ensemble "$ensemble" "$@"
+        run_dispatcher --llama-build "$requested_build" serve "$@"
     else
-        run_dispatcher serve --ensemble "$ensemble" "$@"
+        run_dispatcher serve "$@"
     fi
 }
 
@@ -707,6 +695,7 @@ show_config() {
     printf 'llama.cpp root     : %s\n' "$LLAMA_ROOT"
     printf 'llama.cpp builds   : %s\n' "$LLAMA_BUILDS_DIR"
     printf 'Dispatcher checkout: %s\n' "$DISPATCHER_DIR"
+    printf 'Dispatcher instances: %s/instances/<name> (user-owned)\n' "$DISPATCHER_DIR"
 }
 
 command_name="${1:-help}"
