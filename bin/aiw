@@ -27,11 +27,16 @@ run_menu_action() {
 }
 
 require_core() {
-    [[ -x "$CORE" ]] || fail "AI Workstation core command is missing or not executable: $CORE"
+    [[ -f "$CORE" ]] || fail "AI Workstation core command is missing: $CORE"
 }
 
 require_local_inference_manager() {
     [[ -f "$LOCAL_INFERENCE_MANAGER" ]] || fail "Local-inference manager is missing: $LOCAL_INFERENCE_MANAGER"
+}
+
+run_core() {
+    require_core
+    bash "$CORE" "$@"
 }
 
 local_inference_enabled() {
@@ -44,8 +49,7 @@ local_inference() {
 }
 
 show_help() {
-    require_core
-    "$CORE" help
+    run_core help
     cat <<'EOF'
 
 Optional local inference:
@@ -61,15 +65,13 @@ EOF
 }
 
 show_status() {
-    require_core
-    "$CORE" status
+    run_core status
     printf '\n'
     local_inference status
 }
 
 install_all() {
-    require_core
-    "$CORE" install
+    run_core install
     if local_inference_enabled; then
         printf '\n[..] Local inference is enabled; reconciling its host runtime.\n'
         local_inference install
@@ -79,8 +81,7 @@ install_all() {
 }
 
 verify_all() {
-    require_core
-    "$CORE" verify
+    run_core verify
     if local_inference_enabled; then
         printf '\n[..] Local inference is enabled; verifying it.\n'
         local_inference verify
@@ -126,7 +127,6 @@ EOF
 }
 
 main_menu() {
-    require_core
     local choice
     while true; do
         cat <<'EOF'
@@ -142,10 +142,10 @@ q) Exit
 EOF
         read -r -p 'Select: ' choice || return
         case "$choice" in
-            1) "$CORE" ;;
+            1) run_core ;;
             2) local_inference_menu ;;
             3) run_menu_action show_status ;;
-            4) run_menu_action "$CORE" update ;;
+            4) run_menu_action run_core update ;;
             5) run_menu_action show_help ;;
             q|Q) return ;;
             *) printf 'Unknown selection.\n' ;;
@@ -176,6 +176,6 @@ case "$command_name" in
         ;;
     *)
         require_core
-        exec "$CORE" "$command_name" "$@"
+        exec bash "$CORE" "$command_name" "$@"
         ;;
 esac
