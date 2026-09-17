@@ -31,7 +31,7 @@
     },
     "llama_cpp": {
       "repository": "https://github.com/ggml-org/llama.cpp.git",
-      "commit": "05f2dcfdba3879c55f735efa0f124b1a56f7ed11"
+      "commit": "9e3b928fd8c9d14dbf15a8768b9fdd7e5c721d66"
     },
     "llama_dispatcher": {
       "repository": "https://github.com/SomeSunlight/Llama_Dispatcher.git",
