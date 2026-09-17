@@ -15,7 +15,7 @@ grep -Fq 'llama.cpp / Llama Dispatcher' <<< "$menu_output"
 local_menu_output="$(printf '2\nb\nq\n' | HOME="$temp_home" "$cli")"
 grep -Fq 'Local inference' <<< "$local_menu_output"
 grep -Fq 'List llama.cpp builds' <<< "$local_menu_output"
-grep -Fq 'Setup ThinkPad / Vulkan completely' <<< "$local_menu_output"
+grep -Fq 'Setup generic Vulkan runtime' <<< "$local_menu_output"
 
 welcome_output="$(HOME="$temp_home" "$cli" welcome --force)"
 grep -Fq 'AI Workstation ready' <<< "$welcome_output"
