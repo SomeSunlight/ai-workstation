@@ -12,8 +12,8 @@ readonly LLAMA_REPOSITORY_DIR="${LLAMA_ROOT}/repository"
 readonly LLAMA_BUILDS_DIR="${LLAMA_ROOT}/builds"
 readonly DISPATCHER_DIR="${RUNTIME_ROOT}/Llama_Dispatcher"
 readonly UV_BIN="${HOME}/.local/bin/uv"
-readonly ONEAPI_ROOT="${AIW_ONEAPI_ROOT:-/opt/intel/oneapi}"
-readonly ONEAPI_SETVARS="${ONEAPI_ROOT}/setvars.sh"
+readonly AIW_ONEAPI_INSTALL_ROOT="${AIW_ONEAPI_ROOT:-/opt/intel/oneapi}"
+readonly ONEAPI_SETVARS="${AIW_ONEAPI_INSTALL_ROOT}/setvars.sh"
 
 usage() {
     cat <<'USAGE'
@@ -847,7 +847,7 @@ show_config() {
     printf 'llama.cpp builds    : %s\n' "$LLAMA_BUILDS_DIR"
     printf 'Dispatcher checkout : %s\n' "$DISPATCHER_DIR"
     printf 'Dispatcher instances: %s/instances/<name> (user-owned)\n' "$DISPATCHER_DIR"
-    printf 'oneAPI root         : %s\n' "$ONEAPI_ROOT"
+    printf 'oneAPI root         : %s\n' "$AIW_ONEAPI_INSTALL_ROOT"
 }
 
 command_name="${1:-help}"
