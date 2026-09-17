@@ -7,11 +7,15 @@ readonly MANAGER="${AIW_LOCAL_INFERENCE_MANAGER:-${ROOT}/runtimes/local-inferenc
 readonly CONFIG_DIR="${HOME}/.config/ai-workstation"
 readonly RUNTIME_CONFIG="${AIW_LOCAL_INFERENCE_RUNTIME_CONFIG:-${CONFIG_DIR}/local-inference-runtime.env}"
 readonly DISPATCHER_DIR="${AIW_LOCAL_INFERENCE_DISPATCHER_DIR:-${HOME}/.local/share/ai-workstation/local-inference/Llama_Dispatcher}"
-readonly SYSTEMD_USER_DIR="${AIW_LOCAL_INFERENCE_SYSTEMD_DIR:-${HOME}/.config/systemd/user}"
+readonly SYSTEMD_SYSTEM_DIR="${AIW_LOCAL_INFERENCE_SYSTEMD_DIR:-/etc/systemd/system}"
 readonly SERVICE_NAME="ai-workstation-local-inference.service"
-readonly SERVICE_FILE="${SYSTEMD_USER_DIR}/${SERVICE_NAME}"
+readonly SERVICE_FILE="${SYSTEMD_SYSTEM_DIR}/${SERVICE_NAME}"
 readonly SYSTEMCTL_BIN="${AIW_SYSTEMCTL_BIN:-systemctl}"
 readonly JOURNALCTL_BIN="${AIW_JOURNALCTL_BIN:-journalctl}"
+readonly SUDO_BIN="${AIW_SUDO_BIN-sudo}"
+readonly SERVICE_USER="$(id -un)"
+readonly SERVICE_GROUP="$(id -gn)"
+readonly SERVICE_HOME="$HOME"
 
 usage() {
     cat <<'EOF'
@@ -26,9 +30,13 @@ Usage:
   aiw local-inference logs
   aiw local-inference autostart enable|disable|status
 
-The model root is stored as machine-local AI Workstation configuration. It is
-passed explicitly to Llama Dispatcher as --model-root; no LLAMA_MODEL_ROOT needs
-to be placed in .bashrc, .profile or the global WSL environment.
+The model root is stored as machine-local AI Workstation configuration and passed
+explicitly to Llama Dispatcher as --model-root. No LLAMA_MODEL_ROOT needs to be
+placed in .bashrc, .profile or the global WSL environment.
+
+The managed Dispatcher runs as a normal systemd system service under the current
+Linux user. Autostart therefore follows the WSL distribution/systemd lifecycle and
+can later be used as an explicit dependency of agent services.
 EOF
 }
 
@@ -37,8 +45,12 @@ fail() {
     exit 1
 }
 
-warn() {
-    printf '[!!] %s\n' "$*" >&2
+privileged() {
+    if [[ -n "$SUDO_BIN" ]]; then
+        "$SUDO_BIN" "$@"
+    else
+        "$@"
+    fi
 }
 
 config_value() {
@@ -184,25 +196,34 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+User=${SERVICE_USER}
+Group=${SERVICE_GROUP}
+Environment=HOME=${SERVICE_HOME}
 ExecStart=${aiw_bin} local-inference service-run
 Restart=on-failure
 RestartSec=5
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
 EOF
 }
 
 install_service_unit() {
-    mkdir -p "$SYSTEMD_USER_DIR"
-    render_service_unit > "$SERVICE_FILE"
-    "$SYSTEMCTL_BIN" --user daemon-reload
+    local temp_unit
+    temp_unit="$(mktemp)"
+    trap 'rm -f "${temp_unit:-}"' RETURN
+    render_service_unit > "$temp_unit"
+    privileged mkdir -p "$SYSTEMD_SYSTEM_DIR"
+    privileged install -m 0644 "$temp_unit" "$SERVICE_FILE"
+    privileged "$SYSTEMCTL_BIN" daemon-reload
+    rm -f "$temp_unit"
+    trap - RETURN
 }
 
-require_user_systemd() {
+require_systemd() {
     command -v "$SYSTEMCTL_BIN" >/dev/null 2>&1 || fail "systemctl is unavailable."
-    if ! "$SYSTEMCTL_BIN" --user show-environment >/dev/null 2>&1; then
-        fail "The systemd user manager is unavailable. Ensure systemd is enabled in WSL and open a normal WSL user session."
+    if ! "$SYSTEMCTL_BIN" show-environment >/dev/null 2>&1; then
+        fail "The system systemd manager is unavailable. Ensure systemd is enabled in WSL and restart the distribution."
     fi
 }
 
@@ -223,13 +244,13 @@ service_run() {
 service_status() {
     runtime_show
     printf 'Autostart                  : '
-    if command -v "$SYSTEMCTL_BIN" >/dev/null 2>&1 && "$SYSTEMCTL_BIN" --user is-enabled "$SERVICE_NAME" >/dev/null 2>&1; then
+    if command -v "$SYSTEMCTL_BIN" >/dev/null 2>&1 && "$SYSTEMCTL_BIN" is-enabled "$SERVICE_NAME" >/dev/null 2>&1; then
         printf 'enabled\n'
     else
         printf 'disabled\n'
     fi
     printf 'Dispatcher service         : '
-    if command -v "$SYSTEMCTL_BIN" >/dev/null 2>&1 && "$SYSTEMCTL_BIN" --user is-active "$SERVICE_NAME" >/dev/null 2>&1; then
+    if command -v "$SYSTEMCTL_BIN" >/dev/null 2>&1 && "$SYSTEMCTL_BIN" is-active "$SERVICE_NAME" >/dev/null 2>&1; then
         printf 'running\n'
     else
         printf 'stopped\n'
@@ -238,39 +259,39 @@ service_status() {
 
 start_service() {
     require_runtime_config
-    require_user_systemd
+    require_systemd
     install_service_unit
-    "$SYSTEMCTL_BIN" --user start "$SERVICE_NAME"
+    privileged "$SYSTEMCTL_BIN" start "$SERVICE_NAME"
     printf '[OK] Local inference started.\n'
     printf '     Logs: aiw local-inference logs\n'
 }
 
 stop_service() {
-    require_user_systemd
-    "$SYSTEMCTL_BIN" --user stop "$SERVICE_NAME"
+    require_systemd
+    privileged "$SYSTEMCTL_BIN" stop "$SERVICE_NAME"
     printf '[OK] Local inference stopped.\n'
 }
 
 restart_service() {
     require_runtime_config
-    require_user_systemd
+    require_systemd
     install_service_unit
-    "$SYSTEMCTL_BIN" --user restart "$SERVICE_NAME"
+    privileged "$SYSTEMCTL_BIN" restart "$SERVICE_NAME"
     printf '[OK] Local inference restarted.\n'
 }
 
 autostart() {
     local action="${1:-status}"
-    require_user_systemd
+    require_systemd
     case "$action" in
         enable)
             require_runtime_config
             install_service_unit
-            "$SYSTEMCTL_BIN" --user enable --now "$SERVICE_NAME"
+            privileged "$SYSTEMCTL_BIN" enable --now "$SERVICE_NAME"
             printf '[OK] Local inference autostart enabled and service started.\n'
             ;;
         disable)
-            "$SYSTEMCTL_BIN" --user disable --now "$SERVICE_NAME" 2>/dev/null || true
+            privileged "$SYSTEMCTL_BIN" disable --now "$SERVICE_NAME" 2>/dev/null || true
             printf '[OK] Local inference autostart disabled and service stopped.\n'
             ;;
         status)
@@ -281,8 +302,11 @@ autostart() {
 }
 
 logs() {
-    require_user_systemd
-    exec "$JOURNALCTL_BIN" --user -u "$SERVICE_NAME" -f --no-hostname
+    require_systemd
+    if [[ -n "$SUDO_BIN" ]]; then
+        exec "$SUDO_BIN" "$JOURNALCTL_BIN" -u "$SERVICE_NAME" -f --no-hostname
+    fi
+    exec "$JOURNALCTL_BIN" -u "$SERVICE_NAME" -f --no-hostname
 }
 
 command_name="${1:-help}"
