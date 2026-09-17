@@ -2,6 +2,34 @@
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
+## Active development block — Issue #5: host-local inference onboarding
+
+Purpose: onboard optional `llama.cpp` and Llama Dispatcher operation on the WSL/Linux host without duplicating the Dispatcher's model, benchmark, evaluation, or metrics responsibilities.
+
+Owner-approved decisions for this block:
+
+- `llama.cpp` and Llama Dispatcher run directly on the WSL/Linux host, not in containers.
+- Local inference is optional; remote-only AI Workstations remain valid.
+- Llama Dispatcher continues to own profiles, ensembles, benchmark/eval execution, and metrics history.
+- Hardware/backend choice is explicit configuration. AI Workstation verifies prerequisites but does not silently invent a backend.
+- `llama.cpp` is installed from a pinned source revision rather than an unbounded latest checkout.
+
+Implementation checklist:
+
+- [x] Create Issue #5 and branch `agent/local-inference-onboarding` from current `main`.
+- [x] Record the owner-approved placement and responsibility boundaries before implementation.
+- [ ] Add durable machine-local enablement/configuration for optional local inference.
+- [ ] Add a pinned host-local `llama.cpp` source/build/install workflow, starting with Vulkan and leaving clean backend extension points.
+- [ ] Add reproducible Llama Dispatcher checkout plus `uv` environment synchronization.
+- [ ] Support attaching an instance repository at the Dispatcher's existing `instances/<name>` boundary without copying model/engine semantics into AI Workstation.
+- [ ] Expose install/status/verify/use through the AI Workstation operator surface.
+- [ ] Keep the default/remote-only path unchanged when local inference is not enabled.
+- [ ] Update central versions, documentation, and automated checks together.
+- [ ] Run focused verification and `./tools/release-check.sh` on the coherent review candidate.
+- [ ] Present the review PR without merging; exact-head merge-gate verification remains after explicit owner approval.
+
+Checkpoint: Issue #5 records the bounded onboarding scope. No local-inference implementation existed when this checkpoint was written.
+
 ## Current focus — align the repository after ContextCanon onboarding
 
 Purpose: make the repository structure, ContextCanon Node structure, current project state, and next architectural decisions mutually consistent before adding further AI runtimes.
