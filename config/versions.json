@@ -6,7 +6,7 @@
       "release": "24.04",
       "python": "3.12",
       "wsl_image_url": "https://releases.ubuntu.com/24.04/ubuntu-24.04.4-wsl-amd64.wsl",
-      "wsl_image_sha256": "9b2f7730dc68227dd04a9f3e5eab86ad85caf556b8606ad94f1f29ff5c4fd3f5"
+      "wsl_image_sha256": "9b2f7730dc68227dd04a9f3e5eab86ad85caf556b8606ad94f1f29ff5c4fd3f5c4fd3f5"
     },
     "uv": "0.11.26",
     "ansible": {
@@ -32,6 +32,10 @@
     "llama_cpp": {
       "repository": "https://github.com/ggml-org/llama.cpp.git",
       "commit": "9e3b928fd8c9d14dbf15a8768b9fdd7e5c721d66"
+    },
+    "intel_oneapi": {
+      "deep_learning_essentials_package": "intel-deep-learning-essentials-2025.3",
+      "verified_release": "2025.3.3"
     },
     "llama_dispatcher": {
       "repository": "https://github.com/SomeSunlight/Llama_Dispatcher.git",
