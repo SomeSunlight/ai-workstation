@@ -750,7 +750,7 @@ verify_sycl_build_device() {
         fail "llama.cpp SYCL device enumeration failed."
     fi
     printf '%s\n' "$output"
-    grep -Eq 'found [1-9][0-9]* SYCL devices' <<< "$output" || \
+    grep -Eiq 'found [1-9][0-9]* SYCL devices' <<< "$output" || \
         fail "oneAPI sees a GPU, but this llama.cpp SYCL build did not enumerate a SYCL device."
 }
 
