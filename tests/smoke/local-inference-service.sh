@@ -27,10 +27,10 @@ fake_systemctl="${temp}/systemctl"
 cat > "$fake_systemctl" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$AIW_TEST_SYSTEMCTL_LOG"
-if [[ "$*" == '--user show-environment' ]]; then
+if [[ "$*" == 'show-environment' ]]; then
     exit 0
 fi
-if [[ "$*" == '--user is-enabled '* || "$*" == '--user is-active '* ]]; then
+if [[ "$*" == 'is-enabled '* || "$*" == 'is-active '* ]]; then
     exit 1
 fi
 EOF
@@ -40,6 +40,7 @@ export AIW_LOCAL_INFERENCE_RUNTIME_CONFIG="$runtime_config"
 export AIW_LOCAL_INFERENCE_DISPATCHER_DIR="$dispatcher"
 export AIW_LOCAL_INFERENCE_MANAGER="$fake_manager"
 export AIW_SYSTEMCTL_BIN="$fake_systemctl"
+export AIW_SUDO_BIN=""
 export AIW_TEST_MANAGER_ARGS="$manager_args"
 export AIW_TEST_SYSTEMCTL_LOG="$systemctl_log"
 export AIW_LOCAL_INFERENCE_SYSTEMD_DIR="${temp}/systemd"
@@ -52,7 +53,7 @@ bash "$service" runtime configure \
 grep -Fxq "AIW_LLAMA_MODEL_ROOT=${models}" "$runtime_config"
 grep -Fxq 'AIW_DISPATCHER_INSTANCE=Laptop' "$runtime_config"
 grep -Fxq 'AIW_DISPATCHER_ENSEMBLE=thinkpad-sycl' "$runtime_config"
-if grep -Fq 'LLAMA_MODEL_ROOT=' "$runtime_config"; then
+if grep -Fq '^LLAMA_MODEL_ROOT=' "$runtime_config"; then
     echo 'Runtime config must not create a shell-level LLAMA_MODEL_ROOT variable.' >&2
     exit 1
 fi
@@ -69,13 +70,15 @@ grep -Fxq "$models" "$manager_args"
 unit="$(bash "$service" render-service)"
 grep -Fq 'local-inference service-run' <<< "$unit"
 grep -Fq 'Restart=on-failure' <<< "$unit"
+grep -Fq "User=$(id -un)" <<< "$unit"
+grep -Fq 'WantedBy=multi-user.target' <<< "$unit"
 
 bash "$service" start
-grep -Fq -- '--user daemon-reload' "$systemctl_log"
-grep -Fq -- '--user start ai-workstation-local-inference.service' "$systemctl_log"
+grep -Fxq 'daemon-reload' "$systemctl_log"
+grep -Fxq 'start ai-workstation-local-inference.service' "$systemctl_log"
 [[ -f "${temp}/systemd/ai-workstation-local-inference.service" ]]
 
 bash "$service" autostart enable
-grep -Fq -- '--user enable --now ai-workstation-local-inference.service' "$systemctl_log"
+grep -Fxq 'enable --now ai-workstation-local-inference.service' "$systemctl_log"
 
-printf 'Local-inference runtime configuration, explicit model-root injection and systemd service lifecycle are valid.\n'
+printf 'Local-inference runtime configuration, explicit model-root injection and system-level service lifecycle are valid.\n'
