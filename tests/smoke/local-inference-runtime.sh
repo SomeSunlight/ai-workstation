@@ -27,6 +27,14 @@ grep -Fq 'if [[ "${SETVARS_COMPLETED:-}" != "1" ]]; then' "$manager" || {
     exit 1
 }
 
+# llama-ls-sycl-device currently prints "Found N SYCL devices" with a capital F.
+# Keep the verifier case-insensitive so a valid real device is not rejected.
+grep -Fq "grep -Eiq 'found [1-9][0-9]* SYCL devices'" "$manager" || {
+    echo 'SYCL device verification must accept llama.cpp output capitalization.' >&2
+    exit 1
+}
+printf 'Found 1 SYCL devices:\n' | grep -Eiq 'found [1-9][0-9]* SYCL devices'
+
 # Remote-only is a valid state and must not require any local runtime artifacts.
 remote_status="$(bash "$manager" status)"
 grep -Fq 'Local inference       : false' <<< "$remote_status"
