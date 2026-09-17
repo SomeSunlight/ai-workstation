@@ -28,10 +28,10 @@ Implementation checklist:
 - [x] Keep the default/remote-only path unchanged when local inference is not enabled.
 - [x] Update central versions, local-inference documentation, smoke tests, CI and release checks together.
 - [x] Run focused verification and the repository release gate in Ubuntu 24.04 CI on the coherent review candidate.
-- [ ] Present the review PR without merging; exact-head merge-gate verification remains after explicit owner approval.
+- [x] Present Draft PR #6 without merging; exact-head merge-gate verification remains after explicit owner approval.
 - [ ] Run the first real ThinkPad WSL/Vulkan installation and Dispatcher compile/run checks before treating the runtime as hardware-validated.
 
-Checkpoint: Issue #5 now has a software-complete review candidate. The branch contains a multi-build llama.cpp registry with per-build manifests, pinned default llama.cpp and Dispatcher revisions, a machine-local Laptop/Vulkan preset, Dispatcher instance attachment, and a thin `aiw` front controller that keeps the previous operator implementation intact as `bin/aiw-core`. Remote-only operation remains valid. GitHub CI on Ubuntu 24.04 passes repository layout, local-inference registry/routing, existing Goose/Open WebUI smoke tests, interactive menu checks, uv synchronization, Ansible lint and playbook syntax. Real Intel/WSL/Vulkan hardware behavior remains intentionally unclaimed until the ThinkPad run.
+Checkpoint: Issue #5 now has a software-complete review candidate in Draft PR #6. The branch contains a multi-build llama.cpp registry with per-build manifests, pinned default llama.cpp and Dispatcher revisions, a machine-local Laptop/Vulkan preset, Dispatcher instance attachment, and a thin `aiw` front controller that keeps the previous operator implementation intact as `bin/aiw-core`. Remote-only operation remains valid. GitHub CI on Ubuntu 24.04 passes repository layout, local-inference registry/routing, the repository release gate, existing Goose/Open WebUI smoke tests, interactive menu checks, uv synchronization, Ansible lint and playbook syntax. Real Intel/WSL/Vulkan hardware behavior remains intentionally unclaimed until the ThinkPad run.
 
 ## Current focus — align the repository after ContextCanon onboarding
 
