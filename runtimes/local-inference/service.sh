@@ -193,6 +193,8 @@ render_service_unit() {
 Description=AI Workstation local inference (Llama Dispatcher)
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 Type=simple
@@ -211,13 +213,11 @@ EOF
 install_service_unit() {
     local temp_unit
     temp_unit="$(mktemp)"
-    trap 'rm -f "${temp_unit:-}"' RETURN
     render_service_unit > "$temp_unit"
     privileged mkdir -p "$SYSTEMD_SYSTEM_DIR"
     privileged install -m 0644 "$temp_unit" "$SERVICE_FILE"
     privileged "$SYSTEMCTL_BIN" daemon-reload
     rm -f "$temp_unit"
-    trap - RETURN
 }
 
 require_systemd() {
