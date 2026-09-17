@@ -16,13 +16,21 @@ export AIW_LOCAL_INFERENCE_ROOT="$runtime_root"
 remote_status="$(bash "$manager" status)"
 grep -Fq 'Local inference       : false' <<< "$remote_status"
 grep -Fq 'llama.cpp builds      : 0' <<< "$remote_status"
+grep -Fq 'Dispatcher instances  : 0 user-owned' <<< "$remote_status"
 
-# Configuration is machine-local and does not install/build anything by itself.
-bash "$manager" configure laptop-vulkan
+# Generic configuration is machine-local and must not inject an instance repo.
+bash "$manager" configure vulkan
 [[ -f "$config_file" ]]
 grep -Fxq 'AIW_LOCAL_INFERENCE_ENABLED=true' "$config_file"
 grep -Fxq 'AIW_LLAMA_CPP_BOOTSTRAP_BACKEND=vulkan' "$config_file"
-grep -Fxq 'AIW_DISPATCHER_INSTANCE=Laptop' "$config_file"
+if grep -Fq 'AIW_DISPATCHER_INSTANCE' "$config_file"; then
+    echo 'Generic local-inference config unexpectedly contains a Dispatcher instance.' >&2
+    exit 1
+fi
+if grep -Fq 'Llama_Dispatcher_Laptop' "$config_file"; then
+    echo 'Generic local-inference config unexpectedly contains a user-specific repository.' >&2
+    exit 1
+fi
 
 # Create a synthetic completed build slot. Smoke tests exercise registry semantics,
 # not compilers, Vulkan drivers, network access or real model execution.
@@ -70,8 +78,8 @@ manifest_output="$(bash "$manager" llama show "$name")"
 grep -Fq '"extra_cmake_args": [' <<< "$manifest_output"
 grep -Fq '"-DTEST_ONLY=ON"' <<< "$manifest_output"
 
-# Re-applying a machine preset must preserve the explicitly selected build.
-bash "$manager" configure laptop-vulkan
+# Re-applying a generic backend preset must preserve the explicitly selected build.
+bash "$manager" configure vulkan
 grep -Fxq "AIW_LLAMA_CPP_ACTIVE_BUILD=${name}" "$config_file"
 
 # The stable aiw front controller must expose the same optional runtime.
@@ -84,4 +92,4 @@ if bash "$manager" llama select does-not-exist >/dev/null 2>&1; then
     exit 1
 fi
 
-printf 'Local-inference registry and routing are valid.\n'
+printf 'Local-inference registry, generic ownership boundary and routing are valid.\n'
