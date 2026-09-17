@@ -54,13 +54,13 @@ show_help() {
 
 Optional local inference:
   aiw local-inference help
-  aiw local-inference setup laptop-vulkan
+  aiw local-inference setup vulkan
   aiw local-inference status
   aiw local-inference llama list
 
-`aiw local-inference` manages host-local llama.cpp builds and Llama Dispatcher.
-Multiple llama.cpp builds may coexist; Llama Dispatcher remains the owner of
-profiles, ensembles, benchmarks, evaluations and metrics history.
+`aiw local-inference` manages host-local llama.cpp builds and the pinned Llama
+Dispatcher checkout. Dispatcher instances, profiles, ensembles and their runtime
+data remain user-owned under the Dispatcher's instances/<name> directory.
 EOF
 }
 
@@ -100,9 +100,9 @@ Local inference
 1) Show status
 2) List llama.cpp builds
 3) Select active llama.cpp build
-4) Verify selected build and Dispatcher
-5) Configure ThinkPad / Vulkan
-6) Setup ThinkPad / Vulkan completely
+4) Verify selected build and Dispatcher core
+5) Configure generic Vulkan runtime
+6) Setup generic Vulkan runtime
 7) Show command help
 b) Back
 q) Exit
@@ -116,8 +116,8 @@ EOF
                 [[ -n "$name" ]] && run_menu_action local_inference llama select "$name"
                 ;;
             4) run_menu_action local_inference verify ;;
-            5) run_menu_action local_inference configure laptop-vulkan ;;
-            6) run_menu_action local_inference setup laptop-vulkan ;;
+            5) run_menu_action local_inference configure vulkan ;;
+            6) run_menu_action local_inference setup vulkan ;;
             7) run_menu_action local_inference help ;;
             b|B) return ;;
             q|Q) exit 0 ;;
