@@ -28,6 +28,14 @@
     "open_webui": {
       "version": "0.11.0",
       "image": "ghcr.io/open-webui/open-webui:v0.11.0"
+    },
+    "llama_cpp": {
+      "repository": "https://github.com/ggml-org/llama.cpp.git",
+      "commit": "05f2dcfdba3879c55f735efa0f124b1a56f7ed11"
+    },
+    "llama_dispatcher": {
+      "repository": "https://github.com/SomeSunlight/Llama_Dispatcher.git",
+      "commit": "5e96951d430cf18504b61163e7375d825718747d"
     }
   }
 }
