@@ -39,7 +39,7 @@
     },
     "llama_dispatcher": {
       "repository": "https://github.com/SomeSunlight/Llama_Dispatcher.git",
-      "commit": "8f073434ebde267ccae01c025001e5e52114338a"
+      "commit": "591e2df2e9917d934338aa9ad9b1ee7952123dc5"
     }
   }
 }
