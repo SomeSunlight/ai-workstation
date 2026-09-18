@@ -614,8 +614,13 @@ sync_pinned_dispatcher() {
     origin="$(git -C "$DISPATCHER_DIR" remote get-url origin 2>/dev/null || true)"
     [[ "$origin" == "$repository" ]] || fail "Llama Dispatcher checkout has unexpected origin: ${origin:-missing}"
 
-    git -C "$DISPATCHER_DIR" diff --quiet && git -C "$DISPATCHER_DIR" diff --cached --quiet || \
-        fail "Llama Dispatcher checkout has local changes. Commit/stash them before AI Workstation changes its pinned revision."
+    # Dispatcher core is AI Workstation-owned, but instances/ is explicitly user-owned.
+    # A user-owned instance may legitimately be on another branch/commit, which marks a
+    # Git submodule as modified in the superproject. Ignore instances/ when protecting
+    # the pinned Dispatcher core from accidental local edits.
+    git -C "$DISPATCHER_DIR" diff --quiet -- . ':(exclude)instances' ':(exclude)instances/**' && \
+        git -C "$DISPATCHER_DIR" diff --cached --quiet -- . ':(exclude)instances' ':(exclude)instances/**' || \
+        fail "Llama Dispatcher core checkout has local changes outside instances/. Commit/stash them before AI Workstation changes its pinned revision."
 
     git -C "$DISPATCHER_DIR" fetch --prune origin
     git -C "$DISPATCHER_DIR" checkout --detach "$commit"
