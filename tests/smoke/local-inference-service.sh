@@ -70,6 +70,7 @@ grep -Fxq "$models" "$manager_args"
 unit="$(bash "$service" render-service)"
 grep -Fq 'local-inference service-run' <<< "$unit"
 grep -Fq 'Restart=on-failure' <<< "$unit"
+grep -Fq 'Environment=PYTHONUNBUFFERED=1' <<< "$unit"
 grep -Fq "User=$(id -un)" <<< "$unit"
 grep -Fq 'WantedBy=multi-user.target' <<< "$unit"
 
