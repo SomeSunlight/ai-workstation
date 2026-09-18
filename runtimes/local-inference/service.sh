@@ -201,6 +201,7 @@ Type=simple
 User=${SERVICE_USER}
 Group=${SERVICE_GROUP}
 Environment=HOME=${SERVICE_HOME}
+Environment=PYTHONUNBUFFERED=1
 ExecStart=${aiw_bin} local-inference service-run
 Restart=on-failure
 RestartSec=5
