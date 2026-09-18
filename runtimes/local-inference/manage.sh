@@ -380,7 +380,13 @@ write_build_manifest() {
     build_dir="${slot_dir}/build"
     bin_dir="${build_dir}/bin"
     repository="$(json_value versions.llama_cpp.repository)"
-    version_output="$("${bin_dir}/llama-server" --version 2>&1 | head -n 1 || true)"
+    local version_probe=""
+    if ! version_probe="$("${bin_dir}/llama-server" --version 2>&1)"; then
+        printf '%s\n' "$version_probe" >&2
+        fail "Built llama-server cannot start successfully: ${bin_dir}/llama-server --version"
+    fi
+    version_output="$(printf '%s\n' "$version_probe" | head -n 1)"
+    [[ -n "$version_output" ]] || fail "Built llama-server returned no version output: ${bin_dir}/llama-server --version"
     compiler_output=""
     toolchain_package=""
 
