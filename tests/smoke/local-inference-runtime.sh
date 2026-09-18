@@ -35,6 +35,25 @@ grep -Fq "grep -Eiq 'found [1-9][0-9]* SYCL devices'" "$manager" || {
 }
 printf 'Found 1 SYCL devices:\n' | grep -Eiq 'found [1-9][0-9]* SYCL devices'
 
+# Dispatcher instances are user-owned. A modified instance/submodule must not make
+# the AI Workstation-owned Dispatcher core appear dirty, while real core edits must.
+dirty_repo="${temp_home}/dispatcher-dirty-check"
+mkdir -p "${dirty_repo}/instances/Laptop"
+git -C "$dirty_repo" init -q
+git -C "$dirty_repo" config user.email smoke@example.invalid
+git -C "$dirty_repo" config user.name smoke
+printf 'core\n' > "${dirty_repo}/core.txt"
+printf 'instance\n' > "${dirty_repo}/instances/Laptop/config.txt"
+git -C "$dirty_repo" add .
+git -C "$dirty_repo" commit -qm initial
+printf 'instance changed\n' >> "${dirty_repo}/instances/Laptop/config.txt"
+git -C "$dirty_repo" diff --quiet -- . ':(exclude)instances' ':(exclude)instances/**'
+printf 'core changed\n' >> "${dirty_repo}/core.txt"
+if git -C "$dirty_repo" diff --quiet -- . ':(exclude)instances' ':(exclude)instances/**'; then
+    echo 'Dispatcher core dirty check unexpectedly ignored a core edit.' >&2
+    exit 1
+fi
+
 # Remote-only is a valid state and must not require any local runtime artifacts.
 remote_status="$(bash "$manager" status)"
 grep -Fq 'Local inference       : false' <<< "$remote_status"
