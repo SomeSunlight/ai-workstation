@@ -263,7 +263,7 @@ start_service() {
     require_systemd
     install_service_unit
     privileged "$SYSTEMCTL_BIN" start "$SERVICE_NAME"
-    printf '[OK] Local inference started.\n'
+    printf '[OK] Local inference service started; Dispatcher/llama.cpp startup is in progress.\n'
     printf '     Logs: aiw local-inference logs\n'
 }
 
@@ -305,9 +305,9 @@ autostart() {
 logs() {
     require_systemd
     if [[ -n "$SUDO_BIN" ]]; then
-        exec "$SUDO_BIN" "$JOURNALCTL_BIN" -u "$SERVICE_NAME" -f --no-hostname
+        exec "$SUDO_BIN" "$JOURNALCTL_BIN" -u "$SERVICE_NAME" -n 100 -f --no-hostname
     fi
-    exec "$JOURNALCTL_BIN" -u "$SERVICE_NAME" -f --no-hostname
+    exec "$JOURNALCTL_BIN" -u "$SERVICE_NAME" -n 100 -f --no-hostname
 }
 
 command_name="${1:-help}"
