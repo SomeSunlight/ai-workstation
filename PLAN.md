@@ -129,6 +129,8 @@ Purpose: validate the selected WSL/Linux-host implementation on the real machine
 ### Laptop validation
 
 - [x] Establish a real managed-service smoke checkpoint on the ThinkPad and preserve both Vulkan and SYCL build paths without claiming backend acceptance.
+- [x] Preserve the Issue #8 Intel SYCL/Level Zero findings in a runtime tuning guide, including the host-driver effect, NEO 24.39 -> 26.31 allocation fix, WSL/Sysman limitation, current performance caveat, and controlled-test method.
+- [x] Link the tuning guide from the local-inference runtime documentation without promoting experimental backend findings into permanent Context rules.
 - [ ] Continue Intel SYCL/Level Zero acceptance in Issue #8, including current Intel WSL runtime provenance, direct/shared-memory requirements and an apples-to-apples Windows↔WSL matrix using the same llama.cpp commits and profile values.
 - [ ] Continue hardware Vulkan/DZN enablement independently in Issue #9; software-only `llvmpipe` remains a failed hardware check.
 - [ ] After #8/#9, measure the largest practical model, effective shared-memory availability, throughput, context behavior and stability through Llama Dispatcher, then decide laptop placement.
