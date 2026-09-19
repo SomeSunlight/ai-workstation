@@ -2,7 +2,7 @@
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
-## Active development block — Issue #5: host-local inference onboarding
+## Completed review block — Issue #5: host-local inference onboarding
 
 Purpose: onboard optional `llama.cpp` and Llama Dispatcher operation on the WSL/Linux host without duplicating the Dispatcher's model, benchmark, evaluation, or metrics responsibilities.
 
@@ -32,9 +32,11 @@ Implementation checklist:
 - [x] Present Draft PR #6 without merging; exact-head merge-gate verification remains after explicit owner approval.
 - [x] Run the first real ThinkPad WSL/Vulkan installation: the pinned build succeeds, but WSL Vulkan exposes only Mesa `llvmpipe`; separate D3D12/OpenGL testing confirms the Intel Arc Pro itself is hardware-accelerated in WSL.
 - [x] Add a parallel WSL2/Ubuntu 24.04 Intel SYCL provisioning/build path pinned to the oneAPI 2025.3 series, while retaining the Vulkan build as a controlled baseline.
-- [ ] Run the first real ThinkPad WSL/SYCL install/device/build verification before treating the local-inference runtime as hardware-validated.
+- [x] Run real ThinkPad WSL/SYCL installation, device verification, managed-service startup and model inference. The pinned Level Zero path succeeds with minimal GPU offload but fails at higher offload; a current llama.cpp/OpenCL control path succeeds with full offload. Backend performance/stability acceptance is deliberately split into follow-up Issues #8 and #9.
+- [x] Harden llama.cpp build validation so a freshly built `llama-server` must pass `--version` before a slot is reported ready.
+- [x] Pin the Dispatcher runtime fixes found during hardware acceptance: tolerate non-object JSON logs from current llama.cpp and clean up child/router processes after orchestrator exceptions.
 
-Checkpoint: Draft PR #6 now contains the generic multi-build llama.cpp registry, pinned llama.cpp/Dispatcher revisions, a user-owned Dispatcher-instance boundary, explicit Vulkan verification, and a first narrow Intel SYCL path for WSL2/Ubuntu 24.04. The initial ThinkPad Vulkan experiment proved that the pinned llama.cpp build itself works but only `llvmpipe` is available through Vulkan; D3D12/OpenGL separately sees the Intel Arc Pro with acceleration and unified memory, isolating the missing Vulkan/DZN layer. The next controlled experiment keeps the same llama.cpp commit and builds `sycl-9e3b928f` through Intel Level Zero/oneAPI. Automated Ubuntu 24.04 CI remains green for repository, configuration, registry, routing and ownership semantics; real GPU provisioning remains intentionally hardware-tested rather than mocked.
+Checkpoint: PR #6 now proves the **local-inference infrastructure** end-to-end on real hardware: immutable parallel llama.cpp build slots, explicit selected build, machine-local model/instance/ensemble configuration, managed systemd lifecycle, pinned Dispatcher, and successful real model responses. This checkpoint does **not** claim that Intel Level Zero or WSL Vulkan is accepted for production performance. Intel SYCL/Level Zero stability, same-commit Windows↔WSL comparison and unified-memory behavior continue in Issue #8. Hardware Vulkan/DZN enablement continues separately in Issue #9. OpenCL full-offload on the 12B Gemma model is a useful diagnostic control, not the target architecture.
 
 ## Current focus — align the repository after ContextCanon onboarding
 
