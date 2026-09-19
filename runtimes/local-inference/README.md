@@ -6,7 +6,7 @@ AI Workstation owns reproducible host installation, pinned default revisions, th
 
 Local inference is optional. A remote-only AI Workstation does not need to configure or install this runtime.
 
-Backend acceptance and tuning evidence is kept separately in [TUNING.md](TUNING.md). In particular, the Intel SYCL/Level Zero investigation found that the historical WSL guest-runtime baseline can enumerate the GPU yet still fail during real compute; the current working ThinkPad experiment required a newer Intel NEO/Level Zero user-mode stack. Treat `setup sycl` as the reproducible historical baseline until Issue #8 updates the installer deliberately.
+Backend acceptance and tuning evidence is kept separately in [TUNING.md](TUNING.md). In particular, the Intel SYCL/Level Zero investigation found that the historical WSL guest-runtime baseline can enumerate the GPU yet still fail during real compute; the current working ThinkPad experiment required a newer Intel NEO/Level Zero user-mode stack. Treat `setup sycl` and the current `llama build --backend sycl` dependency-provisioning path as the reproducible historical baseline until Issue #8 updates the installer deliberately; both still reference the older Intel guest-runtime packaging.
 
 ## Ownership boundary
 
