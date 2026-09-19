@@ -203,6 +203,10 @@ Keep the now-working host/guest driver stack and oneAPI 2025.3.3 fixed.
 
 First compare the pinned baseline with a current `llama.cpp` release using the same model and runtime parameters. As of 2026-09-19, upstream's current stable release is `v0.4.1`. It includes substantial later SYCL/ggml work and a WSL-related memory-query fallback.
 
+**Do not currently run `aiw local-inference llama build --backend sycl` on the repaired ThinkPad environment.** The accepted AI Workstation implementation still calls its historical SYCL dependency provisioning from the build path: it re-adds Intel's old `noble client` repository and explicitly requests `intel-level-zero-gpu`. That can conflict with or replace the working current-PPA `libze-intel-gpu1` / NEO 26.31 stack. Issue #8 must reconcile the installer before the normal build command is safe for this environment.
+
+For the immediate source-version comparison, build the current release without running package provisioning, or update the AI Workstation provisioning path first. Whichever method is used, retain an independent immutable build slot and record the exact manifest/provenance.
+
 Do not enable additional performance flags in the first comparison. Establish the source-version effect alone.
 
 If the current release is stable, separate follow-up builds may test SYCL-specific options such as FP16. Keep each materially different build in its own AI Workstation build slot.
