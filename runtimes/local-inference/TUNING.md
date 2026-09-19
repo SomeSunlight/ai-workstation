@@ -207,6 +207,75 @@ First compare the pinned baseline with a current `llama.cpp` release using the s
 
 For the immediate source-version comparison, build the current release without running package provisioning, or update the AI Workstation provisioning path first. Whichever method is used, retain an independent immutable build slot and record the exact manifest/provenance.
 
+A safe one-off build can reuse AI Workstation's existing llama.cpp repository cache while avoiding the dependency installer entirely:
+
+```bash
+aiw local-inference stop
+
+ROOT="$HOME/.local/share/ai-workstation/local-inference/llama.cpp"
+REPO="$ROOT/repository"
+SLOT="$ROOT/builds/sycl-v0.4.1"
+
+git -C "$REPO" fetch origin tag v0.4.1
+COMMIT="$(git -C "$REPO" rev-parse 'v0.4.1^{commit}')"
+test ! -e "$SLOT" || { echo "Build slot already exists: $SLOT" >&2; exit 1; }
+
+git -C "$REPO" worktree add --detach "$SLOT/source" "$COMMIT"
+
+source /opt/intel/oneapi/setvars.sh >/dev/null
+cmake -S "$SLOT/source" -B "$SLOT/build" -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DGGML_SYCL=ON \
+  -DCMAKE_C_COMPILER=icx \
+  -DCMAKE_CXX_COMPILER=icpx
+cmake --build "$SLOT/build" --config Release -j "$(nproc)"
+
+"$SLOT/build/bin/llama-server" --version
+```
+
+To make the slot selectable by the current AI Workstation registry without invoking its dependency provisioning, create the same schema-1 manifest that the normal build command would write:
+
+```bash
+VERSION="$("$SLOT/build/bin/llama-server" --version 2>&1 | head -n 1)"
+COMPILER="$(icpx --version 2>/dev/null | head -n 1)"
+ONEAPI="$(dpkg-query -W -f='${Version}' intel-deep-learning-essentials-2025.3)"
+ORIGIN="$(git -C "$REPO" remote get-url origin)"
+
+python3 - "$SLOT/manifest.json" "$COMMIT" "$SLOT" "$VERSION" "$COMPILER" "$ONEAPI" "$ORIGIN" <<'PY'
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+commit, slot, version, compiler, oneapi, origin = sys.argv[2:8]
+payload = {
+    "schema": 1,
+    "name": "sycl-v0.4.1",
+    "repository": origin,
+    "commit": commit,
+    "backend": "sycl",
+    "extra_cmake_args": [],
+    "source_dir": f"{slot}/source",
+    "build_dir": f"{slot}/build",
+    "bin_dir": f"{slot}/build/bin",
+    "llama_server_version": version,
+    "built_at_utc": datetime.now(timezone.utc).isoformat(),
+    "toolchain": {
+        "compiler": compiler,
+        "package_version": oneapi,
+    },
+}
+path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+
+aiw local-inference llama show sycl-v0.4.1
+aiw local-inference llama select sycl-v0.4.1
+aiw local-inference verify
+```
+
+This is deliberately a temporary acceptance technique. The proper fix is to update AI Workstation's SYCL provisioning so future normal builds preserve the current Intel guest-runtime package generation.
+
 Do not enable additional performance flags in the first comparison. Establish the source-version effect alone.
 
 If the current release is stable, separate follow-up builds may test SYCL-specific options such as FP16. Keep each materially different build in its own AI Workstation build slot.
