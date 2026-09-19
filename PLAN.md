@@ -36,7 +36,7 @@ Implementation checklist:
 - [x] Harden llama.cpp build validation so a freshly built `llama-server` must pass `--version` before a slot is reported ready.
 - [x] Pin the Dispatcher runtime fixes found during hardware acceptance: tolerate non-object JSON logs from current llama.cpp and clean up child/router processes after orchestrator exceptions.
 
-Checkpoint: PR #6 now proves the **local-inference infrastructure** end-to-end on real hardware: immutable parallel llama.cpp build slots, explicit selected build, machine-local model/instance/ensemble configuration, managed systemd lifecycle, pinned Dispatcher, and successful real model responses. This checkpoint does **not** claim that Intel Level Zero or WSL Vulkan is accepted for production performance. Intel SYCL/Level Zero stability, same-commit Windows↔WSL comparison and unified-memory behavior continue in Issue #8. Hardware Vulkan/DZN enablement continues separately in Issue #9. OpenCL full-offload on the 12B Gemma model is a useful diagnostic control, not the target architecture.
+Checkpoint: PR #6 proved the **local-inference infrastructure** end-to-end on real hardware and was squash-merged to `main` as `76ebf7675188d3159bc6e1cea4146fdf0ee8dcb9`. Issue #5 is complete. The checkpoint accepts immutable parallel llama.cpp build slots, explicit selected build, machine-local model/instance/ensemble configuration, managed systemd lifecycle, pinned Dispatcher, and successful real model responses. It does **not** claim that Intel Level Zero or WSL Vulkan is accepted for production performance. Intel SYCL/Level Zero stability, same-commit Windows↔WSL comparison and unified-memory behavior continue in Issue #8. Hardware Vulkan/DZN enablement continues separately in Issue #9. OpenCL full-offload on the 12B Gemma model is a useful diagnostic control, not the target architecture.
 
 ## Current focus — align the repository after ContextCanon onboarding
 
@@ -128,13 +128,11 @@ Purpose: validate the selected WSL/Linux-host implementation on the real machine
 
 ### Laptop validation
 
-- [ ] Establish a comparable Windows baseline on the 64 GB laptop with its Intel GPU/shared-memory constraints.
-- [x] Run the first AI Workstation Vulkan build under WSL: build 9553 succeeds, but `vulkaninfo` exposes only `llvmpipe`; confirm separately that the Intel Arc Pro is hardware-accelerated through WSL D3D12/OpenGL with unified memory.
-- [ ] Run the new Intel SYCL/Level Zero path under WSL with the same llama.cpp commit and verify the actual Arc Pro device before model testing.
-- [ ] Measure the largest practical model, effective shared-memory availability, throughput, context behavior, and stability through Llama Dispatcher rather than a duplicate benchmark harness.
-- [ ] Compare WSL/SYCL against the existing Windows/Vulkan result rather than assuming either backend is faster.
-- [ ] Revisit WSL/Vulkan/DZN later if useful; keep the existing Vulkan build as a reproducible baseline rather than replacing it.
-- [ ] Test whether the default WSL memory ceiling is a material limitation and, if necessary, evaluate an explicit WSL memory configuration without starving Windows.
+- [x] Establish a real managed-service smoke checkpoint on the ThinkPad and preserve both Vulkan and SYCL build paths without claiming backend acceptance.
+- [ ] Continue Intel SYCL/Level Zero acceptance in Issue #8, including current Intel WSL runtime provenance, direct/shared-memory requirements and an apples-to-apples Windows↔WSL matrix using the same llama.cpp commits and profile values.
+- [ ] Continue hardware Vulkan/DZN enablement independently in Issue #9; software-only `llvmpipe` remains a failed hardware check.
+- [ ] After #8/#9, measure the largest practical model, effective shared-memory availability, throughput, context behavior and stability through Llama Dispatcher, then decide laptop placement.
+- [ ] Test the WSL memory ceiling only if measurements show it is a material constraint; avoid speculative host-memory tuning.
 
 ### Placement decision
 
