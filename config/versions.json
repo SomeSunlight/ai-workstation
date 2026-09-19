@@ -28,6 +28,18 @@
     "open_webui": {
       "version": "0.11.0",
       "image": "ghcr.io/open-webui/open-webui:v0.11.0"
+    },
+    "llama_cpp": {
+      "repository": "https://github.com/ggml-org/llama.cpp.git",
+      "commit": "9e3b928fd8c9d14dbf15a8768b9fdd7e5c721d66"
+    },
+    "intel_oneapi": {
+      "deep_learning_essentials_package": "intel-deep-learning-essentials-2025.3",
+      "verified_release": "2025.3.3"
+    },
+    "llama_dispatcher": {
+      "repository": "https://github.com/SomeSunlight/Llama_Dispatcher.git",
+      "commit": "19e5798e2c7cc7bcf962f9c72c118c98560e042b"
     }
   }
 }

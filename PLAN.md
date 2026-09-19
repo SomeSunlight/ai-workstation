@@ -2,6 +2,42 @@
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
+## Completed review block — Issue #5: host-local inference onboarding
+
+Purpose: onboard optional `llama.cpp` and Llama Dispatcher operation on the WSL/Linux host without duplicating the Dispatcher's model, benchmark, evaluation, or metrics responsibilities.
+
+Owner-approved decisions for this block:
+
+- `llama.cpp` and Llama Dispatcher run directly on the WSL/Linux host, not in containers.
+- Local inference is optional; remote-only AI Workstations remain valid.
+- Llama Dispatcher continues to own profiles, ensembles, benchmark/eval execution, and metrics history.
+- Dispatcher instances under `instances/<name>` are user-owned; AI Workstation installs the generic Dispatcher runtime but does not clone, rewrite, reset or update machine-specific instances.
+- Hardware/backend choice is explicit configuration. AI Workstation verifies prerequisites but does not silently invent a backend.
+- AI Workstation pins a tested default `llama.cpp` source revision, while multiple llama.cpp revisions/build configurations may coexist for controlled comparisons.
+- llama.cpp builds use human-readable slot names plus machine-readable manifests; an existing slot name must never silently change meaning.
+- One shared llama.cpp Git/object cache feeds independent detached worktrees/build directories so parallel test builds do not require full duplicate clones.
+
+Implementation checklist:
+
+- [x] Create Issue #5 and branch `agent/local-inference-onboarding` from current `main`.
+- [x] Record the owner-approved placement and responsibility boundaries before implementation.
+- [x] Add durable machine-local enablement/configuration for optional local inference.
+- [x] Add a pinned host-local multi-build `llama.cpp` source/build/install workflow, starting with Vulkan and leaving clean backend extension points.
+- [x] Add reproducible Llama Dispatcher checkout plus `uv` environment synchronization.
+- [x] Keep Dispatcher instance repositories at the existing user-owned `instances/<name>` boundary without copying their configuration semantics into AI Workstation.
+- [x] Expose install/status/verify/use and llama.cpp build selection through the AI Workstation operator surface.
+- [x] Keep the default/remote-only path unchanged when local inference is not enabled.
+- [x] Update central versions, local-inference documentation, smoke tests, CI and release checks together.
+- [x] Run focused verification and the repository release gate in Ubuntu 24.04 CI on the coherent review candidate.
+- [x] Present Draft PR #6 without merging; exact-head merge-gate verification remains after explicit owner approval.
+- [x] Run the first real ThinkPad WSL/Vulkan installation: the pinned build succeeds, but WSL Vulkan exposes only Mesa `llvmpipe`; separate D3D12/OpenGL testing confirms the Intel Arc Pro itself is hardware-accelerated in WSL.
+- [x] Add a parallel WSL2/Ubuntu 24.04 Intel SYCL provisioning/build path pinned to the oneAPI 2025.3 series, while retaining the Vulkan build as a controlled baseline.
+- [x] Run real ThinkPad WSL/SYCL installation, device verification, managed-service startup and model inference. The pinned Level Zero path succeeds with minimal GPU offload but fails at higher offload; a current llama.cpp/OpenCL control path succeeds with full offload. Backend performance/stability acceptance is deliberately split into follow-up Issues #8 and #9.
+- [x] Harden llama.cpp build validation so a freshly built `llama-server` must pass `--version` before a slot is reported ready.
+- [x] Pin the Dispatcher runtime fixes found during hardware acceptance: tolerate non-object JSON logs from current llama.cpp and clean up child/router processes after orchestrator exceptions.
+
+Checkpoint: PR #6 now proves the **local-inference infrastructure** end-to-end on real hardware: immutable parallel llama.cpp build slots, explicit selected build, machine-local model/instance/ensemble configuration, managed systemd lifecycle, pinned Dispatcher, and successful real model responses. This checkpoint does **not** claim that Intel Level Zero or WSL Vulkan is accepted for production performance. Intel SYCL/Level Zero stability, same-commit Windows↔WSL comparison and unified-memory behavior continue in Issue #8. Hardware Vulkan/DZN enablement continues separately in Issue #9. OpenCL full-offload on the 12B Gemma model is a useful diagnostic control, not the target architecture.
+
 ## Current focus — align the repository after ContextCanon onboarding
 
 Purpose: make the repository structure, ContextCanon Node structure, current project state, and next architectural decisions mutually consistent before adding further AI runtimes.
@@ -81,7 +117,7 @@ Purpose: make AI Workstation usable on machines that should not install every ru
 
 ## Next architecture block — local inference placement
 
-Purpose: decide empirically whether llama.cpp and the Llama Dispatcher should move from Windows into WSL/Linux before making Linux-first local inference an architectural rule.
+Purpose: validate the selected WSL/Linux-host implementation on the real machines before promoting it from working direction to accepted architecture, and determine the best backend/runtime details per hardware class.
 
 ### Desktop validation
 
@@ -93,15 +129,18 @@ Purpose: decide empirically whether llama.cpp and the Llama Dispatcher should mo
 ### Laptop validation
 
 - [ ] Establish a comparable Windows baseline on the 64 GB laptop with its Intel GPU/shared-memory constraints.
-- [ ] Test the appropriate llama.cpp Intel/Linux backend under WSL before assuming parity with the Windows runtime.
-- [ ] Measure the largest practical model, effective shared-memory availability, throughput, context behavior, and stability.
+- [x] Run the first AI Workstation Vulkan build under WSL: build 9553 succeeds, but `vulkaninfo` exposes only `llvmpipe`; confirm separately that the Intel Arc Pro is hardware-accelerated through WSL D3D12/OpenGL with unified memory.
+- [ ] Run the new Intel SYCL/Level Zero path under WSL with the same llama.cpp commit and verify the actual Arc Pro device before model testing.
+- [ ] Measure the largest practical model, effective shared-memory availability, throughput, context behavior, and stability through Llama Dispatcher rather than a duplicate benchmark harness.
+- [ ] Compare WSL/SYCL against the existing Windows/Vulkan result rather than assuming either backend is faster.
+- [ ] Revisit WSL/Vulkan/DZN later if useful; keep the existing Vulkan build as a reproducible baseline rather than replacing it.
 - [ ] Test whether the default WSL memory ceiling is a material limitation and, if necessary, evaluate an explicit WSL memory configuration without starving Windows.
 
 ### Placement decision
 
-- [ ] Decide llama.cpp placement only after both machines have comparable measurements.
-- [ ] Decide Llama Dispatcher placement; current preference is Linux/WSL unless testing reveals a concrete Windows-only advantage.
-- [ ] If Linux/WSL wins, define local inference as a first-class non-containerized or deliberately containerized runtime based on measured operational simplicity and hardware access rather than forcing everything into Compose.
+- [ ] Confirm llama.cpp WSL/Linux-host placement after the real laptop and desktop measurements.
+- [ ] Confirm Llama Dispatcher WSL/Linux-host placement unless testing reveals a concrete Windows-only advantage.
+- [ ] Keep local inference non-containerized unless measured operational evidence justifies adding a container layer.
 - [ ] If Windows-hosted inference remains supported, make Windows/WSL network discovery and firewall configuration dynamic, idempotent, and installer-owned instead of relying on manual chat instructions.
 - [ ] Add the resulting stable architecture decision to the appropriate Context Node only after it is tested and accepted.
 
