@@ -20,12 +20,14 @@ The real ThinkPad acceptance run completed the managed path end-to-end:
 
 This checkpoint accepts the infrastructure, **not a final GPU backend or placement decision**. Current backend evidence is:
 
-- Intel SYCL/Level Zero under WSL can run with minimal GPU offload, but higher offload currently fails during SYCL matrix compute with a memory-object allocation error.
-- A current llama.cpp build exposed an additional direct Level Zero/Sysman startup crash; disabling llama.cpp's direct Level Zero API removes that startup crash but not the higher-offload compute failure.
-- SYCL through OpenCL is a stable diagnostic control and has run the 12B Gemma model fully offloaded at `ngl=99`, `ctx=16384`; it is not the target architecture.
-- WSL Vulkan currently exposes only Mesa `llvmpipe` even though separate D3D12/OpenGL tests prove hardware-accelerated Intel GPU access.
+- Intel SYCL/Level Zero under WSL is now functionally stable with the current Intel guest runtime generation: NEO 26.31 plus oneAPI 2025.3.3 runs the Meteor Lake iGPU at full model offload.
+- The decisive fix was the guest-runtime migration from the old 24.39 generation to 26.31; updating only the Windows host driver improved the OpenCL control path but did not remove the earlier Level Zero allocation failure.
+- Both the pinned llama.cpp baseline and v0.4.1 completed real Level Zero inference. On the Gemma 4 26B-A4B MoE profile, a representative v0.4.1 run reached about 3.79 tok/s generation; performance remains modest but backend stability is no longer the blocking question.
+- The earlier multi-minute first-request observation was not representative of the later 26B-A4B experience; subsequent first responses can arrive quickly.
+- SYCL through OpenCL remains a diagnostic control rather than the preferred architecture.
+- WSL Vulkan still requires independent hardware enablement/validation in Issue #9; software-only `llvmpipe` remains unacceptable.
 
-Intel SYCL/Level Zero acceptance, current driver/runtime provenance, unified-memory requirements and same-commit Windows↔WSL comparison are tracked in Issue #8. Hardware Vulkan/DZN work is tracked separately in Issue #9.
+Issue #8 is complete as a successful but performance-limited SYCL/Level Zero acceptance result. Issue #14 tracks the remaining stale AI Workstation SYCL package provisioning, and Issue #9 owns the Vulkan comparison.
 
 ## Accepted ContextCanon maintenance state
 
@@ -41,4 +43,4 @@ This file records accepted checkpoints only. Broader operational state for Goose
 
 ## Next planned work
 
-Continue from `PLAN.md` with an explicit issue-backed block. For laptop inference, use Issue #8 for Intel SYCL/Level Zero and Issue #9 for WSL Vulkan; do not reconstruct those investigations from chat history.
+Continue from `PLAN.md` with an explicit issue-backed block. For laptop inference, treat Issue #8 as the accepted SYCL/Level Zero baseline, use Issue #9 for WSL Vulkan comparison, and use Issue #14 for SYCL provisioning cleanup; do not reconstruct those investigations from chat history.

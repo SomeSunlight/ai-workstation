@@ -50,7 +50,7 @@ Implementation checklist:
 - [x] Harden llama.cpp build validation so a freshly built `llama-server` must pass `--version` before a slot is reported ready.
 - [x] Pin the Dispatcher runtime fixes found during hardware acceptance: tolerate non-object JSON logs from current llama.cpp and clean up child/router processes after orchestrator exceptions.
 
-Checkpoint: PR #6 proved the **local-inference infrastructure** end-to-end on real hardware and was squash-merged to `main` as `76ebf7675188d3159bc6e1cea4146fdf0ee8dcb9`. Issue #5 is complete. The checkpoint accepts immutable parallel llama.cpp build slots, explicit selected build, machine-local model/instance/ensemble configuration, managed systemd lifecycle, pinned Dispatcher, and successful real model responses. It does **not** claim that Intel Level Zero or WSL Vulkan is accepted for production performance. Intel SYCL/Level Zero stability, same-commit Windows↔WSL comparison and unified-memory behavior continue in Issue #8. Hardware Vulkan/DZN enablement continues separately in Issue #9. OpenCL full-offload on the 12B Gemma model is a useful diagnostic control, not the target architecture.
+Checkpoint: PR #6 proved the **local-inference infrastructure** end-to-end on real hardware and was squash-merged to `main` as `76ebf7675188d3159bc6e1cea4146fdf0ee8dcb9`. Issue #5 is complete. The checkpoint accepts immutable parallel llama.cpp build slots, explicit selected build, machine-local model/instance/ensemble configuration, managed systemd lifecycle, pinned Dispatcher, and successful real model responses. Subsequent Issue #8 work established stable full-offload Intel SYCL/Level Zero under WSL with NEO 26.31 and oneAPI 2025.3.3; performance remains modest. Hardware Vulkan/DZN comparison continues separately in Issue #9, while Issue #14 owns the stale SYCL guest-runtime provisioning path. OpenCL full-offload remains a diagnostic control, not the target architecture.
 
 ## Current focus — align the repository after ContextCanon onboarding
 
@@ -145,10 +145,11 @@ Purpose: validate the selected WSL/Linux-host implementation on the real machine
 - [x] Establish a real managed-service smoke checkpoint on the ThinkPad and preserve both Vulkan and SYCL build paths without claiming backend acceptance.
 - [x] Preserve the Issue #8 Intel SYCL/Level Zero findings in a runtime tuning guide, including the host-driver effect, NEO 24.39 -> 26.31 allocation fix, WSL/Sysman limitation, current performance caveat, and controlled-test method.
 - [x] Link the tuning guide from the local-inference runtime documentation without promoting experimental backend findings into permanent Context rules.
-- [ ] Continue Intel SYCL/Level Zero acceptance in Issue #8, including current Intel WSL runtime provenance, direct/shared-memory requirements and an apples-to-apples Windows↔WSL matrix using the same llama.cpp commits and profile values.
-- [ ] Continue hardware Vulkan/DZN enablement independently in Issue #9; software-only `llvmpipe` remains a failed hardware check.
-- [ ] After #8/#9, measure the largest practical model, effective shared-memory availability, throughput, context behavior and stability through Llama Dispatcher, then decide laptop placement.
+- [x] Close Intel SYCL/Level Zero acceptance in Issue #8: NEO 26.31 removed the fatal allocation failure, full offload is stable with both the pinned and v0.4.1 llama.cpp paths, and performance is adequate for comparison but not compelling enough to stop backend evaluation.
+- [ ] Continue hardware Vulkan/DZN enablement independently in Issue #9; use the now-working SYCL/Level Zero 26B-A4B baseline for comparison and continue rejecting software-only `llvmpipe`.
+- [ ] After #9, compare the largest practical model, effective shared-memory availability, throughput, context behavior and stability through Llama Dispatcher, then decide laptop placement.
 - [ ] Test the WSL memory ceiling only if measurements show it is a material constraint; avoid speculative host-memory tuning.
+- [ ] Modernize the AI Workstation Intel guest-runtime provisioning in Issue #14 so normal SYCL setup/build commands preserve the proven NEO 26.31 package generation.
 
 ### Placement decision
 

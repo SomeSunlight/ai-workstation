@@ -1,6 +1,6 @@
 # Local-inference backend tuning notes
 
-This document records **observed backend behavior and controlled tuning evidence** for AI Workstation local inference. It is intentionally not a permanent architecture rule: backend choice remains under evaluation in Issues #8 (Intel SYCL / Level Zero) and #9 (WSL Vulkan).
+This document records **observed backend behavior and controlled tuning evidence** for AI Workstation local inference. It is intentionally not a permanent architecture rule. Issue #8 established a working Intel SYCL / Level Zero baseline; Issue #9 continues the WSL Vulkan comparison, while Issue #14 tracks the remaining AI Workstation SYCL provisioning cleanup.
 
 The main purpose is to preserve enough detail that later work does not have to reconstruct hardware/runtime findings from chat history.
 
@@ -122,22 +122,28 @@ It is valuable because it proves that:
 
 However, OpenCL is not the target architecture for this laptop. The intended comparison remains Level Zero versus hardware Vulkan.
 
-### Current Level Zero performance is functional but not yet accepted
+### Accepted Level Zero checkpoint: stable full offload, modest performance
 
-After the NEO 26.31 migration, Level Zero inference is stable enough to complete requests with the pinned `9e3b928f` build.
+After the NEO 26.31 migration, Level Zero inference became stable with full offload.
 
-Early owner observations:
+The early ~2.7 tok/s observation came from the first short checkpoint and should not be treated as the final result. Subsequent tests established a stronger baseline:
 
-- the first very small request could take several minutes end-to-end;
-- later requests were much faster to begin responding;
-- steady generation observed so far is around 2.7 tokens/s.
+- `llama.cpp 9e3b928f` remained stable with full offload;
+- `llama.cpp v0.4.1` / build 10964 / commit `b29c606e2` was built and tested against the same working NEO 26.31 + oneAPI 2025.3.3 stack;
+- the Gemma 4 26B-A4B QAT MoE model completed real full-offload inference;
+- in one representative long-request comparison, the older build measured about 59.47 tok/s prompt throughput and 3.08 tok/s generation, while v0.4.1 measured about 53.48 tok/s prompt throughput and 3.79 tok/s generation;
+- the owner's later observation is that first response on the 26B-A4B model can arrive quickly, so the earlier multi-minute first-request behavior is not the normal current steady-state experience.
 
-These are **not final benchmark numbers**. Model loading, first-use kernel compilation/warmup, prompt processing and token generation must be measured separately before drawing a performance conclusion.
+The larger 26B-A4B model is Mixture-of-Experts. Its larger parameter/file size does not imply proportionally more per-token compute because only a subset of experts is active for each token. Do not assume the dense 12B model should therefore be the faster or more representative performance baseline.
 
-The current result is therefore:
+The accepted Issue #8 result is:
 
-- **stability breakthrough:** yes;
-- **performance acceptance:** no.
+- **functional stability:** yes;
+- **full offload:** yes;
+- **current-source validation:** yes;
+- **performance compelling enough to stop backend evaluation:** no.
+
+The next performance question is comparative rather than diagnostic: hardware Vulkan under Issue #9 should be measured against this working SYCL/Level Zero baseline.
 
 ## Memory model: direct Level Zero is not the same as true zero-copy GGUF execution
 
@@ -197,88 +203,22 @@ aiw local-inference status
 
 AI Workstation keeps parallel immutable-spec `llama.cpp` build slots. Use them instead of overwriting a working baseline.
 
-## Next SYCL experiment
+## SYCL provisioning follow-up
 
-Keep the now-working host/guest driver stack and oneAPI 2025.3.3 fixed.
+The source-version experiment described by the earlier version of this document is complete: v0.4.1 was built without disturbing the working NEO 26.31 guest stack and successfully exercised full-offload inference.
 
-First compare the pinned baseline with a current `llama.cpp` release using the same model and runtime parameters. As of 2026-09-19, upstream's current stable release is `v0.4.1`. It includes substantial later SYCL/ggml work and a WSL-related memory-query fallback.
+The remaining SYCL work is now **installer/reproducibility**, tracked in Issue #14.
 
-**Do not currently run `aiw local-inference llama build --backend sycl` on the repaired ThinkPad environment.** The accepted AI Workstation implementation still calls its historical SYCL dependency provisioning from the build path: it re-adds Intel's old `noble client` repository and explicitly requests `intel-level-zero-gpu`. That can conflict with or replace the working current-PPA `libze-intel-gpu1` / NEO 26.31 stack. Issue #8 must reconcile the installer before the normal build command is safe for this environment.
+**Do not currently run `aiw local-inference llama build --backend sycl` on the repaired ThinkPad environment if that command would invoke the historical dependency provisioning.** The current AI Workstation provisioning path still re-adds Intel's older Noble client repository and explicitly requests `intel-level-zero-gpu`, which can conflict with the proven current-PPA `libze-intel-gpu1` / NEO 26.31 stack.
 
-For the immediate source-version comparison, build the current release without running package provisioning, or update the AI Workstation provisioning path first. Whichever method is used, retain an independent immutable build slot and record the exact manifest/provenance.
+Until Issue #14 is complete:
 
-A safe one-off build can reuse AI Workstation's existing llama.cpp repository cache while avoiding the dependency installer entirely:
+- preserve the working NEO 26.31 + oneAPI 2025.3.3 environment;
+- keep existing immutable llama.cpp build slots intact;
+- treat manual/source-only builds as controlled experiments rather than the preferred long-term operator workflow;
+- do not interpret this installer limitation as a backend-stability failure.
 
-```bash
-aiw local-inference stop
-
-ROOT="$HOME/.local/share/ai-workstation/local-inference/llama.cpp"
-REPO="$ROOT/repository"
-SLOT="$ROOT/builds/sycl-v0.4.1"
-
-git -C "$REPO" fetch origin tag v0.4.1
-COMMIT="$(git -C "$REPO" rev-parse 'v0.4.1^{commit}')"
-test ! -e "$SLOT" || { echo "Build slot already exists: $SLOT" >&2; exit 1; }
-
-git -C "$REPO" worktree add --detach "$SLOT/source" "$COMMIT"
-
-source /opt/intel/oneapi/setvars.sh >/dev/null
-cmake -S "$SLOT/source" -B "$SLOT/build" -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DGGML_SYCL=ON \
-  -DCMAKE_C_COMPILER=icx \
-  -DCMAKE_CXX_COMPILER=icpx
-cmake --build "$SLOT/build" --config Release -j "$(nproc)"
-
-"$SLOT/build/bin/llama-server" --version
-```
-
-To make the slot selectable by the current AI Workstation registry without invoking its dependency provisioning, create the same schema-1 manifest that the normal build command would write:
-
-```bash
-VERSION="$("$SLOT/build/bin/llama-server" --version 2>&1 | head -n 1)"
-COMPILER="$(icpx --version 2>/dev/null | head -n 1)"
-ONEAPI="$(dpkg-query -W -f='${Version}' intel-deep-learning-essentials-2025.3)"
-ORIGIN="$(git -C "$REPO" remote get-url origin)"
-
-python3 - "$SLOT/manifest.json" "$COMMIT" "$SLOT" "$VERSION" "$COMPILER" "$ONEAPI" "$ORIGIN" <<'PY'
-from datetime import datetime, timezone
-import json
-from pathlib import Path
-import sys
-
-path = Path(sys.argv[1])
-commit, slot, version, compiler, oneapi, origin = sys.argv[2:8]
-payload = {
-    "schema": 1,
-    "name": "sycl-v0.4.1",
-    "repository": origin,
-    "commit": commit,
-    "backend": "sycl",
-    "extra_cmake_args": [],
-    "source_dir": f"{slot}/source",
-    "build_dir": f"{slot}/build",
-    "bin_dir": f"{slot}/build/bin",
-    "llama_server_version": version,
-    "built_at_utc": datetime.now(timezone.utc).isoformat(),
-    "toolchain": {
-        "compiler": compiler,
-        "package_version": oneapi,
-    },
-}
-path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-PY
-
-aiw local-inference llama show sycl-v0.4.1
-aiw local-inference llama select sycl-v0.4.1
-aiw local-inference verify
-```
-
-This is deliberately a temporary acceptance technique. The proper fix is to update AI Workstation's SYCL provisioning so future normal builds preserve the current Intel guest-runtime package generation.
-
-Do not enable additional performance flags in the first comparison. Establish the source-version effect alone.
-
-If the current release is stable, separate follow-up builds may test SYCL-specific options such as FP16. Keep each materially different build in its own AI Workstation build slot.
+Issue #14 should update the normal AI Workstation SYCL provisioning path so future builds are reproducible without risking a runtime downgrade.
 
 ## Vulkan handoff
 
@@ -290,8 +230,9 @@ Do not mix Vulkan enablement changes into Issue #8.
 
 ## References
 
-- AI Workstation Issue #8 — Intel SYCL / Level Zero acceptance
+- AI Workstation Issue #8 — completed Intel SYCL / Level Zero acceptance
 - AI Workstation Issue #9 — WSL hardware Vulkan/DZN
+- AI Workstation Issue #14 — Intel SYCL guest-runtime provisioning
 - Llama Dispatcher Issue #4 — model-start memory telemetry
 - llama.cpp SYCL documentation:
   https://github.com/ggml-org/llama.cpp/blob/master/docs/backend/SYCL.md
