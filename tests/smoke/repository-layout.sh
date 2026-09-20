@@ -10,7 +10,7 @@ required=(
   compose/goose.yml compose/open-webui.yml containers/goose/README.md
   runtimes/local-inference/README.md runtimes/local-inference/manage.sh
   tests/smoke/goose-runtime.sh tests/smoke/open-webui-runtime.sh tests/smoke/interactive-menu.sh
-  tests/smoke/local-inference-runtime.sh
+  tests/smoke/local-inference-runtime.sh tests/smoke/update-recovery.sh
 )
 for item in "${required[@]}"; do
   [[ -e "$ROOT/$item" ]] || { printf 'Missing: %s\n' "$item" >&2; exit 1; }
