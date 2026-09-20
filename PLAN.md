@@ -33,7 +33,7 @@ Investigation checklist:
 - [ ] Preserve the working NEO 26.31 + oneAPI 2025.3.3 SYCL environment; do not use Vulkan experimentation as an excuse to modify Issue #14 provisioning or otherwise change the accepted SYCL stack.
 - [x] Test DZN first as an isolated side-by-side Mesa build in a user-local experiment directory rather than replacing system Mesa or globally enabling a PPA.
 - [x] Select only the experimental DZN ICD for the first Vulkan probe and require `vulkaninfo --summary` to expose the Intel Meteor Lake device (`0x8086:0x7d55`) as hardware-backed; `llvmpipe` alone remains failure.
-- [ ] Keep Intel and NVIDIA selection explicit by hardware identity rather than Vulkan device ordering; characterize the Intel path first and treat RTX 500 Ada/DZN behavior as a separate follow-up probe.
+- [x] Keep Intel and NVIDIA selection explicit by hardware identity rather than Vulkan device ordering; characterize the Intel path first and treat RTX 500 Ada/DZN behavior as a separate follow-up probe.
 - [ ] Once hardware Vulkan is proven, verify the same current llama.cpp source with `llama-server --list-devices` and keep the Vulkan build in an independent immutable build slot.
 - [ ] Run a real Intel Vulkan smoke test with the same Gemma 4 26B-A4B model and relevant profile values used for the accepted SYCL comparison before tuning any Vulkan-specific performance settings.
 - [ ] Measure cold model load, first-request latency, warm behavior, prompt processing, generation, RAM peak, steady RAM use and repeated-run stability; distinguish physical UMA from actual backend copy/staging behavior.
