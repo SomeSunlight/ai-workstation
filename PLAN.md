@@ -28,8 +28,8 @@ Accepted comparison baseline from Issue #8:
 
 Investigation checklist:
 
-- [ ] Capture the pre-test Windows/WSL/Vulkan provenance and current software-only `llvmpipe` baseline, including WSL/kernel, `/dev/dxg`, D3D12/DXCore exposure, Mesa/Vulkan packages, installed ICDs, Intel device identity and current llama.cpp build provenance.
-- [ ] Before the first Mesa/DZN or guest-package mutation, stop WSL cleanly and export the complete Ubuntu distribution to a restorable backup stored outside the distribution; record the distro name and backup identity locally.
+- [x] Capture the pre-test Windows/WSL/Vulkan provenance and current software-only `llvmpipe` baseline, including WSL/kernel, `/dev/dxg`, D3D12/DXCore exposure, Mesa/Vulkan packages, installed ICDs, Intel device identity and current llama.cpp build provenance.
+- [x] Before the first Mesa/DZN or guest-package mutation, stop WSL cleanly and export the complete Ubuntu distribution to a restorable backup stored outside the distribution; record the distro name and backup identity locally.
 - [ ] Preserve the working NEO 26.31 + oneAPI 2025.3.3 SYCL environment; do not use Vulkan experimentation as an excuse to modify Issue #14 provisioning or otherwise change the accepted SYCL stack.
 - [ ] Test DZN first as an isolated side-by-side Mesa build in a user-local experiment directory rather than replacing system Mesa or globally enabling a PPA.
 - [ ] Select only the experimental DZN ICD for the first Vulkan probe and require `vulkaninfo --summary` to expose the Intel Meteor Lake device (`0x8086:0x7d55`) as hardware-backed; `llvmpipe` alone remains failure.
