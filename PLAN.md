@@ -15,6 +15,31 @@ Purpose: make the installed checkout recover safely when a squash-merged review 
 - [x] Update operator documentation/state/changelog together.
 - [ ] Run the full repository release gate and present the review PR without merging.
 
+## Current investigation block — Issue #9: WSL hardware Vulkan / DZN
+
+Purpose: determine whether hardware Vulkan through Mesa DZN can improve ThinkPad local-inference performance and/or operational quality while preserving the now-stable Intel SYCL / Level Zero path as a known-good fallback and comparison baseline.
+
+Accepted comparison baseline from Issue #8:
+
+- NEO 26.31 + oneAPI 2025.3.3 is functionally stable with full Intel iGPU offload.
+- llama.cpp v0.4.1 / commit `b29c606e2` is validated on the working stack.
+- Gemma 4 26B-A4B QAT MoE is the preferred comparison model; a representative v0.4.1 Level Zero run measured about 53.48 tok/s prompt throughput and 3.79 tok/s generation.
+- Vulkan is therefore a performance/stability/operability comparison, not a recovery path for a broken SYCL backend.
+
+Investigation checklist:
+
+- [ ] Capture the pre-test Windows/WSL/Vulkan provenance and current software-only `llvmpipe` baseline, including WSL/kernel, `/dev/dxg`, D3D12/DXCore exposure, Mesa/Vulkan packages, installed ICDs, Intel device identity and current llama.cpp build provenance.
+- [ ] Before the first Mesa/DZN or guest-package mutation, stop WSL cleanly and export the complete Ubuntu distribution to a restorable backup stored outside the distribution; record the distro name and backup identity locally.
+- [ ] Preserve the working NEO 26.31 + oneAPI 2025.3.3 SYCL environment; do not use Vulkan experimentation as an excuse to modify Issue #14 provisioning or otherwise change the accepted SYCL stack.
+- [ ] Test DZN first as an isolated side-by-side Mesa build in a user-local experiment directory rather than replacing system Mesa or globally enabling a PPA.
+- [ ] Select only the experimental DZN ICD for the first Vulkan probe and require `vulkaninfo --summary` to expose the Intel Meteor Lake device (`0x8086:0x7d55`) as hardware-backed; `llvmpipe` alone remains failure.
+- [ ] Keep Intel and NVIDIA selection explicit by hardware identity rather than Vulkan device ordering; characterize the Intel path first and treat RTX 500 Ada/DZN behavior as a separate follow-up probe.
+- [ ] Once hardware Vulkan is proven, verify the same current llama.cpp source with `llama-server --list-devices` and keep the Vulkan build in an independent immutable build slot.
+- [ ] Run a real Intel Vulkan smoke test with the same Gemma 4 26B-A4B model and relevant profile values used for the accepted SYCL comparison before tuning any Vulkan-specific performance settings.
+- [ ] Measure cold model load, first-request latency, warm behavior, prompt processing, generation, RAM peak, steady RAM use and repeated-run stability; distinguish physical UMA from actual backend copy/staging behavior.
+- [ ] Compare Vulkan with the accepted SYCL baseline on throughput, memory behavior, stability and operational simplicity. A modest raw-speed loss can still be relevant if Linux/WSL operation is materially more stable or simpler than the native-Windows placement.
+- [ ] Only after the isolated manual DZN path succeeds, decide whether AI Workstation should provision DZN from distro packages/PPA or a pinned Mesa build; keep machine/user-specific device choices outside repository defaults.
+- [ ] If implementation follows from the experiment, keep it on this review branch, update docs/tests/version provenance together, run focused checks and `./tools/release-check.sh`, and do not merge without explicit owner approval.
 
 ## Completed review block — Issue #5: host-local inference onboarding
 
