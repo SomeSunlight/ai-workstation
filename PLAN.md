@@ -34,7 +34,7 @@ Investigation checklist:
 - [x] Test DZN first as an isolated side-by-side Mesa build in a user-local experiment directory rather than replacing system Mesa or globally enabling a PPA.
 - [x] Select only the experimental DZN ICD for the first Vulkan probe and require `vulkaninfo --summary` to expose the Intel Meteor Lake device (`0x8086:0x7d55`) as hardware-backed; `llvmpipe` alone remains failure.
 - [x] Keep Intel and NVIDIA selection explicit by hardware identity rather than Vulkan device ordering; characterize the Intel path first and treat RTX 500 Ada/DZN behavior as a separate follow-up probe.
-- [ ] Once hardware Vulkan is proven, verify the same current llama.cpp source with `llama-server --list-devices` and keep the Vulkan build in an independent immutable build slot.
+- [x] Once hardware Vulkan is proven, verify the same current llama.cpp source with `llama-server --list-devices` and keep the Vulkan build in an independent immutable build slot.
 - [ ] Run a real Intel Vulkan smoke test with the same Gemma 4 26B-A4B model and relevant profile values used for the accepted SYCL comparison before tuning any Vulkan-specific performance settings.
 - [ ] Measure cold model load, first-request latency, warm behavior, prompt processing, generation, RAM peak, steady RAM use and repeated-run stability; distinguish physical UMA from actual backend copy/staging behavior.
 - [ ] Compare Vulkan with the accepted SYCL baseline on throughput, memory behavior, stability and operational simplicity. A modest raw-speed loss can still be relevant if Linux/WSL operation is materially more stable or simpler than the native-Windows placement.
