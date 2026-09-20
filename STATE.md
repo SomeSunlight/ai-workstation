@@ -6,7 +6,7 @@ PR #2 was squash-merged to `main` as `db65575c415f18a8c81db6e1bfcb32a50a56fb32`.
 
 This baseline contains nine authored ContextCanon Nodes: the root plus eight nested Nodes. Canonical Node names use explicit `ctx:node name` metadata.
 
-PR #6 was squash-merged to `main` as `76ebf7675188d3159bc6e1cea4146fdf0ee8dcb9`. It establishes the accepted host-local inference **infrastructure checkpoint**. The pinned Llama Dispatcher checkpoint was merged separately in `SomeSunlight/Llama_Dispatcher` PR #3 as merge commit `2f401efa75f8c9fcde939049868202d338a3366e`; AI Workstation pins the tested Dispatcher head `19e5798e2c7cc7bcf962f9c72c118c98560e042b`.
+PR #6 was squash-merged to `main` as `76ebf7675188d3159bc6e1cea4146fdf0ee8dcb9`. It establishes the accepted host-local inference **infrastructure checkpoint**. Llama Dispatcher PR #6 subsequently added explicit effective llama.cpp runtime provenance and was squash-merged as `84efaa41684ff11a0fcb7266edf5cbf35efb7bad`; AI Workstation now pins that accepted Dispatcher checkpoint.
 
 ## Accepted local-inference infrastructure
 
