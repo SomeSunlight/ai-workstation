@@ -204,8 +204,7 @@ To update the Git checkout and rerun the idempotent Linux installation:
 aiw update
 ```
 
-`aiw update` performs `git pull --ff-only` in the Linux checkout and then reruns
-`install.sh`. Ansible configures the host; it does not update the repository.
+`aiw update` fetches/prunes the Linux checkout, keeps fast-forward-only update safety, and then reruns `install.sh`. If the current local review branch tracks an `origin` branch that was deleted after merge, the local branch is preserved and the installed checkout automatically returns to `main` / `origin/main`. Ansible configures the host; it does not update the repository.
 
 ## Where to find it later
 
