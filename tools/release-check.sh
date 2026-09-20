@@ -9,6 +9,7 @@ bash -n install.sh bootstrap/linux/install.sh bin/aiw bin/aiw-core runtimes/loca
 python3 -m json.tool config/versions.json >/dev/null
 python3 tools/check-version-consistency.py
 ./tests/smoke/repository-layout.sh
+bash ./tests/smoke/update-recovery.sh
 bash ./tests/smoke/local-inference-runtime.sh
 
 if [[ -x "${HOME}/.local/bin/uv" ]]; then

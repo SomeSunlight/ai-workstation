@@ -1,4 +1,9 @@
 # Changelog
+## 0.6.4
+- Recover `aiw update` safely when an installed review branch was deleted remotely after merge, preserving the local branch and returning the installation checkout to `main`.
+- Add a smoke test that recreates the deleted-upstream Git state end to end.
+- Advance the pinned Llama Dispatcher to the merged effective-runtime-provenance checkpoint `84efaa41684ff11a0fcb7266edf5cbf35efb7bad`.
+
 ## 0.6.2
 - Route Windows shortcuts through generated `cmd.exe /k` launchers so WSL errors remain visible.
 - Create a second `AI Workstation Terminal` shortcut that opens the Linux home directory.

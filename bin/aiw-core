@@ -1062,6 +1062,33 @@ update_repository() {
         fail "This checkout is not a Git repository: $ROOT"
     cd "$ROOT"
     git diff --quiet && git diff --cached --quiet || fail "Repository has uncommitted changes."
+
+    git fetch --prune origin
+
+    local branch remote merge_ref remote_branch
+    branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+    if [[ -n "$branch" ]]; then
+        remote="$(git config --get "branch.${branch}.remote" || true)"
+        merge_ref="$(git config --get "branch.${branch}.merge" || true)"
+        if [[ "$remote" == "origin" && "$merge_ref" == refs/heads/* ]]; then
+            remote_branch="${merge_ref#refs/heads/}"
+            if ! git show-ref --verify --quiet "refs/remotes/origin/${remote_branch}"; then
+                warn "Tracked remote branch origin/${remote_branch} no longer exists."
+                warn "Switching the installation checkout to main; local branch '${branch}' is preserved."
+                git show-ref --verify --quiet refs/remotes/origin/main || \
+                    fail "origin/main is unavailable; cannot recover the installation checkout."
+                if git show-ref --verify --quiet refs/heads/main; then
+                    git switch main
+                else
+                    git switch --create main --track origin/main
+                fi
+                git branch --set-upstream-to=origin/main main >/dev/null
+                git pull --ff-only origin main
+                exec "${ROOT}/install.sh" install --yes
+            fi
+        fi
+    fi
+
     git pull --ff-only
     exec "${ROOT}/install.sh" install --yes
 }
