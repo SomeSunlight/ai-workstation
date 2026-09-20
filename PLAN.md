@@ -2,6 +2,20 @@
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
+## Current review block — Issue #12: robust installation update
+
+Purpose: make the installed checkout recover safely when a squash-merged review branch has been deleted remotely, and reconcile the accepted Llama Dispatcher provenance checkpoint.
+
+- [x] Reproduce the deleted-upstream failure from the real WSL update attempt.
+- [x] Preserve fast-forward-only and clean-working-tree safety.
+- [ ] Fetch/prune before update and fall back to `main` only when the current `origin` tracking branch no longer exists.
+- [ ] Preserve the old local review branch; do not reset or delete it.
+- [ ] Add a focused Git smoke test for the deleted-upstream recovery path.
+- [ ] Advance the pinned Llama Dispatcher revision to merged provenance checkpoint `84efaa41684ff11a0fcb7266edf5cbf35efb7bad`.
+- [ ] Update operator documentation/state/changelog together.
+- [ ] Run the full repository release gate and present the review PR without merging.
+
+
 ## Completed review block — Issue #5: host-local inference onboarding
 
 Purpose: onboard optional `llama.cpp` and Llama Dispatcher operation on the WSL/Linux host without duplicating the Dispatcher's model, benchmark, evaluation, or metrics responsibilities.
