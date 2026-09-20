@@ -106,7 +106,7 @@ By default the generated name is `<backend>-<short-commit>`. A descriptive suffi
 
 The first ThinkPad comparison pins llama.cpp commit `9e3b928fd8c9d14dbf15a8768b9fdd7e5c721d66` (Windows build 9553), matching the source revision already validated with the existing Dispatcher setup under Windows/Vulkan. Backend experiments therefore change the hardware/runtime path without also changing llama.cpp source.
 
-The first WSL/Vulkan run successfully built that revision but `vulkaninfo` exposed only Mesa `llvmpipe`, so AI Workstation correctly rejects it as hardware-valid. Separate WSL testing showed the Intel GPU is accelerated through the WSL D3D12 path; the missing piece for the Vulkan experiment is a usable Vulkan-over-D3D12/DZN path. The Vulkan build remains installed as a parallel baseline.
+The first WSL/Vulkan run successfully built that revision but `vulkaninfo` exposed only Mesa `llvmpipe`, so AI Workstation correctly rejected it as hardware-valid. Issue #9 later proved real Intel hardware Vulkan through a side-by-side user-local Mesa 26.2.3 DZN build. That path remains experimental and is not provisioned by normal AI Workstation setup because current Gemma 4 Flash-Attention correctness and Qwen performance/memory are not yet good enough for backend acceptance. See [TUNING.md](TUNING.md) for the preserved evidence.
 
 ## Vulkan setup
 
@@ -219,7 +219,7 @@ Model/profile/ensemble semantics and benchmark rows remain produced by the exist
 
 ## Backend status
 
-- **Vulkan**: build path implemented. On the first ThinkPad WSL run only `llvmpipe` was visible; hardware Vulkan under WSL remains a later DZN investigation.
+- **Vulkan**: build path implemented. Hardware Intel Vulkan under WSL has been proven with a side-by-side Mesa 26.2.3 DZN experiment, but DZN remains an experimental non-default path because current model correctness/performance is not yet acceptable; normal setup still rejects software-only `llvmpipe`.
 - **SYCL**: implemented for the WSL2/Ubuntu 24.04 Intel-GPU acceptance path using pinned oneAPI 2025.3-series tooling and verified Level Zero visibility.
 - **CUDA**: extension point when a WSL CUDA toolkit (`nvcc`) already exists; automatic CUDA toolkit provisioning is not part of this block.
 - **CPU**: supported as a build backend.

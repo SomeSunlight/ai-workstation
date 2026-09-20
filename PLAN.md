@@ -15,7 +15,7 @@ Purpose: make the installed checkout recover safely when a squash-merged review 
 - [x] Update operator documentation/state/changelog together.
 - [ ] Run the full repository release gate and present the review PR without merging.
 
-## Current investigation block — Issue #9: WSL hardware Vulkan / DZN
+## Completed investigation block — Issue #9: WSL hardware Vulkan / DZN
 
 Purpose: determine whether hardware Vulkan through Mesa DZN can improve ThinkPad local-inference performance and/or operational quality while preserving the stable Intel SYCL / Level Zero path as the known-good fallback and comparison baseline.
 
@@ -44,7 +44,9 @@ Investigation checklist:
 - [x] Decide provisioning: do not integrate experimental DZN into the normal AI Workstation installer yet; keep the proven side-by-side path as controlled evidence until correctness/performance is good enough to justify productizing it.
 - [x] Compare the practical result with SYCL: hardware Vulkan enablement is successful, but the current Gemma FA correctness issue and Qwen performance prevent Vulkan/DZN from replacing the accepted SYCL baseline.
 - [x] Document the Issue #9 result and upstream-related boundaries in the tuning guide.
-- [ ] Run the exact-head repository merge gate and squash-merge the owner-approved review PR.
+- [x] Run the exact-head repository merge gate and squash-merge the owner-approved review PR.
+
+Checkpoint: PR #16 passed the exact-head `Validate` workflow at `7af161d543c5f18e47509db12f1bdd191ee8b19a` and was squash-merged to `main` as `19be08a08f7b747daa954649dfc143a7b9e0e755`. Issue #9 concludes with hardware Vulkan/DZN proven under WSL but not selected as the normal laptop backend because Gemma 4 Flash-Attention correctness and Qwen 3.6 performance/memory remain limiting.
 
 ## Completed review block — Issue #5: host-local inference onboarding
 
@@ -176,8 +178,8 @@ Purpose: validate the selected WSL/Linux-host implementation on the real machine
 - [x] Preserve the Issue #8 Intel SYCL/Level Zero findings in a runtime tuning guide, including the host-driver effect, NEO 24.39 -> 26.31 allocation fix, WSL/Sysman limitation, current performance caveat, and controlled-test method.
 - [x] Link the tuning guide from the local-inference runtime documentation without promoting experimental backend findings into permanent Context rules.
 - [x] Close Intel SYCL/Level Zero acceptance in Issue #8: NEO 26.31 removed the fatal allocation failure, full offload is stable with both the pinned and v0.4.1 llama.cpp paths, and performance is adequate for comparison but not compelling enough to stop backend evaluation.
-- [ ] Continue hardware Vulkan/DZN enablement independently in Issue #9; use the now-working SYCL/Level Zero 26B-A4B baseline for comparison and continue rejecting software-only `llvmpipe`.
-- [ ] After #9, compare the largest practical model, effective shared-memory availability, throughput, context behavior and stability through Llama Dispatcher, then decide laptop placement.
+- [x] Complete Issue #9 hardware Vulkan/DZN investigation: real Intel hardware Vulkan is proven through user-local Mesa 26.2.3 DZN, but Gemma 4 Flash Attention corrupts output and the Qwen control path is too slow/memory-heavy to replace SYCL today.
+- [ ] Continue laptop placement comparison from the accepted SYCL baseline; retain DZN as controlled evidence and revisit it when upstream correctness/performance changes materially.
 - [ ] Test the WSL memory ceiling only if measurements show it is a material constraint; avoid speculative host-memory tuning.
 - [ ] Modernize the AI Workstation Intel guest-runtime provisioning in Issue #14 so normal SYCL setup/build commands preserve the proven NEO 26.31 package generation.
 
