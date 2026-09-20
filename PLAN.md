@@ -15,6 +15,36 @@ Purpose: make the installed checkout recover safely when a squash-merged review 
 - [x] Update operator documentation/state/changelog together.
 - [ ] Run the full repository release gate and present the review PR without merging.
 
+## Current investigation block — Issue #9: WSL hardware Vulkan / DZN
+
+Purpose: determine whether hardware Vulkan through Mesa DZN can improve ThinkPad local-inference performance and/or operational quality while preserving the stable Intel SYCL / Level Zero path as the known-good fallback and comparison baseline.
+
+Accepted comparison baseline from Issue #8:
+
+- NEO 26.31 + oneAPI 2025.3.3 is functionally stable with full Intel iGPU offload.
+- llama.cpp v0.4.1 / commit `b29c606e2` is validated on the working stack.
+- Gemma 4 26B-A4B QAT MoE is the preferred comparison model; a representative v0.4.1 Level Zero run measured 53.48 tok/s prompt throughput and 3.79 tok/s generation.
+- Vulkan is therefore a performance/stability/operability comparison, not a recovery path for a broken SYCL backend.
+
+Investigation checklist:
+
+- [x] Capture the pre-test Windows/WSL/Vulkan provenance and software-only `llvmpipe` baseline.
+- [x] Export the complete Ubuntu WSL distribution before the first Mesa/DZN mutation.
+- [x] Preserve the working NEO 26.31 + oneAPI 2025.3.3 SYCL environment unchanged.
+- [x] Build Mesa 26.2.3 DZN side-by-side in a user-local experiment directory without replacing system Mesa.
+- [x] Select the experimental DZN ICD explicitly and prove the Intel Meteor Lake device `0x8086:0x7d55` is hardware-backed; `llvmpipe` alone remains failure.
+- [x] Prove explicit Intel/NVIDIA device identity and selection; DZN exposes both Intel Arc Pro `0x8086:0x7d55` and RTX 500 Ada `0x10de:0x28ba`.
+- [x] Build the same llama.cpp v0.4.1 source as an independent Vulkan slot and verify `llama-server --list-devices` through DZN.
+- [x] Run real Intel Vulkan inference with Gemma 4 26B-A4B and preserve the correctness boundary: model loading succeeds from native WSL storage, but Flash Attention produces repeated `<unused49>` output.
+- [x] Re-test the Gemma correctness boundary on current llama.cpp build 11064 / commit `a894dae9`; the Flash-Attention corruption remains.
+- [x] Isolate Flash Attention from KV quantization: Gemma with FA off + F16 V cache answers correctly, while FA on + F16 V cache again produces `<unused49>`; the FA-off workaround is operationally unusable because of memory pressure.
+- [x] Run Qwen 3.6 35B-A3B as a control: Vulkan/DZN + Flash Attention produces correct text, proving the DZN/Vulkan backend and FA are not globally broken, but measured throughput remains unexpectedly low.
+- [x] Record the native-WSL-storage finding: the large GGUF failed to load from `/mnt/c` with `read error: Bad address`, while the same file loaded successfully and much faster from the WSL filesystem; SYCL model loading also improved visibly from native WSL storage.
+- [x] Preserve representative Dispatcher measurements and qualitative memory/stability observations in `runtimes/local-inference/TUNING.md`; do not claim precise load-time/RAM accounting until startup-memory telemetry exists.
+- [x] Decide provisioning: do not integrate experimental DZN into the normal AI Workstation installer yet; keep the proven side-by-side path as controlled evidence until correctness/performance is good enough to justify productizing it.
+- [x] Compare the practical result with SYCL: hardware Vulkan enablement is successful, but the current Gemma FA correctness issue and Qwen performance prevent Vulkan/DZN from replacing the accepted SYCL baseline.
+- [x] Document the Issue #9 result and upstream-related boundaries in the tuning guide.
+- [ ] Run the exact-head repository merge gate and squash-merge the owner-approved review PR.
 
 ## Completed review block — Issue #5: host-local inference onboarding
 
