@@ -1,6 +1,6 @@
 # Local-inference backend tuning notes
 
-This document records **observed backend behavior and controlled tuning evidence** for AI Workstation local inference. It is intentionally not a permanent architecture rule. Issue #8 established a working Intel SYCL / Level Zero baseline; Issue #9 continues the WSL Vulkan comparison, while Issue #14 tracks the remaining AI Workstation SYCL provisioning cleanup.
+This document records **observed backend behavior and controlled tuning evidence** for AI Workstation local inference. It is intentionally not a permanent architecture rule. Issue #8 established a working Intel SYCL / Level Zero baseline. Issue #9 proved hardware Vulkan through Mesa DZN under WSL, but also established correctness/performance boundaries that currently keep DZN experimental. Issue #14 tracks the remaining AI Workstation SYCL provisioning cleanup.
 
 The main purpose is to preserve enough detail that later work does not have to reconstruct hardware/runtime findings from chat history.
 
@@ -220,13 +220,142 @@ Until Issue #14 is complete:
 
 Issue #14 should update the normal AI Workstation SYCL provisioning path so future builds are reproducible without risking a runtime downgrade.
 
-## Vulkan handoff
+## WSL Vulkan / DZN findings from Issue #9
 
-Issue #9 owns WSL hardware Vulkan/DZN investigation.
+Issue #9 answered the first architectural question positively: **hardware Vulkan under WSL is possible on this ThinkPad through Mesa DZN**. It did not establish DZN as the preferred inference backend.
 
-The original WSL Vulkan baseline exposed only Mesa `llvmpipe`, despite separate D3D12/OpenGL tests proving hardware Intel GPU access. The next Vulkan block should determine whether a current Mesa DZN path can expose the Intel iGPU as a real Vulkan device under WSL and then compare it against the working SYCL baseline.
+### Hardware Vulkan enablement succeeded
 
-Do not mix Vulkan enablement changes into Issue #8.
+The pre-test Ubuntu 24.04 system Mesa exposed only `llvmpipe`; the packaged stack did not provide a usable DZN Vulkan ICD.
+
+Mesa 26.2.3 was therefore built side-by-side under the user's AI Workstation experiment directory with an intentionally minimal DZN configuration:
+
+```bash
+meson setup build-dzn \
+  -Dvulkan-drivers=microsoft-experimental \
+  -Dgallium-drivers= \
+  -Dplatforms= \
+  -Dbuildtype=release \
+  -Dllvm=disabled
+
+ninja -C build-dzn
+```
+
+Nothing was installed over system Mesa. The build-tree development ICD was selected explicitly.
+
+DZN exposed both physical adapters through WSL/D3D12:
+
+- NVIDIA RTX 500 Ada — vendor/device `0x10de:0x28ba`;
+- Intel Arc Pro integrated graphics — vendor/device `0x8086:0x7d55`.
+
+The Intel test path was then forced explicitly:
+
+```bash
+export LD_LIBRARY_PATH=/usr/lib/wsl/lib:${LD_LIBRARY_PATH:-}
+export VK_DRIVER_FILES="$HOME/.local/share/ai-workstation/experiments/mesa-26.2.3/build-dzn/src/microsoft/vulkan/dzn_devenv_icd.x86_64.json"
+export MESA_VK_DEVICE_SELECT=8086:7d55!
+```
+
+With that environment, `vulkaninfo --summary` exposed only the intended Intel hardware device and `llama-server --list-devices` from the independent Vulkan build reported the Intel Arc Pro device. The DZN warning that the implementation is not conformant is expected and is itself a reason not to treat this as a production-ready system Vulkan stack.
+
+Two immutable llama.cpp Vulkan slots were exercised:
+
+- v0.4.1 / build 10964 / commit `b29c606e2`;
+- build 11064 / commit `a894dae9`, 100 upstream commits newer than the first DZN test build.
+
+The later build did not remove the Gemma correctness problem described below.
+
+### Native WSL model storage materially changed loading behavior
+
+The first Gemma 4 26B-A4B load used a GGUF under `/mnt/c` and failed during model loading with:
+
+```text
+llama_model_load: error loading model: read error: Bad address
+```
+
+Setting `GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM=1` did not remove that loading failure.
+
+The same GGUF was copied into the native WSL filesystem. After that change:
+
+- Vulkan/DZN loaded the model successfully;
+- loading was visibly much faster;
+- the same native-WSL model location also made SYCL model loading visibly faster in the later control run.
+
+This is an observed platform boundary, not yet a complete root-cause proof. The exact interaction between DrvFS/`/mnt/c`, llama.cpp model I/O and DZN buffer upload was not isolated further. For this machine, large host-local GGUF files should nevertheless be kept on the native WSL filesystem when testing WSL inference.
+
+### Gemma 4 correctness fails on the Vulkan Flash-Attention path
+
+With Gemma 4 26B-A4B QAT, Q4 KV cache and Flash Attention enabled, the model loads and starts inference but immediately produces repeated invalid special tokens such as:
+
+```text
+Hello<unused49><unused49><unused49>...
+```
+
+Reasoning was disabled for the reproduction. The same corruption occurred on both tested llama.cpp revisions, including build 11064.
+
+The critical A/B tests were:
+
+| Gemma configuration | Result |
+|---|---|
+| `cache-type-v=q4_0`, FA on | repeated `<unused49>` corruption |
+| `cache-type-v=f16`, FA on | repeated `<unused49>` corruption |
+| `cache-type-v=f16`, FA off | coherent answer |
+
+This isolates the observed failure much more strongly to the current Gemma/Vulkan Flash-Attention execution path than to V-cache quantization itself.
+
+FA-off is not a useful workaround on this laptop. Quantized V cache requires Flash Attention in current llama.cpp, so disabling FA forces an unquantized V cache. During the F16-V control run llama.cpp warned that Gemma's V embeddings have different sizes across layers and padded the V cache to 2048. System memory pressure became severe enough that the Windows desktop briefly lost/rearranged external displays. The configuration answered correctly, but it is operationally unacceptable.
+
+Similar upstream llama.cpp reports exist for Gemma 4 Vulkan corruption, including Issue #21516 (`<unused>` loops) and the still-open Issue #27007 (Gemma 4 26B-A4B full-GPU Vulkan corruption). Those reports are useful corroborating context, but this ThinkPad/DZN experiment does not claim the same low-level root cause.
+
+### Qwen proves Vulkan/DZN + Flash Attention is not globally broken
+
+Qwen 3.6 35B-A3B Q4_K_M was used as a control with Vulkan/DZN and Flash Attention enabled.
+
+Unlike Gemma, Qwen produced coherent output. This proves that neither DZN/Vulkan nor Flash Attention is generically unusable on the machine.
+
+The current Qwen profile keeps KV offload enabled by overriding the laptop Vulkan engine default with `no-kv-offload: false`. That exception is intentional: upstream llama.cpp Issue #23321 documents gibberish output on Qwen3.6-35B-A3B when Vulkan `no-kv-offload` is enabled, and the local test configuration is aligned with the working path.
+
+Performance, however, was unexpectedly low. Representative Dispatcher measurements were:
+
+| Backend / model | Context | Prompt tokens | Prompt tok/s | Generated tokens | Generation tok/s |
+|---|---:|---:|---:|---:|---:|
+| SYCL / Gemma 4 26B-A4B / v0.4.1 | 16K | 13,715 | 53.48 | 924 | 3.79 |
+| Vulkan-DZN / Qwen 3.6 35B-A3B | 16K | 67 | 7.15 | 74 | 1.34 |
+| Vulkan-DZN / Qwen 3.6 35B-A3B | 8K | 3,641 | 17.63 | 568 | 2.45 |
+| Vulkan-DZN / Qwen 3.6 35B-A3B | 8K | 340 | 17.19 | 18 | 2.68 |
+| Vulkan-DZN / Gemma 4 26B-A4B, FA off, F16 V | 16K | 102 | 6.33 | 10 | 3.05 |
+
+These rows are **not an apples-to-apples backend benchmark**. The models differ, and prompt-evaluation throughput depends strongly on prompt length. They are preserved as observed evidence showing that the Qwen control path is functional but not yet fast enough to make DZN attractive.
+
+A later SYCL control using the same Gemma GGUF from native WSL storage remained correct and reached roughly 4.4-4.9 tok/s generation on short requests. Its visibly faster model load is operational evidence for native WSL storage, but the short prompt measurements should not be compared directly with the earlier 13.7k-token prompt throughput row.
+
+### UMA does not eliminate memory pressure
+
+The Intel iGPU is physically UMA/shared-memory, but the experiment again showed that backend buffers and file-backed pages can coexist and create large transient or steady pressure.
+
+Operator observations:
+
+- the Qwen Q4_K_M GGUF is roughly 22 GiB versus roughly 14 GiB for the tested Gemma Q4_K_XL;
+- during Qwen loading, Windows Task Manager rose from roughly 32 GiB used to about 92% of the 64 GiB machine;
+- the Gemma FA-off/F16-V control saturated memory much more severely.
+
+These are operator-visible observations rather than precise backend allocation telemetry. Dispatcher Issue #4 remains the right place for automatic startup-memory/load-time telemetry.
+
+### Issue #9 conclusion
+
+The Vulkan investigation is therefore a **successful hardware-enablement experiment with a negative backend-selection result**:
+
+- hardware DZN/Vulkan under WSL: **proven**;
+- explicit Intel device selection: **proven**;
+- real llama.cpp inference through DZN: **proven**;
+- native WSL model storage: **strongly preferred on this machine**;
+- Gemma 4 26B-A4B with required Flash Attention: **incorrect output**;
+- FA-off Gemma workaround: **correct but memory-prohibitive**;
+- Qwen 3.6 control with FA: **correct but unexpectedly slow and memory-heavy**;
+- DZN installation/provisioning in normal AI Workstation setup: **deferred**;
+- accepted day-to-day Intel backend: **remain on the known-good SYCL / Level Zero baseline for now**.
+
+Do not weaken Vulkan verification or remove the side-by-side DZN evidence. The experiment proved that WSL hardware Vulkan is real. The remaining blockers are now inference correctness/performance, not device visibility.
 
 ## References
 
@@ -242,5 +371,11 @@ Do not mix Vulkan enablement changes into Issue #8.
   https://github.com/ggml-org/llama.cpp/issues/24045
 - llama.cpp issue #26010 — SYCL versus Vulkan generation throughput:
   https://github.com/ggml-org/llama.cpp/issues/26010
+- llama.cpp issue #21516 — Gemma 4 Vulkan `<unused>` token loop:
+  https://github.com/ggml-org/llama.cpp/issues/21516
+- llama.cpp issue #27007 — open Gemma 4 26B-A4B Vulkan corruption report:
+  https://github.com/ggml-org/llama.cpp/issues/27007
+- llama.cpp issue #23321 — Qwen3.6 Vulkan corruption with `no-kv-offload`:
+  https://github.com/ggml-org/llama.cpp/issues/23321
 - Intel Ubuntu client-GPU package instructions:
   https://dgpu-docs.intel.com/installation-guides/installing-packages-from-the-intel-ppa.html
