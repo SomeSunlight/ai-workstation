@@ -1,6 +1,6 @@
 {
   "versions": {
-    "project": "0.6.3",
+    "project": "0.6.4",
     "ubuntu": {
       "distribution": "Ubuntu-24.04",
       "release": "24.04",
@@ -39,7 +39,7 @@
     },
     "llama_dispatcher": {
       "repository": "https://github.com/SomeSunlight/Llama_Dispatcher.git",
-      "commit": "19e5798e2c7cc7bcf962f9c72c118c98560e042b"
+      "commit": "84efaa41684ff11a0fcb7266edf5cbf35efb7bad"
     }
   }
 }
