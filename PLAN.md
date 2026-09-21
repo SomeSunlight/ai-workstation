@@ -30,13 +30,13 @@ Accepted baseline:
 
 Implementation checklist:
 
-- [ ] Replace the historical Intel Noble client repository/package path with Intel's current Ubuntu 24.04 `intel-graphics` PPA path.
-- [ ] Install the current compute/development package set required by the proven Level Zero/SYCL workflow, centered on `libze-intel-gpu1`, `libze1`, `libze-dev`, `intel-opencl-icd`, `intel-ocloc`, and `clinfo`.
-- [ ] Keep Intel GPU runtime provisioning and oneAPI compiler/toolchain provisioning logically separate in the installer.
-- [ ] Prevent `setup sycl` from reinstalling the obsolete `intel-level-zero-gpu` package or silently downgrading a working current NEO stack.
-- [ ] Record/verify the effective Intel GPU runtime and oneAPI versions after setup.
-- [ ] Add focused smoke coverage for the repository/package selection semantics without requiring Intel hardware in CI.
-- [ ] Update runtime documentation and version/provenance configuration together.
+- [x] Replace the historical Intel Noble client repository/package path with Intel's current Ubuntu 24.04 `intel-graphics` PPA path.
+- [x] Install the current compute/development package set required by the proven Level Zero/SYCL workflow, centered on `libze-intel-gpu1`, `libze1`, `libze-dev`, `intel-opencl-icd`, `intel-ocloc`, and `clinfo`.
+- [x] Keep Intel GPU runtime provisioning and oneAPI compiler/toolchain provisioning logically separate in the installer.
+- [x] Prevent `setup sycl` from reinstalling the obsolete `intel-level-zero-gpu` package or silently downgrading a working current NEO stack.
+- [x] Record/verify the effective Intel GPU runtime and oneAPI versions after setup.
+- [x] Add focused smoke coverage for the repository/package selection semantics without requiring Intel hardware in CI.
+- [x] Update runtime documentation and version/provenance configuration together.
 - [ ] Run focused checks and the complete repository release gate.
 - [ ] Present the coherent review PR without merging; merge only after explicit owner approval.
 
