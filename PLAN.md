@@ -37,7 +37,8 @@ Implementation checklist:
 - [x] Record/verify the effective Intel GPU runtime and oneAPI versions after setup.
 - [x] Add focused smoke coverage for the repository/package selection semantics without requiring Intel hardware in CI.
 - [x] Update runtime documentation and version/provenance configuration together.
-- [ ] Run focused checks and the complete repository release gate.
+- [x] Run focused checks and the complete repository release gate.
+- [ ] On the real ThinkPad, run the updated SYCL setup against the existing NEO 26.31 installation, verify no downgrade/replacement occurs, repeat it for idempotence, and confirm full-offload inference still works.
 - [ ] Present the coherent review PR without merging; merge only after explicit owner approval.
 
 ## Completed investigation block — Issue #9: WSL hardware Vulkan / DZN
