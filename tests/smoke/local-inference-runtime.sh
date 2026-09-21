@@ -37,6 +37,11 @@ grep -Fq 'verify_minimum_package_version libze-intel-gpu1' "$manager" || {
     exit 1
 }
 
+grep -Fq 'install_system_dependencies "$backend"' "$manager" || {
+    echo 'Backend setup must reprovision prerequisites even when a pinned build already exists.' >&2
+    exit 1
+}
+
 # Intel's setvars.sh owns ONEAPI_ROOT. AI Workstation must not declare that
 # vendor environment variable readonly before sourcing the Intel environment.
 if grep -Eq '^[[:space:]]*readonly[[:space:]]+ONEAPI_ROOT=' "$manager"; then
