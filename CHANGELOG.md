@@ -1,4 +1,9 @@
 # Changelog
+## 0.6.5
+- Move Intel SYCL guest-runtime provisioning from the historical Noble client repository to Intel's current Ubuntu 24.04 `intel-graphics` PPA.
+- Migrate from obsolete `intel-level-zero-gpu` to `libze-intel-gpu1` and require at least the proven NEO 26.31 / Level Zero 1.32 generation.
+- Keep oneAPI provisioning separate, record effective SYCL runtime provenance, and add regression smoke coverage for the package-source boundary.
+
 ## 0.6.4
 - Recover `aiw update` safely when an installed review branch was deleted remotely after merge, preserving the local branch and returning the installation checkout to `main`.
 - Add a smoke test that recreates the deleted-upstream Git state end to end.
