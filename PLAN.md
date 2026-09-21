@@ -7,11 +7,11 @@ This file is the durable recovery map for active and upcoming development work. 
 Purpose: stop the Linux installer from rewriting Git-tracked executable bits on every install/update now that normal installations clone directly into the Linux filesystem.
 
 - [x] Reproduce the cause: repository-wide `chmod 0644` followed by an incomplete hard-coded executable allowlist.
-- [ ] Remove automatic repository-wide permission normalization from the Linux installer.
-- [ ] Remove the obsolete `tools/normalize-permissions.sh` helper.
-- [ ] Keep the world-writable repository safety check without mutating tracked file modes.
-- [ ] Update setup/troubleshooting documentation to make Git/Linux modes authoritative.
-- [ ] Add regression coverage for tracked executable modes / absence of bulk normalization.
+- [x] Remove automatic repository-wide permission normalization from the Linux installer.
+- [x] Remove the obsolete `tools/normalize-permissions.sh` helper.
+- [x] Keep the world-writable repository safety check without mutating tracked file modes.
+- [x] Update setup/troubleshooting documentation to make Git/Linux modes authoritative.
+- [x] Add regression coverage for tracked executable modes / absence of bulk normalization.
 - [ ] Run the complete release gate.
 - [ ] Present a review PR; do not merge without explicit owner approval.
 

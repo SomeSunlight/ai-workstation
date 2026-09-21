@@ -17,6 +17,24 @@ for item in "${required[@]}"; do
 done
 [[ "$ROOT" != /mnt/* ]] || { echo 'Repository must not be operated from /mnt.' >&2; exit 1; }
 
+bootstrap_installer="$ROOT/bootstrap/linux/install.sh"
+if grep -Fq 'normalize_permissions' "$bootstrap_installer" ||    grep -Eq -- '-type f .*chmod 0?644' "$bootstrap_installer"; then
+  echo 'Linux installer must not rewrite Git-tracked file modes.' >&2
+  exit 1
+fi
+[[ ! -e "$ROOT/tools/normalize-permissions.sh" ]] || {
+  echo 'Legacy repository permission normalizer still exists.' >&2
+  exit 1
+}
+
+for executable in   bin/aiw-core   runtimes/local-inference/manage.sh   tests/smoke/goose-runtime.sh   tests/smoke/interactive-menu.sh   tests/smoke/open-webui-runtime.sh; do
+  mode="$(git -C "$ROOT" ls-files --stage -- "$executable" | awk '{print $1}')"
+  [[ "$mode" == "100755" ]] || {
+    echo "Expected Git executable mode 100755 for $executable, found ${mode:-missing}." >&2
+    exit 1
+  }
+done
+
 temp_home="$(mktemp -d)"
 trap 'rm -rf "$temp_home"' EXIT
 mkdir -p "$temp_home/.local/bin"
