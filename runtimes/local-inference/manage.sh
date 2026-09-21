@@ -449,16 +449,19 @@ write_build_manifest() {
     [[ -n "$version_output" ]] || fail "Built llama-server returned no version output: ${bin_dir}/llama-server --version"
     compiler_output=""
     toolchain_package=""
+    gpu_runtime_packages=""
 
     if [[ "$backend" == "sycl" ]]; then
         compiler_output="$(icpx --version 2>/dev/null | head -n 1 || true)"
         local package_name
         package_name="$(json_value versions.intel_oneapi.deep_learning_essentials_package)"
         toolchain_package="$(dpkg-query -W -f='${Version}' "$package_name" 2>/dev/null || true)"
+        gpu_runtime_packages="$(dpkg-query -W -f='${Package}=${Version}\n' \
+            libze-intel-gpu1 libze1 libze-dev intel-opencl-icd intel-ocloc 2>/dev/null || true)"
     fi
 
     python3 - "$slot_dir/manifest.json" "$name" "$repository" "$commit" "$backend" \
-        "$source_dir" "$build_dir" "$bin_dir" "$version_output" "$compiler_output" "$toolchain_package" \
+        "$source_dir" "$build_dir" "$bin_dir" "$version_output" "$compiler_output" "$toolchain_package" "$gpu_runtime_packages" \
         "${extra_args[@]}" <<'PY'
 from datetime import datetime, timezone
 import json
