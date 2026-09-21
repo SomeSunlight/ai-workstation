@@ -91,25 +91,6 @@ print(value)
 ' "$VERSIONS_FILE" "$path"
 }
 
-normalize_permissions() {
-    find "$ROOT" \
-        \( -path "$ROOT/.git" -o -path "$ROOT/.venv" -o -path "$ROOT/.ansible" \) -prune -o \
-        -type d -exec chmod 0755 {} +
-
-    find "$ROOT" \
-        \( -path "$ROOT/.git" -o -path "$ROOT/.venv" -o -path "$ROOT/.ansible" \) -prune -o \
-        -type f -exec chmod 0644 {} +
-
-    chmod 0755 \
-        "$ROOT/install.sh" \
-        "$ROOT/bin/aiw" \
-        "$ROOT/bootstrap/linux/install.sh" \
-        "$ROOT/tools/normalize-permissions.sh" \
-        "$ROOT/tools/release-check.sh" \
-        "$ROOT/tools/adopt-prototype-lock.sh" \
-        "$ROOT/tests/smoke/repository-layout.sh"
-}
-
 preflight() {
     section 'Bootstrap preflight'
 
@@ -127,7 +108,7 @@ preflight() {
     [[ "$(ps -p 1 -o comm= | xargs)" == "systemd" ]] || fail "systemd must run as PID 1."
     [[ -f "${ROOT}/pyproject.toml" ]] || fail "pyproject.toml is missing."
     if find "$ROOT" -maxdepth 0 -perm -0002 -print -quit | grep -q .; then
-        fail "Repository is world-writable. Run tools/normalize-permissions.sh first."
+        fail "Repository is world-writable. Fix the checkout ownership/permissions before installing."
     fi
 
     info "Repository : $ROOT"
@@ -293,7 +274,6 @@ main() {
             show_status
             ;;
         install)
-            normalize_permissions
             preflight
             confirm_install
             prepare_become_password

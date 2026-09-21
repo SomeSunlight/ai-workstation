@@ -62,14 +62,12 @@ For a test distribution:
 
 ## `ansible.cfg` is ignored
 
-The repository must not be world-writable. Run:
+The repository must not be world-writable. Normal installations clone the
+repository directly inside the Linux filesystem, and Git is authoritative for
+tracked file modes.
 
-```bash
-./tools/normalize-permissions.sh
-```
-
-Normal installations clone the repository directly inside Linux and therefore
-do not inherit synthetic Windows permissions.
+If the checkout has incorrect permissions, fix the checkout ownership or clone a
+fresh copy inside Linux rather than rewriting permissions across the repository.
 
 ## Docker works only with sudo
 
