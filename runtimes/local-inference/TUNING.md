@@ -1,6 +1,6 @@
 # Local-inference backend tuning notes
 
-This document records **observed backend behavior and controlled tuning evidence** for AI Workstation local inference. It is intentionally not a permanent architecture rule. Issue #8 established a working Intel SYCL / Level Zero baseline. Issue #9 proved hardware Vulkan through Mesa DZN under WSL, but also established correctness/performance boundaries that currently keep DZN experimental. Issue #14 tracks the remaining AI Workstation SYCL provisioning cleanup.
+This document records **observed backend behavior and controlled tuning evidence** for AI Workstation local inference. It is intentionally not a permanent architecture rule. Issue #8 established a working Intel SYCL / Level Zero baseline. Issue #9 proved hardware Vulkan through Mesa DZN under WSL, but also established correctness/performance boundaries that currently keep DZN experimental. Issue #14 aligns normal AI Workstation SYCL provisioning with the proven current Intel runtime generation.
 
 The main purpose is to preserve enough detail that later work does not have to reconstruct hardware/runtime findings from chat history.
 
@@ -205,20 +205,19 @@ AI Workstation keeps parallel immutable-spec `llama.cpp` build slots. Use them i
 
 ## SYCL provisioning follow-up
 
-The source-version experiment described by the earlier version of this document is complete: v0.4.1 was built without disturbing the working NEO 26.31 guest stack and successfully exercised full-offload inference.
+The source-version experiment is complete: v0.4.1 was built without disturbing the working NEO 26.31 guest stack and successfully exercised full-offload inference.
 
-The remaining SYCL work is now **installer/reproducibility**, tracked in Issue #14.
+Issue #14 updates the normal AI Workstation provisioning path to match that proven generation:
 
-**Do not currently run `aiw local-inference llama build --backend sycl` on the repaired ThinkPad environment if that command would invoke the historical dependency provisioning.** The current AI Workstation provisioning path still re-adds Intel's older Noble client repository and explicitly requests `intel-level-zero-gpu`, which can conflict with the proven current-PPA `libze-intel-gpu1` / NEO 26.31 stack.
+- Intel's Ubuntu 24.04 `intel-graphics` PPA supplies the guest GPU runtime;
+- `libze-intel-gpu1` replaces the historical `intel-level-zero-gpu` package;
+- NEO older than 26.31 and Level Zero loader/development packages older than 1.32 are rejected;
+- oneAPI 2025.3 provisioning remains a separate toolchain step;
+- the effective GPU-runtime and oneAPI package versions are printed and stored with new SYCL build provenance.
 
-Until Issue #14 is complete:
+The Issue #14 review candidate should make `aiw local-inference setup sycl` the intended reproducible path again after it is validated on the real ThinkPad.
 
-- preserve the working NEO 26.31 + oneAPI 2025.3.3 environment;
-- keep existing immutable llama.cpp build slots intact;
-- treat manual/source-only builds as controlled experiments rather than the preferred long-term operator workflow;
-- do not interpret this installer limitation as a backend-stability failure.
-
-Issue #14 should update the normal AI Workstation SYCL provisioning path so future builds are reproducible without risking a runtime downgrade.
+The later native-WSL model tests also reached stable 16K and 32K contexts. During 32K model loading, observed host memory temporarily approached 99% before falling back to roughly 58% steady state. That is consistent with reclaimable file-backed pages coexisting temporarily with backend buffers, but it remains an operational observation rather than a precise allocation trace.
 
 ## WSL Vulkan / DZN findings from Issue #9
 
