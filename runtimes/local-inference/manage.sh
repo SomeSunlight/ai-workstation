@@ -740,6 +740,10 @@ ensure_pinned_backend_build() {
     name="${backend}-${short}"
     if ! build_exists "$name"; then
         llama_build --backend "$backend" --commit "$commit" --name "$name"
+    else
+        # setup must also validate/refresh backend prerequisites on an existing
+        # build; otherwise an already-built slot would bypass provisioning.
+        install_system_dependencies "$backend"
     fi
     llama_select "$name"
 }
