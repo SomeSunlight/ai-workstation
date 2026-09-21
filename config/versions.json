@@ -1,6 +1,6 @@
 {
   "versions": {
-    "project": "0.6.4",
+    "project": "0.6.5",
     "ubuntu": {
       "distribution": "Ubuntu-24.04",
       "release": "24.04",
@@ -40,6 +40,13 @@
     "llama_dispatcher": {
       "repository": "https://github.com/SomeSunlight/Llama_Dispatcher.git",
       "commit": "84efaa41684ff11a0fcb7266edf5cbf35efb7bad"
+    },
+    "intel_gpu": {
+      "ubuntu_ppa": "ppa:kobuk-team/intel-graphics",
+      "verified_neo_release": "26.31.39395.14",
+      "minimum_neo_release": "26.31",
+      "verified_level_zero_loader": "1.32.0",
+      "minimum_level_zero_loader": "1.32"
     }
   }
 }

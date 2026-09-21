@@ -12,6 +12,36 @@ export HOME="$temp_home"
 export AIW_LOCAL_INFERENCE_CONFIG="$config_file"
 export AIW_LOCAL_INFERENCE_ROOT="$runtime_root"
 
+# The supported SYCL provisioning path must use Intel's current Ubuntu PPA and
+# the modern libze-intel-gpu1 package family. The legacy package may appear only
+# in migration/removal checks, never in an apt install package list.
+versions_file="${ROOT}/config/versions.json"
+grep -Fq '"ubuntu_ppa": "ppa:kobuk-team/intel-graphics"' "$versions_file" || {
+    echo 'Intel GPU provisioning must use the current intel-graphics PPA.' >&2
+    exit 1
+}
+grep -Fq 'libze-intel-gpu1 libze1 intel-opencl-icd clinfo libze-dev intel-ocloc' "$manager" || {
+    echo 'SYCL provisioning is missing the current Intel NEO / Level Zero package set.' >&2
+    exit 1
+}
+grep -Fq 'apt-get remove -y intel-level-zero-gpu' "$manager" || {
+    echo 'SYCL provisioning must explicitly migrate away from intel-level-zero-gpu.' >&2
+    exit 1
+}
+if grep -Eq 'apt-get install[^[:cntrl:]]*intel-level-zero-gpu' "$manager"; then
+    echo 'SYCL provisioning still installs obsolete intel-level-zero-gpu.' >&2
+    exit 1
+fi
+grep -Fq 'verify_minimum_package_version libze-intel-gpu1' "$manager" || {
+    echo 'SYCL verification must reject Intel NEO generations older than the proven minimum.' >&2
+    exit 1
+}
+
+grep -Fq 'install_system_dependencies "$backend"' "$manager" || {
+    echo 'Backend setup must reprovision prerequisites even when a pinned build already exists.' >&2
+    exit 1
+}
+
 # Intel's setvars.sh owns ONEAPI_ROOT. AI Workstation must not declare that
 # vendor environment variable readonly before sourcing the Intel environment.
 if grep -Eq '^[[:space:]]*readonly[[:space:]]+ONEAPI_ROOT=' "$manager"; then

@@ -15,6 +15,32 @@ Purpose: make the installed checkout recover safely when a squash-merged review 
 - [x] Update operator documentation/state/changelog together.
 - [ ] Run the full repository release gate and present the review PR without merging.
 
+## Current review block — Issue #14: reproduce the working Intel SYCL stack
+
+Purpose: make a fresh supported WSL installation reproduce the Intel SYCL / Level Zero environment already proven on the ThinkPad, without reintroducing the obsolete NEO 24.39 package generation.
+
+Accepted baseline:
+
+- Ubuntu 24.04 under WSL2.
+- Intel NEO 26.31 with `libze-intel-gpu1 26.31.39395.14`.
+- Level Zero loader/development packages 1.32.
+- oneAPI 2025.3.3.
+- Full-offload Gemma 4 26B-A4B inference is stable; 16K and 32K smoke tests complete successfully, with high transient model-load memory pressure returning to substantially lower steady-state use.
+- Vulkan/DZN is a separate Issue #9 path and must not be changed by this block.
+
+Implementation checklist:
+
+- [x] Replace the historical Intel Noble client repository/package path with Intel's current Ubuntu 24.04 `intel-graphics` PPA path.
+- [x] Install the current compute/development package set required by the proven Level Zero/SYCL workflow, centered on `libze-intel-gpu1`, `libze1`, `libze-dev`, `intel-opencl-icd`, `intel-ocloc`, and `clinfo`.
+- [x] Keep Intel GPU runtime provisioning and oneAPI compiler/toolchain provisioning logically separate in the installer.
+- [x] Prevent `setup sycl` from reinstalling the obsolete `intel-level-zero-gpu` package or silently downgrading a working current NEO stack.
+- [x] Record/verify the effective Intel GPU runtime and oneAPI versions after setup.
+- [x] Add focused smoke coverage for the repository/package selection semantics without requiring Intel hardware in CI.
+- [x] Update runtime documentation and version/provenance configuration together.
+- [x] Run focused checks and the complete repository release gate.
+- [x] On the real ThinkPad, run the updated SYCL setup against the existing NEO 26.31 installation, verify no downgrade/replacement occurs, repeat it for idempotence, and confirm full-offload inference still works.
+- [x] Present the coherent review PR without merging; merge only after explicit owner approval.
+
 ## Completed investigation block — Issue #9: WSL hardware Vulkan / DZN
 
 Purpose: determine whether hardware Vulkan through Mesa DZN can improve ThinkPad local-inference performance and/or operational quality while preserving the stable Intel SYCL / Level Zero path as the known-good fallback and comparison baseline.

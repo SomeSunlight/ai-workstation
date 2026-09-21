@@ -6,7 +6,7 @@ AI Workstation owns reproducible host installation, pinned default revisions, th
 
 Local inference is optional. A remote-only AI Workstation does not need to configure or install this runtime.
 
-Backend acceptance and tuning evidence is kept separately in [TUNING.md](TUNING.md). The Intel SYCL/Level Zero investigation is now complete: NEO 26.31 plus oneAPI 2025.3.3 runs the ThinkPad iGPU stably at full offload, including with llama.cpp v0.4.1. The remaining caveat is installer-owned: `setup sycl` and the current `llama build --backend sycl` dependency-provisioning path still reference the older Intel guest-runtime packaging. Issue #14 owns that provisioning cleanup; until it is complete, do not use those commands in a way that could replace the working NEO 26.31 stack.
+Backend acceptance and tuning evidence is kept separately in [TUNING.md](TUNING.md). The Intel SYCL/Level Zero investigation is complete: NEO 26.31 plus oneAPI 2025.3.3 runs the ThinkPad iGPU stably at full offload, including with llama.cpp v0.4.1. The normal SYCL provisioning path now follows Intel's Ubuntu 24.04 `intel-graphics` PPA, requires at least the proven NEO 26.31 / Level Zero 1.32 generation, and records the effective package/toolchain provenance.
 
 ## Ownership boundary
 
@@ -98,7 +98,7 @@ Each build gets `manifest.json`, which records at least:
 - binary path;
 - first line of `llama-server --version`;
 - build timestamp;
-- for SYCL, observed Intel compiler/package provenance.
+- for SYCL, observed Intel compiler, oneAPI package, and NEO/Level Zero package provenance.
 
 By default the generated name is `<backend>-<short-commit>`. A descriptive suffix can be added with `--label`; an explicit `--name` is also possible. Two materially different build specifications should use two different build names. The manifest, not the human-oriented name, is the source of truth.
 
@@ -139,14 +139,16 @@ For the controlled ThinkPad test this command:
 
 1. keeps existing Vulkan/build slots untouched;
 2. verifies Ubuntu 24.04 under WSL and `/dev/dxg`;
-3. configures Intel's Ubuntu 24.04 client-GPU APT repository;
-4. installs the Intel user-mode Level Zero/OpenCL compute runtime inside WSL;
-5. configures Intel's oneAPI APT repository;
-6. installs the pinned `intel-deep-learning-essentials-2025.3` package series;
-7. sources `/opt/intel/oneapi/setvars.sh` once per AI Workstation process and requires `sycl-ls` to expose a Level Zero GPU;
-8. builds the pinned llama.cpp commit as `sycl-9e3b928f` with `GGML_SYCL=ON`, `icx`, and `icpx`;
-9. selects the SYCL slot and verifies the llama.cpp SYCL device tools;
-10. verifies the pinned Dispatcher core without touching any user-owned instance.
+3. removes the historical Intel Noble client-repository definition if it is still present;
+4. configures Intel's current Ubuntu 24.04 `ppa:kobuk-team/intel-graphics` source;
+5. installs `libze-intel-gpu1`, `libze1`, `libze-dev`, `intel-opencl-icd`, `intel-ocloc`, and `clinfo`;
+6. removes the obsolete `intel-level-zero-gpu` package when migrating an older installation;
+7. configures Intel's oneAPI APT repository independently from the GPU runtime;
+8. installs the pinned `intel-deep-learning-essentials-2025.3` package series;
+9. requires at least the proven NEO 26.31 and Level Zero 1.32 package generations and prints the effective package/compiler provenance;
+10. sources `/opt/intel/oneapi/setvars.sh` once per AI Workstation process and requires `sycl-ls` to expose a Level Zero GPU;
+11. builds the pinned llama.cpp commit as `sycl-9e3b928f` with `GGML_SYCL=ON`, `icx`, and `icpx`;
+12. selects the SYCL slot, verifies the llama.cpp SYCL device tools, and verifies the pinned Dispatcher core without touching any user-owned instance.
 
 AI Workstation exports `UR_L0_ENABLE_RELAXED_ALLOCATION_LIMITS=1` for the SYCL runtime because the pinned llama.cpp launcher uses it for larger Level Zero allocations. Device choice remains Dispatcher engine policy; for example an Intel engine may declare `ONEAPI_DEVICE_SELECTOR: "level_zero:0"` under its `environment:` mapping.
 
