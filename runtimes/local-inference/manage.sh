@@ -167,25 +167,74 @@ require_ubuntu_noble_wsl() {
     [[ -e /dev/dxg ]] || fail "WSL does not expose /dev/dxg. Update the Windows Intel GPU driver / WSL and restart WSL before installing SYCL."
 }
 
-configure_intel_sycl_repositories() {
+configure_intel_gpu_repository() {
     require_ubuntu_noble_wsl
 
-    printf '[..] Configuring Intel client-GPU and oneAPI APT repositories.\n'
+    local ppa
+    ppa="$(json_value versions.intel_gpu.ubuntu_ppa)"
+
+    printf '[..] Configuring current Intel Ubuntu 24.04 GPU PPA: %s\n' "$ppa"
+    sudo apt-get update
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates software-properties-common
+
+    # Remove the historical Intel Noble client-repository definition. Keeping both
+    # sources enabled can let APT select an older NEO/Level Zero package generation.
+    sudo rm -f /etc/apt/sources.list.d/intel-gpu-noble.list
+
+    sudo add-apt-repository -y "$ppa"
+}
+
+configure_oneapi_repository() {
+    printf '[..] Configuring Intel oneAPI APT repository.\n'
     sudo apt-get update
     sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         ca-certificates gnupg gpg-agent wget
-
-    wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \
-        sudo gpg --yes --dearmor --output /usr/share/keyrings/intel-graphics.gpg
-    printf '%s\n' \
-        'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu noble client' | \
-        sudo tee /etc/apt/sources.list.d/intel-gpu-noble.list >/dev/null
 
     wget -qO- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | \
         gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg >/dev/null
     printf '%s\n' \
         'deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main' | \
         sudo tee /etc/apt/sources.list.d/oneAPI.list >/dev/null
+}
+
+package_version() {
+    dpkg-query -W -f='\${Version}' "$1" 2>/dev/null || true
+}
+
+verify_minimum_package_version() {
+    local package_name="$1"
+    local minimum="$2"
+    local actual
+    actual="$(package_version "$package_name")"
+    [[ -n "$actual" ]] || fail "Required Intel package is missing: $package_name"
+    dpkg --compare-versions "$actual" ge "$minimum" || \
+        fail "$package_name $actual is older than the supported minimum $minimum."
+}
+
+print_sycl_runtime_provenance() {
+    local oneapi_package
+    oneapi_package="$(json_value versions.intel_oneapi.deep_learning_essentials_package)"
+
+    printf '[..] Intel SYCL runtime provenance:\n'
+    dpkg-query -W -f='     \${Package}\t\${Version}\n' \
+        libze-intel-gpu1 libze1 libze-dev intel-opencl-icd intel-ocloc "$oneapi_package" \
+        2>/dev/null || true
+    if command -v icpx >/dev/null 2>&1; then
+        printf '     '
+        icpx --version 2>/dev/null | head -n 1 || true
+    fi
+}
+
+verify_sycl_runtime_packages() {
+    if dpkg-query -W -f='\${Status}' intel-level-zero-gpu 2>/dev/null | grep -Fq 'install ok installed'; then
+        fail "Obsolete intel-level-zero-gpu is still installed; current SYCL setup requires libze-intel-gpu1."
+    fi
+
+    verify_minimum_package_version libze-intel-gpu1 "$(json_value versions.intel_gpu.minimum_neo_release)"
+    verify_minimum_package_version libze1 "$(json_value versions.intel_gpu.minimum_level_zero_loader)"
+    verify_minimum_package_version libze-dev "$(json_value versions.intel_gpu.minimum_level_zero_loader)"
+    print_sycl_runtime_provenance
 }
 
 load_backend_environment() {
@@ -212,6 +261,7 @@ load_backend_environment() {
 }
 
 verify_sycl_hardware() {
+    verify_sycl_runtime_packages
     load_backend_environment sycl
     command -v icx >/dev/null 2>&1 || fail "Intel oneAPI C compiler (icx) is unavailable after loading oneAPI."
     command -v icpx >/dev/null 2>&1 || fail "Intel oneAPI C++ compiler (icpx) is unavailable after loading oneAPI."
@@ -253,7 +303,8 @@ install_system_dependencies() {
                 fail "CUDA backend requires an existing WSL CUDA toolkit (nvcc). Automatic CUDA toolkit installation is intentionally not part of this first block."
             ;;
         sycl)
-            configure_intel_sycl_repositories
+            configure_intel_gpu_repository
+            configure_oneapi_repository
             ;;
         cpu)
             ;;
@@ -269,10 +320,19 @@ install_system_dependencies() {
     if [[ "$backend" == "sycl" ]]; then
         local oneapi_package
         oneapi_package="$(json_value versions.intel_oneapi.deep_learning_essentials_package)"
-        printf '[..] Installing Intel WSL user-mode compute runtime and oneAPI package: %s\n' "$oneapi_package"
+
+        if dpkg-query -W -f='\${Status}' intel-level-zero-gpu 2>/dev/null | grep -Fq 'install ok installed'; then
+            printf '[..] Removing obsolete Intel Level Zero package: intel-level-zero-gpu\n'
+            sudo env DEBIAN_FRONTEND=noninteractive apt-get remove -y intel-level-zero-gpu
+        fi
+
+        printf '[..] Installing current Intel NEO / Level Zero compute runtime from the Intel graphics PPA.\n'
         sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            libze1 intel-level-zero-gpu intel-opencl-icd clinfo libze-dev intel-ocloc
+            libze-intel-gpu1 libze1 intel-opencl-icd clinfo libze-dev intel-ocloc
+
+        printf '[..] Installing pinned oneAPI toolchain package: %s\n' "$oneapi_package"
         sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y "$oneapi_package"
+
         verify_sycl_hardware
     fi
 }
