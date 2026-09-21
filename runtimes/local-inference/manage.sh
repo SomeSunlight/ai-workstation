@@ -199,7 +199,7 @@ configure_oneapi_repository() {
 }
 
 package_version() {
-    dpkg-query -W -f='\${Version}' "$1" 2>/dev/null || true
+    dpkg-query -W -f='${Version}' "$1" 2>/dev/null || true
 }
 
 verify_minimum_package_version() {
@@ -217,7 +217,7 @@ print_sycl_runtime_provenance() {
     oneapi_package="$(json_value versions.intel_oneapi.deep_learning_essentials_package)"
 
     printf '[..] Intel SYCL runtime provenance:\n'
-    dpkg-query -W -f='     \${Package}\t\${Version}\n' \
+    dpkg-query -W -f='     ${Package}\t${Version}\n' \
         libze-intel-gpu1 libze1 libze-dev intel-opencl-icd intel-ocloc "$oneapi_package" \
         2>/dev/null || true
     if command -v icpx >/dev/null 2>&1; then
@@ -227,7 +227,7 @@ print_sycl_runtime_provenance() {
 }
 
 verify_sycl_runtime_packages() {
-    if dpkg-query -W -f='\${Status}' intel-level-zero-gpu 2>/dev/null | grep -Fq 'install ok installed'; then
+    if dpkg-query -W -f='${Status}' intel-level-zero-gpu 2>/dev/null | grep -Fq 'install ok installed'; then
         fail "Obsolete intel-level-zero-gpu is still installed; current SYCL setup requires libze-intel-gpu1."
     fi
 
@@ -321,7 +321,7 @@ install_system_dependencies() {
         local oneapi_package
         oneapi_package="$(json_value versions.intel_oneapi.deep_learning_essentials_package)"
 
-        if dpkg-query -W -f='\${Status}' intel-level-zero-gpu 2>/dev/null | grep -Fq 'install ok installed'; then
+        if dpkg-query -W -f='${Status}' intel-level-zero-gpu 2>/dev/null | grep -Fq 'install ok installed'; then
             printf '[..] Removing obsolete Intel Level Zero package: intel-level-zero-gpu\n'
             sudo env DEBIAN_FRONTEND=noninteractive apt-get remove -y intel-level-zero-gpu
         fi
