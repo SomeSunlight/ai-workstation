@@ -434,7 +434,7 @@ write_build_manifest() {
     local commit="$3"
     shift 3
     local extra_args=("$@")
-    local slot_dir source_dir build_dir bin_dir repository version_output compiler_output toolchain_package
+    local slot_dir source_dir build_dir bin_dir repository version_output compiler_output toolchain_package gpu_runtime_packages
     slot_dir="$(build_dir_for "$name")"
     source_dir="${slot_dir}/source"
     build_dir="${slot_dir}/build"
@@ -468,8 +468,8 @@ import sys
 path = Path(sys.argv[1])
 name, repository, commit, backend = sys.argv[2:6]
 source_dir, build_dir, bin_dir, version_output = sys.argv[6:10]
-compiler_output, toolchain_package = sys.argv[10:12]
-extra_args = sys.argv[12:]
+compiler_output, toolchain_package, gpu_runtime_packages = sys.argv[10:13]
+extra_args = sys.argv[13:]
 payload = {
     "schema": 1,
     "name": name,
@@ -483,10 +483,16 @@ payload = {
     "llama_server_version": version_output,
     "built_at_utc": datetime.now(timezone.utc).isoformat(),
 }
-if compiler_output or toolchain_package:
+if compiler_output or toolchain_package or gpu_runtime_packages:
     payload["toolchain"] = {
         "compiler": compiler_output,
         "package_version": toolchain_package,
+        "gpu_runtime_packages": {
+            key: value
+            for line in gpu_runtime_packages.splitlines()
+            if "=" in line
+            for key, value in [line.split("=", 1)]
+        },
     }
 path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 PY
