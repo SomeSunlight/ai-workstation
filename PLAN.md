@@ -16,10 +16,12 @@ Decisions: resolve official latest stable GitHub releases to exact tags; persist
 - [x] Add real behavior smoke tests for directory independence, stable release validation, configuration persistence, backup/recreation, and failures.
 - [x] Add menu actions and a short README route to the operating guide; align project version/changelog and CI.
 - [x] Run focused tests and the complete release check; inspect the final diff.
-- [ ] Commit/push the coherent review candidate.
-- [ ] Open a review PR and record the owner test steps; do not merge without explicit owner approval.
+- [x] Commit and publish the coherent review candidate on the review branch.
+- [x] Open review PR #22 and record the owner test steps; do not merge without explicit owner approval.
 
 Focused verification: `container-updates.sh`, `interactive-menu.sh`, `check-version-consistency.py`, Bash syntax and diff hygiene pass. The complete `./tools/release-check.sh` and existing Goose/Open WebUI/local-inference service smoke tests pass; new update checks also cover concurrent-update locking and unexpected recovery-volume mounts. Behavior tests cover download/API failures, duplicate image entries, backup failures for running/stopped services, startup/health failures, fresh installs, unreadable volumes, exported override conflicts and return-to-menu after errors.
+
+Review checkpoint: [PR #22](https://github.com/SomeSunlight/ai-workstation/pull/22) is open against `main`; implementation commit `691bdeddeae8b193f0c1869950a921175441e755` has the exact locally tested tree `46908f85f62fea0e86b4e5bb52d419701ebdde14`. All requested implementation/documentation work is complete. Next external gate: owner tests the real Docker-volume update on the laptop, reviews the result, and explicitly approves before any merge. No merge is authorized by this block.
 
 Recovery checkpoint: working branch `agent/issue-21-container-updates`, accepted base `f72973e764560a4102b7291495fa0fb93effe434`. Latest stable release metadata observed on 2026-10-06: Open WebUI `v0.11.4`, Goose `v1.53.0`; implementation must discover releases at execution time rather than hard-code these observations. Docker Engine is unavailable in this development workspace, so container behavior is exercised with deterministic command mocks and real-volume acceptance remains an owner test.
 
