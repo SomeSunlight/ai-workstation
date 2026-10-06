@@ -1,4 +1,10 @@
 # Changelog
+## 0.6.6
+- Add guided application updates for Goose and Open WebUI, reachable through `aiw` from any WSL directory.
+- Discover stable official releases, select exact version tags, and persist selections in the protected Git-ignored `.env` without changing repository defaults.
+- Back up stopped Open WebUI data before recreation, verify service health, and retain recovery evidence on startup failure; Goose updates apply to new sessions.
+- Add behavior and menu smoke checks to the release gate; distinguish application updates from repository/host installation updates.
+
 ## 0.6.5
 - Move Intel SYCL guest-runtime provisioning from the historical Noble client repository to Intel's current Ubuntu 24.04 `intel-graphics` PPA.
 - Migrate from obsolete `intel-level-zero-gpu` to `libze-intel-gpu1` and require at least the proven NEO 26.31 / Level Zero 1.32 generation.

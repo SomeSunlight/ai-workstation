@@ -8,6 +8,8 @@ This baseline contains nine authored ContextCanon Nodes: the root plus eight nes
 
 PR #6 was squash-merged to `main` as `76ebf7675188d3159bc6e1cea4146fdf0ee8dcb9`. It establishes the accepted host-local inference **infrastructure checkpoint**. Llama Dispatcher PR #6 subsequently added explicit effective llama.cpp runtime provenance and was squash-merged as `84efaa41684ff11a0fcb7266edf5cbf35efb7bad`; AI Workstation now pins that accepted Dispatcher checkpoint.
 
+The current accepted `main` checkpoint is PR #20, `f72973e764560a4102b7291495fa0fb93effe434`. PR #13 (`1505a8dcce7b5bc94489913b20a5371ba7357d9a`) accepts deleted-review-branch update recovery. PR #18 (`420fe61d2cd98d7e438169ea629cb1581b6d676d`) accepts current Intel NEO provisioning after the real ThinkPad setup/idempotence test. PR #20 removes the legacy repository permission normalizer; tracked executable modes remain Git-owned.
+
 ## Accepted local-inference infrastructure
 
 Local inference is optional. When enabled, `llama.cpp` and Llama Dispatcher run directly on the WSL/Linux host rather than in containers; remote-only AI Workstations remain valid.
@@ -30,7 +32,7 @@ This checkpoint accepts the infrastructure, **not a final GPU backend or placeme
 - Qwen 3.6 35B-A3B produces coherent output through DZN + Flash Attention, proving the backend is not generically broken, but current throughput is unexpectedly low and memory pressure is high.
 - Large GGUF loading from `/mnt/c` failed on the DZN path with `read error: Bad address`; moving the same model to the native WSL filesystem fixed loading and made model startup visibly faster. SYCL loading also benefited from native WSL model storage.
 
-Issue #8 is complete as a successful but performance-limited SYCL/Level Zero acceptance result. Issue #9 is complete as a successful hardware-Vulkan enablement experiment with a negative backend-selection result for now. Issue #14 tracks the remaining stale AI Workstation SYCL package provisioning.
+Issue #8 is complete as a successful but performance-limited SYCL/Level Zero acceptance result. Issue #9 is complete as a successful hardware-Vulkan enablement experiment with a negative backend-selection result for now. Issue #14 provisioning is implemented and accepted through PR #18.
 
 ## Accepted ContextCanon maintenance state
 
@@ -46,4 +48,4 @@ This file records accepted checkpoints only. Broader operational state for Goose
 
 ## Next planned work
 
-Continue from `PLAN.md` with an explicit issue-backed block. For laptop inference, treat Issue #8 as the accepted SYCL/Level Zero baseline and Issue #9 as the completed DZN/Vulkan evidence package; use Issue #14 for SYCL provisioning cleanup. The detailed backend findings and representative measurements are preserved in `runtimes/local-inference/TUNING.md`.
+Continue from `PLAN.md` with an explicit issue-backed block. For laptop inference, treat Issue #8 as the accepted SYCL/Level Zero baseline and Issue #9 as the completed DZN/Vulkan evidence package; treat Issue #14 / PR #18 as the accepted provisioning checkpoint. The detailed backend findings and representative measurements are preserved in `runtimes/local-inference/TUNING.md`.

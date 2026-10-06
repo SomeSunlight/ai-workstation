@@ -18,6 +18,15 @@ grep -Fq 'List llama.cpp builds' <<< "$local_menu_output"
 grep -Fq 'Setup generic Vulkan runtime' <<< "$local_menu_output"
 grep -Fq 'Setup Intel SYCL runtime (WSL / Ubuntu 24.04)' <<< "$local_menu_output"
 
+goose_menu_output="$(printf '1\n1\n8\nb\n\nb\nq\nq\n' | "$cli")"
+grep -Fq 'Update application' <<< "$goose_menu_output"
+grep -Fq 'Latest stable official release' <<< "$goose_menu_output"
+grep -Fq 'Enter a specific stable version' <<< "$goose_menu_output"
+
+webui_menu_output="$(printf '1\n2\n10\nb\n\nb\nq\nq\n' | "$cli")"
+grep -Fq 'Update application (includes data backup)' <<< "$webui_menu_output"
+grep -Fq 'Use the repository default version' <<< "$webui_menu_output"
+
 welcome_output="$(HOME="$temp_home" "$cli" welcome --force)"
 grep -Fq 'AI Workstation ready' <<< "$welcome_output"
 grep -Fq 'aiw              Open the interactive tool menu' <<< "$welcome_output"

@@ -7,7 +7,7 @@ readonly SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
 readonly ROOT="$(cd -- "$(dirname -- "$SCRIPT_PATH")/.." && pwd -P)"
 readonly UV_BIN="${HOME}/.local/bin/uv"
 readonly CONFIG_DIR="${HOME}/.config/ai-workstation"
-readonly STATE_DIR="${HOME}/.local/state/ai-workstation"
+readonly STATE_DIR="${AIW_STATE_DIR:-${HOME}/.local/state/ai-workstation}"
 readonly LOG_DIR="${STATE_DIR}/logs"
 readonly GOOSE_WORKSPACES_DIR="${CONFIG_DIR}/goose-workspaces"
 readonly ANSIBLE_CONFIG_FILE="${ROOT}/ansible/ansible.cfg"
@@ -18,7 +18,6 @@ readonly RUNTIME_ENV_FILE="${AIW_RUNTIME_ENV_FILE:-${ROOT}/.env}"
 readonly RUNTIME_ENV_EXAMPLE="${AIW_RUNTIME_ENV_EXAMPLE:-${ROOT}/.env.example}"
 readonly GOOSE_COMPOSE_FILE="${ROOT}/compose/goose.yml"
 readonly OPEN_WEBUI_COMPOSE_FILE="${ROOT}/compose/open-webui.yml"
-readonly DEFAULT_OPEN_WEBUI_IMAGE="ghcr.io/open-webui/open-webui:v0.11.0"
 readonly DEFAULT_OPEN_WEBUI_PORT="3000"
 
 usage() {
@@ -51,6 +50,7 @@ Usage:
   aiw goose init
   aiw goose status
   aiw goose pull
+  aiw goose update [VERSION|--repository] [--yes]
   aiw goose session [WORKSPACE] [GOOSE ARGUMENTS...]
   aiw goose run WORKSPACE [GOOSE RUN ARGUMENTS...]
   aiw goose version
@@ -74,6 +74,8 @@ Usage:
   aiw open-webui init         Prepare the shared .env file
   aiw open-webui status       Show service status and browser URL
   aiw open-webui pull         Pull the pinned image
+  aiw open-webui update [VERSION|--repository] [--yes]
+                             Update to a stable release; back up data first
   aiw open-webui up           Start or recreate the service
   aiw open-webui restart      Restart the service
   aiw open-webui recover      Reset persistent provider settings from .env
@@ -227,6 +229,9 @@ compose_for() {
         --file "$compose_file" \
         "$@"
 }
+
+# Application updates share release discovery, protected image selection and backup.
+source "${ROOT}/tools/runtime-update.sh"
 
 # Goose workspaces -----------------------------------------------------------
 
@@ -452,6 +457,7 @@ show_goose_status() {
     fi
 
     printf 'Goose Compose        : %s\n' "$([[ -f "$GOOSE_COMPOSE_FILE" ]] && printf 'present' || printf 'missing')"
+    printf 'Goose selected image : %s\n' "$(runtime_selected_image goose GOOSE_IMAGE)"
     printf 'Goose configuration  : %s\n' "$config_status"
     printf 'Goose model          : %s\n' "$model"
     printf 'Goose workspaces     : %s\n' "$workspace_count"
@@ -551,6 +557,9 @@ goose_command() {
         pull)
             goose_pull
             ;;
+        update)
+            runtime_update goose "$@"
+            ;;
         session)
             goose_session "$@"
             ;;
@@ -623,8 +632,7 @@ show_open_webui_status() {
     local health_status="not checked"
     local url image
     url="$(open_webui_url)"
-    image="$(env_value OPEN_WEBUI_IMAGE "$RUNTIME_ENV_FILE")"
-    image="${image:-$DEFAULT_OPEN_WEBUI_IMAGE}"
+    image="$(runtime_selected_image open-webui OPEN_WEBUI_IMAGE)"
 
     if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
         if open_webui_is_running; then
@@ -642,7 +650,7 @@ show_open_webui_status() {
     fi
 
     printf 'Open WebUI Compose   : %s\n' "$([[ -f "$OPEN_WEBUI_COMPOSE_FILE" ]] && printf 'present' || printf 'missing')"
-    printf 'Open WebUI image     : %s\n' "$image"
+    printf 'Open WebUI selection : %s\n' "$image"
     printf 'Open WebUI service   : %s\n' "$service_status"
     printf 'Open WebUI health    : %s\n' "$health_status"
     printf 'Open WebUI URL       : %s\n' "$url"
@@ -813,6 +821,9 @@ open_webui_command() {
         pull)
             open_webui_pull
             ;;
+        update)
+            runtime_update open-webui "$@"
+            ;;
         up|start)
             open_webui_up
             ;;
@@ -842,6 +853,31 @@ open_webui_command() {
 }
 
 # Interactive menus ---------------------------------------------------------
+
+menu_update_application() {
+    local tool="$1" choice version
+    cat <<EOF_MENU
+
+Update $tool
+============
+1) Latest stable official release
+2) Enter a specific stable version
+3) Use the repository default version
+b) Back
+EOF_MENU
+    read -r -p 'Select: ' choice || return 0
+    case "$choice" in
+        1) bash "$SCRIPT_PATH" "$tool" update ;;
+        2)
+            read -r -p 'Version (for example v1.2.3): ' version || return 0
+            [[ -n "$version" ]] || return 0
+            bash "$SCRIPT_PATH" "$tool" update "$version"
+            ;;
+        3) bash "$SCRIPT_PATH" "$tool" update --repository ;;
+        b|B) return 0 ;;
+        *) printf 'Unknown selection.\n' ;;
+    esac
+}
 
 menu_add_workspace() {
     local name path
@@ -926,6 +962,7 @@ Goose
 5) Show status
 6) Show quick help
 7) Pull pinned Goose image
+8) Update application
 b) Back
 q) Exit
 EOF_MENU
@@ -938,6 +975,7 @@ EOF_MENU
             5) run_menu_action show_goose_status ;;
             6) run_menu_action goose_quick_help ;;
             7) run_menu_action goose_pull ;;
+            8) run_menu_action menu_update_application goose ;;
             b|B) return ;;
             q|Q) exit 0 ;;
             *) printf 'Unknown selection.\n' ;;
@@ -963,6 +1001,7 @@ Browser URL: $(open_webui_url)
 7) Follow logs
 8) Pull pinned image
 9) Show command help
+10) Update application (includes data backup)
 b) Back
 q) Exit
 EOF_MENU
@@ -977,6 +1016,7 @@ EOF_MENU
             7) run_menu_action open_webui_logs ;;
             8) run_menu_action open_webui_pull ;;
             9) run_menu_action open_webui_usage ;;
+            10) run_menu_action menu_update_application open-webui ;;
             b|B) return ;;
             q|Q) exit 0 ;;
             *) printf 'Unknown selection.\n' ;;
