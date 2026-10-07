@@ -14,11 +14,13 @@ Decisions: the home stays a normal Compose-managed volume. The owner accepts rec
 - [x] Remove legacy project cleanup and verify routine Goose operations target only the current project.
 - [x] Document the one-time reset and recreated ownership check; align release metadata.
 - [x] Run focused behavior/Compose checks and the complete release gate.
-- [ ] Publish the follow-up in PR #24 without merging.
+- [x] Publish the follow-up in PR #24 without merging.
 
 Recovery: continue on `agent/issue-23-goose-provider-freedom` after `da7b372ee3db3bf3ba5f4968da33102bff20939b`. Docker Engine and the owner's WSL are unavailable here; native volume deletion/recreation remains an explicit owner operation. PR #24 remains unmerged and has no merge authorization.
 
 Verification: focused lifecycle tests and real Compose 5.3.0 rendering pass. The complete release gate also passes with an unrelated host XDG path; ContextCanon 0.7.3 reports all nine Nodes `ok` with no generated drift. No authored Context or Ansible implementation changed in this follow-up. The recreated Docker volume's labels still require the documented real WSL check.
+
+Publication: implementation commit `5611c6f8ed860f10f56446f1a7563cf7a58f9c4d` is on the existing PR #24 branch; its GitHub tree matches the locally verified `fe160367fd40fbb94aca7382bdf6b850cfb1892c` exactly. Next: current-head Validate and the owner's one-time reset/native reconfiguration/ownership test. Neither automatic deletion nor a merge has occurred.
 
 ## Current review block — Issue #23: unrestricted Goose provider configuration
 
