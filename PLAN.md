@@ -2,7 +2,7 @@
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
-## Current implementation block — Issue #23: unrestricted Goose provider configuration
+## Current review block — Issue #23: unrestricted Goose provider configuration
 
 Purpose: expose native Goose configuration through the operator menu, support local/self-hosted and public providers equally, and preserve one-project container isolation without forcing or falling back to a public LLM.
 
@@ -17,11 +17,13 @@ Decisions: native Goose settings in the existing `ai-workstation_goose-home` vol
 - [x] Add meaningful regression tests for local/custom providers, missing/legacy configuration, secrets, menu routing and container boundaries.
 - [x] Update migration/model-routing guidance, Context rules and generated dependent packages, release metadata and accepted baseline state.
 - [x] Run focused checks, ContextCanon validation and the complete release gate; inspect the coherent diff.
-- [ ] Commit/push the review candidate and open a PR against `main`; leave the new PR unmerged pending owner review.
+- [x] Commit/publish the review candidate and open a PR against `main`; leave the new PR unmerged pending owner review.
 
 Recovery: branch `agent/issue-23-goose-provider-freedom`, accepted base `e4f6ee86e746241ea6630bb759b971b7e47012b7`. Docker Engine is unavailable here; deterministic command tests cover launch semantics, while real interactive configuration/provider acceptance requires the owner's Docker installation. Baseline ContextCanon check also found stale root frozen setup/troubleshooting resources from earlier accepted edits; regenerate those resources and review all affected downstream package pins using the matching ContextCanon 0.7.3 compiler, without changing unrelated normative rules.
 
 Verification checkpoint: complete release gate passes with actual Docker Compose 5.3.0 rendering, including provider-neutral launch/migration/menu behavior, primary/subagent overrides, literal environment values, missing/malformed configuration, empty overrides, failed reads/checks/configuration and one-workspace boundaries. Existing Open WebUI/local-inference service checks, locked `uv sync`/lock check, Ansible lint and both playbook syntax checks pass. ContextCanon 0.7.3 `check --all .` reports all nine Nodes `ok`; only generated Markdown's intentional hard-break whitespace is excluded from authored diff hygiene. Real Docker Engine/native-menu/LLM acceptance remains an owner test.
+
+Review checkpoint: [PR #24](https://github.com/SomeSunlight/ai-workstation/pull/24) is open against `main`. Implementation commit `deb9dbd1edd018057355d0f7a35bc9f5ab6a0602` has the exact locally tested tree `fcb2cec01a54ef5516a4f97e09df90e967717203`, verified when publishing through the GitHub connector. Next external gate: owner tests the native menu, intended main/subagent endpoints and persistent configuration on WSL/Docker, then explicitly approves before any merge. PR #24 has no merge authorization.
 
 ## Completed review block — Issue #21: guided application container updates
 
