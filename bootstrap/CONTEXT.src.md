@@ -1,11 +1,11 @@
 # Bootstrap — Local Context Source
-<!-- ctx:node id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" name="Bootstrap" version="0.1.1-draft" -->
+<!-- ctx:node id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" name="Bootstrap" version="0.1.2-draft" -->
 
 ## Parent Context Node
 
 <!-- contextcanon-placement-parent:start -->
-- [ai-workstation](..) — `0.1.1`
-  <!-- ctx:parent id="aea56adf-2a26-43f0-b712-3bbeab7a3097" version="0.1.1" normalized-digest="d8fce480dca898b6065ff14ff1ec111b1cc4f03db80af71fc205b28d1beb4530" package-digest="f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613" -->
+- [ai-workstation](..) — `0.1.2`
+  <!-- ctx:parent id="aea56adf-2a26-43f0-b712-3bbeab7a3097" version="0.1.2" normalized-digest="2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf" package-digest="faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview

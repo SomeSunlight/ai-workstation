@@ -3,11 +3,13 @@ name: ai-workstation-goose
 services:
   goose:
     image: "${GOOSE_IMAGE:-ghcr.io/aaif-goose/goose:v1.44.0}"
+    # Explicit Goose-only settings; .env is used only for runtime interpolation.
+    env_file:
+      - path: "${AIW_GOOSE_ENV_FILE:-../config/local/goose.env}"
+        required: false
+        format: raw
     environment:
       HOME: /home/goose
-      GOOSE_PROVIDER: "${GOOSE_PROVIDER:-openrouter}"
-      GOOSE_MODEL: "${GOOSE_MODEL:-}"
-      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
       GOOSE_DISABLE_KEYRING: "${GOOSE_DISABLE_KEYRING:-1}"
       GOOSE_DISABLE_TELEMETRY: "${GOOSE_DISABLE_TELEMETRY:-1}"
     volumes:

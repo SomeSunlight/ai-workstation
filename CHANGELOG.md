@@ -1,4 +1,10 @@
 # Changelog
+## 0.6.7
+- Expose native Goose provider/model/extension configuration and connection checks from the menu without mounting a project.
+- Remove forced OpenRouter routing and shared credential injection; keep native settings in the existing home volume and offer an optional protected Goose-only environment editor.
+- Check routing before workspace mounts, preserve provider/model CLI overrides, and document migration, subagent defaults and outbound-network limits.
+- Add behavior regression coverage and align runtime Contexts; refresh stale baseline frozen setup/troubleshooting resources with ContextCanon 0.7.3.
+
 ## 0.6.6
 - Add guided application updates for Goose and Open WebUI, reachable through `aiw` from any WSL directory.
 - Discover stable official releases, select exact version tags, and persist selections in the protected Git-ignored `.env` without changing repository defaults.

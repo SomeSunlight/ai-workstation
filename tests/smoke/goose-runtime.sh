@@ -29,7 +29,8 @@ grep -Fq 'name: ai-workstation_goose-home' "$compose_file"
 ! grep -Fq '/var/run/docker.sock' "$compose_file"
 ! grep -Fq 'AIW_GOOSE_WORKSPACE' "$compose_file"
 
-grep -Eq '^GOOSE_MODEL=$' "$env_example"
+! grep -Eq '^GOOSE_(PROVIDER|MODEL)=' "$env_example"
+! grep -Eq 'GOOSE_PROVIDER:|GOOSE_MODEL:|OPENROUTER_API_KEY:' "$compose_file"
 grep -Eq '^OPENROUTER_API_KEY=$' "$env_example"
 grep -Fq 'aiw goose workspace add NAME [PATH]' < <("$cli" goose help)
 grep -Fq 'isolated per session' < <(HOME="$(mktemp -d)" "$cli" goose status)
@@ -54,6 +55,9 @@ set -Eeuo pipefail
 printf '%s\n' "$*" >> "${MOCK_DOCKER_LOG}"
 if [[ "${1:-}" == "compose" && "${2:-}" == "version" ]]; then
   printf 'Docker Compose version v5.3.0\n'
+fi
+if [[ " $* " == *' --entrypoint /bin/sh '* ]]; then
+  printf ':\n:\n:\n:\nactive_provider: local-openai\nproviders:\n  local-openai:\n    model: sparringpartner\n'
 fi
 MOCK_DOCKER
 chmod +x "${mock_bin}/docker"

@@ -2,7 +2,28 @@
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
-## Current review block — Issue #21: guided application container updates
+## Current implementation block — Issue #23: unrestricted Goose provider configuration
+
+Purpose: expose native Goose configuration through the operator menu, support local/self-hosted and public providers equally, and preserve one-project container isolation without forcing or falling back to a public LLM.
+
+Writable scope: `bin/aiw-core`, Goose helpers and smoke tests, `compose/goose.yml`, `.env.example`, operator documentation, versions/changelog, and the authored Compose/Goose Contexts plus their generated dependent packages. The owner explicitly replaces the old Compose-only credential assumption with protected application-native storage and optional Goose-only environment configuration. Hardware inference provisioning and Open WebUI provider behavior are outside this block.
+
+Decisions: native Goose settings in the existing `ai-workstation_goose-home` volume are authoritative; configuration runs without a project mount. OpenRouter is an optional first test. Existing `.env` provider/model/key entries are not silently imported. Advanced provider/subagent environment settings use a separately protected, explicitly edited Goose-only file. Preserve arbitrary native supported provider/model choices and CLI arguments; document release-dependent subagent behavior and recipe/session overrides rather than promising automatic optimal model selection or network isolation.
+
+- [x] Read required Contexts and inspect pinned Goose CLI/source behavior; create Issue #23.
+- [x] After owner approval and exact-head green Validate/release checks, squash-merge tested PR #22 as `e4f6ee86e746241ea6630bb759b971b7e47012b7` and start from that accepted baseline.
+- [x] Implement configuration/menu access and protected Goose-only environment settings without a project mount or public-provider defaults.
+- [x] Verify configuration before mounting a workspace; preserve the existing home volume, workspace boundaries and native CLI arguments.
+- [x] Add meaningful regression tests for local/custom providers, missing/legacy configuration, secrets, menu routing and container boundaries.
+- [x] Update migration/model-routing guidance, Context rules and generated dependent packages, release metadata and accepted baseline state.
+- [x] Run focused checks, ContextCanon validation and the complete release gate; inspect the coherent diff.
+- [ ] Commit/push the review candidate and open a PR against `main`; leave the new PR unmerged pending owner review.
+
+Recovery: branch `agent/issue-23-goose-provider-freedom`, accepted base `e4f6ee86e746241ea6630bb759b971b7e47012b7`. Docker Engine is unavailable here; deterministic command tests cover launch semantics, while real interactive configuration/provider acceptance requires the owner's Docker installation. Baseline ContextCanon check also found stale root frozen setup/troubleshooting resources from earlier accepted edits; regenerate those resources and review all affected downstream package pins using the matching ContextCanon 0.7.3 compiler, without changing unrelated normative rules.
+
+Verification checkpoint: complete release gate passes with actual Docker Compose 5.3.0 rendering, including provider-neutral launch/migration/menu behavior, primary/subagent overrides, literal environment values, missing/malformed configuration, empty overrides, failed reads/checks/configuration and one-workspace boundaries. Existing Open WebUI/local-inference service checks, locked `uv sync`/lock check, Ansible lint and both playbook syntax checks pass. ContextCanon 0.7.3 `check --all .` reports all nine Nodes `ok`; only generated Markdown's intentional hard-break whitespace is excluded from authored diff hygiene. Real Docker Engine/native-menu/LLM acceptance remains an owner test.
+
+## Completed review block — Issue #21: guided application container updates
 
 Purpose: let an operator update Open WebUI and Goose from `aiw`, from any WSL directory, without remembering Docker commands or mistaking a pull of an old pinned tag for an application upgrade.
 
@@ -21,7 +42,7 @@ Decisions: resolve official latest stable GitHub releases to exact tags; persist
 
 Focused verification: `container-updates.sh`, `interactive-menu.sh`, `check-version-consistency.py`, Bash syntax and diff hygiene pass. The complete `./tools/release-check.sh` and existing Goose/Open WebUI/local-inference service smoke tests pass; new update checks also cover concurrent-update locking and unexpected recovery-volume mounts. Behavior tests cover download/API failures, duplicate image entries, backup failures for running/stopped services, startup/health failures, fresh installs, unreadable volumes, exported override conflicts and return-to-menu after errors.
 
-Review checkpoint: [PR #22](https://github.com/SomeSunlight/ai-workstation/pull/22) is open against `main`; implementation commit `691bdeddeae8b193f0c1869950a921175441e755` has the exact locally tested tree `46908f85f62fea0e86b4e5bb52d419701ebdde14`. All requested implementation/documentation work is complete. Next external gate: owner tests the real Docker-volume update on the laptop, reviews the result, and explicitly approves before any merge. No merge is authorized by this block.
+Accepted checkpoint: the owner reported PR #22 tested and explicitly approved merging it. Exact review head `f4c5ca304a2ccaf98934befa1f8662a7f0c3071a` passed Validate run `37532821370` and the repeated release gate. PR #22 was squash-merged as `e4f6ee86e746241ea6630bb759b971b7e47012b7` on 2026-10-07.
 
 Recovery checkpoint: working branch `agent/issue-21-container-updates`, accepted base `f72973e764560a4102b7291495fa0fb93effe434`. Latest stable release metadata observed on 2026-10-06: Open WebUI `v0.11.4`, Goose `v1.53.0`; implementation must discover releases at execution time rather than hard-code these observations. Docker Engine is unavailable in this development workspace, so container behavior is exercised with deterministic command mocks and real-volume acceptance remains an owner test.
 
