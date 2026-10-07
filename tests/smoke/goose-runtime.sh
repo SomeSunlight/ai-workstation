@@ -77,6 +77,17 @@ grep -Fq -- "--volume ${temp_project}:/workspaces/sample" <<< "$mock_command"
 grep -Fq -- '--workdir /workspaces/sample' <<< "$mock_command"
 grep -Fq -- 'goose session --help' <<< "$mock_command"
 
+# Routine launch/shutdown belongs only to the current Goose Compose project.
+# In particular, never run old-project `down --remove-orphans`, which could
+# affect other services that used to share that project.
+PATH="${mock_bin}:$PATH" MOCK_DOCKER_LOG="$mock_log" AIW_RUNTIME_ENV_FILE="$mock_env" \
+  HOME="$temp_home" "$cli" goose down >/dev/null
+mock_command="$(tail -n 1 "$mock_log")"
+grep -Fq -- '--project-name ai-workstation-goose' <<< "$mock_command"
+grep -Fq -- 'down --remove-orphans' <<< "$mock_command"
+! grep -Eq '^compose --project-name ai-workstation ' "$mock_log"
+! grep -Eq -- '--volumes|volume (create|rm)|prune' "$mock_log"
+
 HOME="$temp_home" "$cli" goose workspace remove sample >/dev/null
 [[ ! -e "$temp_home/.config/ai-workstation/goose-workspaces/sample" ]]
 

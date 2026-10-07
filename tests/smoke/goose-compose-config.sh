@@ -54,6 +54,8 @@ assert service["security_opt"] == ["no-new-privileges:true"]
 assert len(service["volumes"]) == 1
 assert service["volumes"][0]["target"] == "/home/goose"
 assert config["volumes"]["goose-home"]["name"] == "ai-workstation_goose-home"
+assert config["name"] == "ai-workstation-goose"
+assert not config["volumes"]["goose-home"].get("external", False), "Goose home must remain Compose-managed"
 PYTHON
 done
 printf 'Real Goose Compose rendering preserves local routing, literal credentials and isolation.\n'

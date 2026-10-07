@@ -1,4 +1,9 @@
 # Changelog
+## 0.6.8
+- Remove implicit cleanup of the old Goose Compose project from routine launch and shutdown.
+- Keep the stable home as a normal Compose-managed volume; document an explicit one-time reset for old ownership labels without automatic migration or deletion.
+- Verify that Goose lifecycle commands target only the current project and keep volume removal outside normal operation.
+
 ## 0.6.7
 - Expose native Goose provider/model/extension configuration and connection checks from the menu without mounting a project.
 - Remove forced OpenRouter routing and shared credential injection; keep native settings in the existing home volume and offer an optional protected Goose-only environment editor.

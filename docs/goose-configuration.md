@@ -110,6 +110,61 @@ native configuration menu. Existing settings/history remain; no cloud values
 are silently imported and no volumes are deleted. Missing/incomplete routing
 stops the launcher before a project is mounted.
 
+## One-time reset of old Compose ownership
+
+An older installation may print:
+
+```text
+volume "ai-workstation_goose-home" already exists but was created for project "ai-workstation" (expected "ai-workstation-goose")
+```
+
+This concerns the volume's stored Compose ownership label, not the image or LLM.
+The stable volume name is valid. The home remains a normal Compose-managed
+volume; routine commands operate only on `ai-workstation-goose` and do not
+clean up the old Compose project automatically.
+
+For a clean reset, close all Goose sessions with `/exit`. **This deletes native
+Goose settings, custom providers, stored credentials, sessions and cache.**
+Proceed only when you accept that loss or have backed up the home volume.
+Project files, workspace registrations, the optional `goose.env` file, installed
+images and Open WebUI data are outside this reset.
+
+In a WSL terminal:
+
+```bash
+aiw goose down
+docker ps --all --filter volume=ai-workstation_goose-home --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}'
+```
+
+The container list must be empty before removing the volume. If an old utility
+container remains, inspect that exact container and check its Compose project
+and service labels:
+
+```bash
+docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}} / {{index .Config.Labels "com.docker.compose.service"}}' CONTAINER_ID
+```
+
+Only an obsolete Goose container with labels `ai-workstation / goose` belongs
+to this historical cleanup. Stop and remove that exact container with
+`docker stop CONTAINER_ID` followed by `docker rm CONTAINER_ID`; inspect any
+other volume user before proceeding. Avoid old-project `down --remove-orphans`,
+which could also affect services that previously shared the project.
+
+Once no container uses the home, reset and reconfigure:
+
+```bash
+docker volume rm ai-workstation_goose-home
+aiw goose configure
+docker volume inspect --format '{{index .Labels "com.docker.compose.project"}} / {{index .Labels "com.docker.compose.volume"}}' ai-workstation_goose-home
+aiw goose check
+```
+
+Compose creates a fresh home during configuration. The ownership check must
+print `ai-workstation-goose / goose-home`, and the warning should disappear.
+Retained `goose.env` values still apply; if a custom provider's new ID changes,
+adjust any primary, planner or subagent provider references in the advanced
+environment menu before testing.
+
 ## Confidential project operation
 
 Select your own endpoint, main model and subagent defaults, then test the

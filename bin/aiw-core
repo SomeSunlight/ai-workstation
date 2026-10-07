@@ -394,14 +394,6 @@ goose_compose() {
     AIW_GOOSE_ENV_FILE="$GOOSE_ENV_FILE" compose_for ai-workstation-goose "$GOOSE_COMPOSE_FILE" "$@"
 }
 
-legacy_goose_compose() {
-    compose_for ai-workstation "$GOOSE_COMPOSE_FILE" "$@"
-}
-
-cleanup_legacy_goose_runtime() {
-    legacy_goose_compose down --remove-orphans >/dev/null 2>&1 || true
-}
-
 goose_init() {
     runtime_init
     ensure_goose_workspaces_dir
@@ -461,8 +453,7 @@ goose_pull() {
 goose_down() {
     require_docker
     goose_compose down --remove-orphans
-    cleanup_legacy_goose_runtime
-    printf '[OK] Goose session containers and the legacy utility container are stopped.\n'
+    printf '[OK] Goose session containers are stopped.\n'
 }
 
 goose_version() {
@@ -490,7 +481,6 @@ goose_run_in_workspace() {
 
     require_docker
     require_goose_configuration
-    cleanup_legacy_goose_runtime
     local host_path container_path
     host_path="$(goose_workspace_path "$workspace_name")"
     container_path="/workspaces/${workspace_name}"

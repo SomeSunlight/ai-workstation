@@ -2,6 +2,24 @@
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
+## Owner-test follow-up — Issue #25: clean Goose Compose ownership
+
+Purpose: address the owner's repeated volume ownership warning without permanent compatibility behavior for the old Compose project name.
+
+Writable scope: the Goose lifecycle in `bin/aiw-core`, existing Goose smoke tests, `docs/goose-configuration.md`, project version/changelog, this recovery checkpoint and PR #24. Keep the current Compose project and stable home volume name. No Context semantics change is needed.
+
+Decisions: the home stays a normal Compose-managed volume. The owner accepts reconfiguring after an explicit one-time home reset; deletion is an owner-run operation on WSL, not automatic launcher behavior. Remove routine cleanup of the old `ai-workstation` Compose project. Preserve Goose's optional environment file, workspace registry, project files, images and Open WebUI data.
+
+- [x] Inspect the warning, current Compose ownership and old-project cleanup; record Issue #25 and the owner's reset preference.
+- [x] Remove legacy project cleanup and verify routine Goose operations target only the current project.
+- [x] Document the one-time reset and recreated ownership check; align release metadata.
+- [x] Run focused behavior/Compose checks and the complete release gate.
+- [ ] Publish the follow-up in PR #24 without merging.
+
+Recovery: continue on `agent/issue-23-goose-provider-freedom` after `da7b372ee3db3bf3ba5f4968da33102bff20939b`. Docker Engine and the owner's WSL are unavailable here; native volume deletion/recreation remains an explicit owner operation. PR #24 remains unmerged and has no merge authorization.
+
+Verification: focused lifecycle tests and real Compose 5.3.0 rendering pass. The complete release gate also passes with an unrelated host XDG path; ContextCanon 0.7.3 reports all nine Nodes `ok` with no generated drift. No authored Context or Ansible implementation changed in this follow-up. The recreated Docker volume's labels still require the documented real WSL check.
+
 ## Current review block — Issue #23: unrestricted Goose provider configuration
 
 Purpose: expose native Goose configuration through the operator menu, support local/self-hosted and public providers equally, and preserve one-project container isolation without forcing or falling back to a public LLM.
