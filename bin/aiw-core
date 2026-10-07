@@ -445,10 +445,11 @@ show_goose_status() {
     printf 'Goose environment    : %s (%s)\n' "$GOOSE_ENV_FILE" "$([[ -f "$GOOSE_ENV_FILE" ]] && printf 'present' || printf 'optional; absent')"
     printf 'Goose workspaces     : %s\n' "$workspace_count"
     printf 'Goose container mode : isolated per session\n'
-    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 && \
+        docker image inspect "$(runtime_selected_image goose GOOSE_IMAGE)" >/dev/null 2>&1; then
         goose_config_summary status || warn 'Cannot read native Goose configuration; no provider was selected automatically.'
     else
-        printf 'Goose connection     : unavailable for inspection (Docker is not running)\n'
+        printf 'Goose connection     : unavailable for inspection (Docker or selected image unavailable)\n'
     fi
 }
 

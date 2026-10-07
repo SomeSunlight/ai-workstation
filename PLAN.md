@@ -25,6 +25,8 @@ Verification checkpoint: complete release gate passes with actual Docker Compose
 
 Review checkpoint: [PR #24](https://github.com/SomeSunlight/ai-workstation/pull/24) is open against `main`. Implementation commit `deb9dbd1edd018057355d0f7a35bc9f5ab6a0602` has the exact locally tested tree `fcb2cec01a54ef5516a4f97e09df90e967717203`, verified when publishing through the GitHub connector. Next external gate: owner tests the native menu, intended main/subagent endpoints and persistent configuration on WSL/Docker, then explicitly approves before any merge. PR #24 has no merge authorization.
 
+CI recovery: the first review run exposed host `XDG_CONFIG_HOME` leaking into the Docker test double. The mock now clears host routing/path variables like real Compose, and the regression gate passes with an intentionally unrelated host XDG path. Status also skips inspection if the selected image is absent, avoiding unintended Docker resource creation during a fresh-install status check. The follow-up stays in PR #24 and requires a green current-head Validate run.
+
 ## Completed review block — Issue #21: guided application container updates
 
 Purpose: let an operator update Open WebUI and Goose from `aiw`, from any WSL directory, without remembering Docker commands or mistaking a pull of an old pinned tag for an application upgrade.

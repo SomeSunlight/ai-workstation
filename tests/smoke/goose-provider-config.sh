@@ -7,6 +7,8 @@ trap 'rm -rf "$temp_dir"' EXIT
 export HOME="$temp_dir/operator" MOCK_GOOSE_HOME="$temp_dir/volume"
 export AIW_RUNTIME_ENV_FILE="$temp_dir/runtime.env" MOCK_DOCKER_LOG="$temp_dir/docker.log"
 export AIW_GOOSE_ENV_FILE="$HOME/.config/ai-workstation/goose.env"
+# Real Compose does not inherit these host variables unless explicitly configured.
+unset GOOSE_PROVIDER GOOSE_MODEL GOOSE_SUBAGENT_PROVIDER GOOSE_SUBAGENT_MODEL GOOSE_PATH_ROOT XDG_CONFIG_HOME
 mkdir -p "$HOME" "$MOCK_GOOSE_HOME/.config/goose" "$temp_dir/bin" "$temp_dir/project" "$temp_dir/unrelated"
 export PATH="$temp_dir/bin:$PATH"
 ln -s "$ROOT/bin/aiw" "$temp_dir/bin/aiw"
@@ -20,6 +22,7 @@ cat > "$temp_dir/bin/docker" <<'MOCK_DOCKER'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 printf '%s\n' "$*" >> "$MOCK_DOCKER_LOG"
+if [[ " $* " == *' image inspect '* && "${MOCK_IMAGE_MISSING:-0}" != 0 ]]; then exit 1; fi
 if [[ " $* " == *' --entrypoint /bin/sh '* ]]; then
     [[ "${MOCK_READ_FAIL:-0}" == 0 ]] || exit 42
     if [[ -f "$AIW_GOOSE_ENV_FILE" ]]; then
@@ -49,6 +52,10 @@ if aiw goose session private > "$temp_dir/output" 2>&1; then
     echo 'Missing native configuration launched a project session.' >&2; exit 1
 fi
 ! grep -Fq -- '--volume' "$MOCK_DOCKER_LOG"
+
+: > "$MOCK_DOCKER_LOG"
+MOCK_IMAGE_MISSING=1 aiw goose status > "$temp_dir/output"
+! grep -Fq -- '--entrypoint' "$MOCK_DOCKER_LOG"
 ! grep -Fq 'old-cloud-secret' "$temp_dir/output"
 
 # Native configuration is provider-neutral, directory-independent and mount-free.
