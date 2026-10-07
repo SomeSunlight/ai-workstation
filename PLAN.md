@@ -2,7 +2,30 @@
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
-## Current review block — Issue #19: remove legacy permission normalization
+## Current review block — Issue #21: guided application container updates
+
+Purpose: let an operator update Open WebUI and Goose from `aiw`, from any WSL directory, without remembering Docker commands or mistaking a pull of an old pinned tag for an application upgrade.
+
+Writable scope: `bin/aiw-core`, a shared runtime-update helper under `tools/`, `tests/smoke/`, release/CI wiring, `README.md`, `docs/container-updates.md`, `CHANGELOG.md`, and project version metadata. ContextCanon sources/generated packages and runtime isolation definitions stay outside this block.
+
+Decisions: resolve official latest stable GitHub releases to exact tags; persist per-machine selections through the existing protected Git-ignored `.env` overrides. Keep repository runtime defaults unchanged and expose them as an explicit choice. Open WebUI gets a stopped-volume backup before recreation; Goose updates affect future sessions only. Repository/host `aiw update` remains a separate operation.
+
+- [x] Reconstruct required Contexts and reconcile accepted PR #13 / #18 / #20 baseline with exact-head green CI evidence.
+- [x] Inspect runtime pins, Compose projects/volumes, existing menu and test contracts; create Issue #21 and a review branch.
+- [x] Implement guided latest-stable / explicit-version / repository-default updates with download-first and failure handling.
+- [x] Add real behavior smoke tests for directory independence, stable release validation, configuration persistence, backup/recreation, and failures.
+- [x] Add menu actions and a short README route to the operating guide; align project version/changelog and CI.
+- [x] Run focused tests and the complete release check; inspect the final diff.
+- [x] Commit and publish the coherent review candidate on the review branch.
+- [x] Open review PR #22 and record the owner test steps; do not merge without explicit owner approval.
+
+Focused verification: `container-updates.sh`, `interactive-menu.sh`, `check-version-consistency.py`, Bash syntax and diff hygiene pass. The complete `./tools/release-check.sh` and existing Goose/Open WebUI/local-inference service smoke tests pass; new update checks also cover concurrent-update locking and unexpected recovery-volume mounts. Behavior tests cover download/API failures, duplicate image entries, backup failures for running/stopped services, startup/health failures, fresh installs, unreadable volumes, exported override conflicts and return-to-menu after errors.
+
+Review checkpoint: [PR #22](https://github.com/SomeSunlight/ai-workstation/pull/22) is open against `main`; implementation commit `691bdeddeae8b193f0c1869950a921175441e755` has the exact locally tested tree `46908f85f62fea0e86b4e5bb52d419701ebdde14`. All requested implementation/documentation work is complete. Next external gate: owner tests the real Docker-volume update on the laptop, reviews the result, and explicitly approves before any merge. No merge is authorized by this block.
+
+Recovery checkpoint: working branch `agent/issue-21-container-updates`, accepted base `f72973e764560a4102b7291495fa0fb93effe434`. Latest stable release metadata observed on 2026-10-06: Open WebUI `v0.11.4`, Goose `v1.53.0`; implementation must discover releases at execution time rather than hard-code these observations. Docker Engine is unavailable in this development workspace, so container behavior is exercised with deterministic command mocks and real-volume acceptance remains an owner test.
+
+## Completed review block — Issue #19: remove legacy permission normalization
 
 Purpose: stop the Linux installer from rewriting Git-tracked executable bits on every install/update now that normal installations clone directly into the Linux filesystem.
 
@@ -12,10 +35,10 @@ Purpose: stop the Linux installer from rewriting Git-tracked executable bits on 
 - [x] Keep the world-writable repository safety check without mutating tracked file modes.
 - [x] Update setup/troubleshooting documentation to make Git/Linux modes authoritative.
 - [x] Add regression coverage for tracked executable modes / absence of bulk normalization.
-- [ ] Run the complete release gate.
-- [ ] Present a review PR; do not merge without explicit owner approval.
+- [x] Run the complete release gate; exact review-head Validate checks passed before PR #20 merged.
+- [x] Present the review PR; PR #20 was merged by the owner as `f72973e764560a4102b7291495fa0fb93effe434`.
 
-## Current review block — Issue #12: robust installation update
+## Completed review block — Issue #12: robust installation update
 
 Purpose: make the installed checkout recover safely when a squash-merged review branch has been deleted remotely, and reconcile the accepted Llama Dispatcher provenance checkpoint.
 
@@ -26,9 +49,9 @@ Purpose: make the installed checkout recover safely when a squash-merged review 
 - [x] Add a focused Git smoke test for the deleted-upstream recovery path.
 - [x] Advance the pinned Llama Dispatcher revision to merged provenance checkpoint `84efaa41684ff11a0fcb7266edf5cbf35efb7bad`.
 - [x] Update operator documentation/state/changelog together.
-- [ ] Run the full repository release gate and present the review PR without merging.
+- [x] Complete the release gate and review PR; PR #13 was merged as `1505a8dcce7b5bc94489913b20a5371ba7357d9a`.
 
-## Current review block — Issue #14: reproduce the working Intel SYCL stack
+## Completed review block — Issue #14: reproduce the working Intel SYCL stack
 
 Purpose: make a fresh supported WSL installation reproduce the Intel SYCL / Level Zero environment already proven on the ThinkPad, without reintroducing the obsolete NEO 24.39 package generation.
 
@@ -53,6 +76,8 @@ Implementation checklist:
 - [x] Run focused checks and the complete repository release gate.
 - [x] On the real ThinkPad, run the updated SYCL setup against the existing NEO 26.31 installation, verify no downgrade/replacement occurs, repeat it for idempotence, and confirm full-offload inference still works.
 - [x] Present the coherent review PR without merging; merge only after explicit owner approval.
+
+Checkpoint: PR #18 was merged as `420fe61d2cd98d7e438169ea629cb1581b6d676d`; the real ThinkPad setup/idempotence validation is recorded complete above.
 
 ## Completed investigation block — Issue #9: WSL hardware Vulkan / DZN
 

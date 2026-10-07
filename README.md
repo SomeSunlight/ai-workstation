@@ -50,6 +50,23 @@ The interactive menu provides Goose workspace selection, Open WebUI lifecycle
 commands, status, update and help. Direct commands remain available for scripts,
 documentation and troubleshooting.
 
+## Update Open WebUI or Goose
+
+Open a WSL terminal in **any directory** and run `aiw`. Choose:
+
+```text
+Standard tools -> Open WebUI / Goose -> Update application -> Latest stable official release
+```
+
+The menu shows the current selection and target version, asks before applying it,
+and performs the Docker steps. Open WebUI data is backed up before the service is
+recreated; Goose uses the new image in the next session. See
+[Application updates](docs/container-updates.md) for details and recovery.
+
+`aiw update` updates the workstation repository and host installation. Application
+updates are separate; pulling an existing pinned image alone does not select a
+new version.
+
 ## Check the current installation state
 
 `Status` and `Verify` do not require an elevated PowerShell window for ordinary
@@ -130,6 +147,7 @@ Other Goose commands:
 aiw goose init
 aiw goose status
 aiw goose pull
+aiw goose update
 aiw goose version
 aiw goose help
 ```
@@ -161,6 +179,7 @@ Or use direct commands:
 ```bash
 aiw open-webui init
 aiw open-webui pull
+aiw open-webui update
 aiw open-webui up
 aiw open-webui open
 aiw open-webui status
@@ -342,6 +361,7 @@ AI Workstation targets Windows with WSL 2 and Ubuntu. Exact supported Windows, P
 - [Repository setup](docs/repository-setup.md)
 - [Clean-room test](docs/clean-room-test.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Application updates](docs/container-updates.md)
 - [Security](SECURITY.md)
 
 ## License

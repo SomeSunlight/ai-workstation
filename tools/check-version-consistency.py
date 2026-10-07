@@ -43,6 +43,27 @@ if not uv_match:
     raise ValueError("Could not read uv version from .github/workflows/validate.yml")
 checks["uv workflow"] = (uv_match.group(1), versions["uv"])
 
+changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+release_match = re.search(r"^## ([0-9]+\.[0-9]+\.[0-9]+)$", changelog, re.M)
+if not release_match:
+    raise ValueError("Could not read the current project release from CHANGELOG.md")
+checks["project changelog"] = (release_match.group(1), versions["project"])
+
+env_example = (ROOT / ".env.example").read_text(encoding="utf-8")
+for runtime, key, compose_name in (
+    ("goose", "GOOSE_IMAGE", "goose"),
+    ("open_webui", "OPEN_WEBUI_IMAGE", "open-webui"),
+):
+    image = versions[runtime]["image"]
+    checks[f"{runtime} image tag"] = (image.rsplit(":", 1)[1], "v" + versions[runtime]["version"])
+    env_match = re.search(rf"^{key}=(.+)$", env_example, re.M)
+    compose = (ROOT / f"compose/{compose_name}.yml").read_text(encoding="utf-8")
+    compose_match = re.search(rf"\$\{{{key}:-([^}}]+)\}}", compose)
+    if not env_match or not compose_match:
+        raise ValueError(f"Missing {key} default in .env.example or Compose")
+    checks[f"{runtime} env default"] = (env_match.group(1), image)
+    checks[f"{runtime} Compose default"] = (compose_match.group(1), image)
+
 errors = [f"{name}: definition={actual}, config={expected}" for name, (actual, expected) in checks.items() if actual != expected]
 if errors:
     print("Version definitions are inconsistent:", file=sys.stderr)

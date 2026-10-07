@@ -11,6 +11,8 @@ python3 tools/check-version-consistency.py
 ./tests/smoke/repository-layout.sh
 bash ./tests/smoke/update-recovery.sh
 bash ./tests/smoke/local-inference-runtime.sh
+bash ./tests/smoke/container-updates.sh
+bash ./tests/smoke/interactive-menu.sh
 
 if [[ -x "${HOME}/.local/bin/uv" ]]; then
   "${HOME}/.local/bin/uv" lock --check --python /usr/bin/python3
