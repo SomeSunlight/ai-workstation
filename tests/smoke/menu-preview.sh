@@ -62,9 +62,19 @@ output="$("$CLI" help 2>&1)"
 assert_contains "$output" 'AI Workstation command line'
 assert_absent "$output" 'Command to run:'
 
+# End-of-input during a prompt also fails closed.
+output="$(printf '5\n' | "$CLI" 2>&1)"
+assert_contains "$output" 'Command to run: aiw help'
+assert_absent "$output" 'AI Workstation command line'
+
 # Nested standard menu: cancellation must not call Docker or require it.
 output="$(printf '1\n1\n7\nn\nb\nq\nq\n' | "$CLI" 2>&1)"
 assert_contains "$output" 'Command to run: aiw goose pull'
+assert_absent "$output" 'Docker is not installed'
+
+# Open WebUI actions from the nested menu must use the same gate.
+output="$(printf '1\n2\n4\nn\nb\nq\nq\n' | "$CLI" 2>&1)"
+assert_contains "$output" 'Command to run: aiw open-webui restart'
 assert_absent "$output" 'Docker is not installed'
 
 # Informational actions have public CLI equivalents too.

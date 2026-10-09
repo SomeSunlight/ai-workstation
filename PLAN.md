@@ -10,14 +10,14 @@ Writable scope: `README.md`, `bin/aiw`, `bin/aiw-core`, shared `bin/aiw-menu-con
 
 - [x] Read ContextCanon workflow and inspect current command surface, launchers, existing tests and current main.
 - [x] Create Issues #26 and #27 and a dedicated branch.
-- [ ] Implement persistent commented YAML configuration, editor entry and reusable command-preview/confirmation.
-- [ ] Cover top-level, Goose, Open WebUI, workspace, and local-inference actions, including dynamic parameters.
-- [ ] Put recovery-first value proposition and launcher distinction at the start of README.
-- [ ] Add behavioral tests for preview on/off, y/n/EOF, quoting, persistence, invalid config and editor.
-- [ ] Run available focused and release checks; inspect final change diff.
-- [ ] Publish a coherent review PR for the project owner; do not merge without approval.
+- [x] Implement persistent commented YAML configuration, editor entry and reusable command-preview/confirmation.
+- [x] Cover top-level, Goose, Open WebUI, workspace, and local-inference actions, including dynamic parameters.
+- [x] Put recovery-first value proposition and launcher distinction at the start of README.
+- [x] Add behavioral tests for preview on/off, y/n/EOF, quoting, persistence, invalid config and editor.
+- [x] Run available focused and release checks; inspect final change diff.
+- [x] Publish a coherent review PR for the project owner; do not merge without approval.
 
-Recovery checkpoint: branch `agent/issues-26-27-readme-menu-preview`, starting from `main` at `e4f6ee86e746241ea6630bb759b971b7e47012b7`. PR #22 is already merged (previous PLAN block stale); reconcile its accepted status below and in STATE. Existing `aiw` CLI invocations remain unchanged; preview applies only to interactive selections.
+Review checkpoint: [PR #28](https://github.com/SomeSunlight/ai-workstation/pull/28) is open against main for owner review; **not merged**. Branch `agent/issues-26-27-readme-menu-preview` starts from accepted main `e4f6ee86e746241ea6630bb759b971b7e47012b7`. The code-and-behavior review head `4b7a277017c026c28a951d2203e29daa9eba374e` passed the complete GitHub Validate workflow on Ubuntu 24.04, including the release checks and new menu-preview tests. This plan/test hygiene commit must pass the same check before merge. Full WSL/Docker hardware testing remains owner acceptance. Direct `aiw` CLI invocations remain unchanged; preview applies only to interactive selections.
 
 ## Completed review block — Issue #21: guided application container updates
 
@@ -41,7 +41,7 @@ Focused verification: `container-updates.sh`, `interactive-menu.sh`, `check-vers
 
 Accepted checkpoint: [PR #22](https://github.com/SomeSunlight/ai-workstation/pull/22) was merged into main as `e4f6ee86e746241ea6630bb759b971b7e47012b7`. The new review block above is separate.
 
-Recovery checkpoint: working branch `agent/issue-21-container-updates`, accepted base `f72973e764560a4102b7291495fa0fb93effe434`. Latest stable release metadata observed on 2026-10-06: Open WebUI `v0.11.4`, Goose `v1.53.0`; implementation must discover releases at execution time rather than hard-code these observations. Docker Engine is unavailable in this development workspace, so container behavior is exercised with deterministic command mocks and real-volume acceptance remains an owner test.
+Historical recovery checkpoint: development branch `agent/issue-21-container-updates`, accepted base `f72973e764560a4102b7291495fa0fb93effe434`. Latest stable release metadata observed on 2026-10-06: Open WebUI `v0.11.4`, Goose `v1.53.0`; implementation must discover releases at execution time rather than hard-code these observations. Docker Engine is unavailable in this development workspace, so container behavior is exercised with deterministic command mocks and real-volume acceptance remains an owner test.
 
 ## Completed review block — Issue #19: remove legacy permission normalization
 
