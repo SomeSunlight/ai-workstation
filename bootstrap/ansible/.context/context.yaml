@@ -3,27 +3,31 @@
 # This file is deterministic compiler output and must not be edited manually.
 
 schema: contextcanon/v0
-compiler_version: "0.6.0"
+compiler_version: "0.8.0"
 
 # Stable logical Node identity. The filesystem path is deliberately not identity.
 node:
   id: "ad9cbb59-ae04-4290-9c53-5d70cfefe434"
   name: "Ansible host configuration"
-  version: "0.1.2-draft"
+  version: "0.2.0-draft"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
-parents:
+parents: []
+
+# Immutable import carriers. relationship is the public semantic kind; Source remains technical provenance.
+sources:
   - id: "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
     name: "Bootstrap"
-    version: "0.1.2-draft"
+    version: "0.2.0-draft"
+    relationship: "parent"
     locator: ".."
-    normalized_digest: "a5acfe9353cd48188dafb8149a9b0401aca7415e9c1accc53ef2be907976828f"
-    package_digest: "956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9"
+    normalized_digest: "59cc67c06924af00df20ae1aff6fc6f206b3e2d2dd4ca626834a68a1ee16c8f2"
+    package_digest: "1c63971d5569ceacda28e0b95f350c499badbb4a08356b26893bf4d3ad39d327"
 
-# Accepted reusable Source packages used by this build. Both digests are exact pins.
-sources: []
+# Direct informational References. Their Rules are not effective and they are not exported to Children.
+references: []
 
-# Effective imported Context origins, flattened through accepted Parent/Source packages.
+# Effective normative imported Context origins, flattened through Parent relationships only.
 imports:
   - id: "c4c94726-3cc7-4df6-b779-72bbf9c06f40"
     name: "Development Workflow"
@@ -33,18 +37,18 @@ imports:
     why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.1.2"
-    normalized_digest: "2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf"
-    package_digest: "faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82"
+    version: "0.2.0"
+    normalized_digest: "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739"
+    package_digest: "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e"
   - id: "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
     name: "Bootstrap"
-    version: "0.1.2-draft"
-    normalized_digest: "a5acfe9353cd48188dafb8149a9b0401aca7415e9c1accc53ef2be907976828f"
-    package_digest: "956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9"
+    version: "0.2.0-draft"
+    normalized_digest: "59cc67c06924af00df20ae1aff6fc6f206b3e2d2dd4ca626834a68a1ee16c8f2"
+    package_digest: "1c63971d5569ceacda28e0b95f350c499badbb4a08356b26893bf4d3ad39d327"
 
 # Elements authored in this Node's CONTEXT.src.md.
 local:
-  state: "<!-- contextcanon-placement-state:start -->\n<!-- cc:placement-state id=\"ONB-F7A368F3CAE1\" -->\n- The automation environment requires Python 3.12.*.\n\n<!-- cc:placement-state id=\"ONB-73F6A9557DB5\" -->\n- `ansible-core` is pinned to 2.21.1.\n\n<!-- cc:placement-state id=\"ONB-D32F29A7A6AB\" -->\n- `ansible-lint` is pinned to 26.6.0.\n<!-- contextcanon-placement-state:end -->"
+  state: "<!-- contextcanon-placement-state:start -->\n- The automation environment requires Python 3.12.*.\n  <!-- cc:placement-state id=\"ONB-F7A368F3CAE1\" -->\n\n- `ansible-core` is pinned to 2.21.1.\n  <!-- cc:placement-state id=\"ONB-73F6A9557DB5\" -->\n\n- `ansible-lint` is pinned to 26.6.0.\n  <!-- cc:placement-state id=\"ONB-D32F29A7A6AB\" -->\n<!-- contextcanon-placement-state:end -->"
   plan: null
   rules:
     - {"id": "ONB-B139299ADE50", "title": "Conflicting container packages are not removed automatically", "group": "Onboarding placement"}
@@ -94,31 +98,31 @@ targets:
   - topic: "ONB-FA47F00F43A9"
     intent: "required"
     kind: "resource"
-    locator: "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/SECURITY.md"
+    locator: "CONTEXT/references/n86fee10195c6f43/SECURITY.md"
     target_node_id: null
     target_node_name: null
   - topic: "ONB-0513F8B51242"
     intent: "required"
     kind: "resource"
-    locator: "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/troubleshooting.md"
+    locator: "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md"
     target_node_id: null
     target_node_name: null
   - topic: "ONB-716FC7DB282B"
     intent: "required"
     kind: "resource"
-    locator: "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/repository-setup.md"
+    locator: "CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md"
     target_node_id: null
     target_node_name: null
 
 # Mapping from author-facing Resource paths to generated package paths.
 resources:
-  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/CONTEXT.md"}
-  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/SECURITY.md"}
-  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/repository-setup.md"}
-  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/troubleshooting.md"}
   - {"source": null, "published": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md"}
+  - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/CONTEXT.md"}
+  - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/SECURITY.md"}
+  - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md"}
+  - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md"}
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "ed8b7185991621c2820fa86303af806c2f2d7e1c2cc3131900831584278cc4fd"
-  package_digest: "4da61b535f5915abad65070d1f20d477a13576f3125ae76dbdc7b5bb0d931b40"
+  normalized_digest: "1d5ad6070b014952ff87eaec30c52cd6ad09501d91c7292e1790705d963a2164"
+  package_digest: "95c239624d7339e49d268844b7352cf711bd7d78ea42df1ec554244bcb19678c"

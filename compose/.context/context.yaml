@@ -3,27 +3,31 @@
 # This file is deterministic compiler output and must not be edited manually.
 
 schema: contextcanon/v0
-compiler_version: "0.6.0"
+compiler_version: "0.8.0"
 
 # Stable logical Node identity. The filesystem path is deliberately not identity.
 node:
   id: "90dd976e-8753-495b-a631-d708b13878d1"
   name: "Containerized application runtimes"
-  version: "0.1.3-draft"
+  version: "0.2.0-draft"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
-parents:
+parents: []
+
+# Immutable import carriers. relationship is the public semantic kind; Source remains technical provenance.
+sources:
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.1.2"
+    version: "0.2.0"
+    relationship: "parent"
     locator: ".."
-    normalized_digest: "2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf"
-    package_digest: "faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82"
+    normalized_digest: "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739"
+    package_digest: "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e"
 
-# Accepted reusable Source packages used by this build. Both digests are exact pins.
-sources: []
+# Direct informational References. Their Rules are not effective and they are not exported to Children.
+references: []
 
-# Effective imported Context origins, flattened through accepted Parent/Source packages.
+# Effective normative imported Context origins, flattened through Parent relationships only.
 imports:
   - id: "c4c94726-3cc7-4df6-b779-72bbf9c06f40"
     name: "Development Workflow"
@@ -33,14 +37,14 @@ imports:
     why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.1.2"
-    normalized_digest: "2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf"
-    package_digest: "faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82"
+    version: "0.2.0"
+    normalized_digest: "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739"
+    package_digest: "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e"
 
 # Elements authored in this Node's CONTEXT.src.md.
 local:
-  state: "<!-- contextcanon-placement-state:start -->\n<!-- cc:placement-state id=\"ONB-5475B681ADB6\" -->\n- The currently integrated application runtimes are Goose and Open WebUI.\n<!-- contextcanon-placement-state:end -->"
-  plan: "<!-- contextcanon-placement-plan:start -->\n<!-- cc:placement-plan id=\"ONB-F2E85C95052E\" -->\n- Goose supports operator-selected local/self-hosted and public model connections through its native configuration; hardware inference provisioning remains a separate host runtime concern.\n<!-- contextcanon-placement-plan:end -->"
+  state: "<!-- contextcanon-placement-state:start -->\n- The currently integrated application runtimes are Goose and Open WebUI.\n  <!-- cc:placement-state id=\"ONB-5475B681ADB6\" -->\n<!-- contextcanon-placement-state:end -->"
+  plan: "<!-- contextcanon-placement-plan:start -->\n- Goose supports operator-selected local/self-hosted and public model connections through its native configuration; hardware inference provisioning remains a separate host runtime concern.\n  <!-- cc:placement-plan id=\"ONB-F2E85C95052E\" -->\n<!-- contextcanon-placement-plan:end -->"
   rules:
     - {"id": "ONB-C582F0CA4FCE", "title": "Application containers do not receive the Docker socket", "group": "Onboarding placement"}
     - {"id": "ONB-E7F7BAC0BF5F", "title": "Runtime credentials use protected local storage", "group": "Onboarding placement"}
@@ -84,31 +88,31 @@ targets:
   - topic: "ONB-FA47F00F43A9"
     intent: "required"
     kind: "resource"
-    locator: "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/SECURITY.md"
+    locator: "CONTEXT/references/n86fee10195c6f43/SECURITY.md"
     target_node_id: null
     target_node_name: null
   - topic: "ONB-0513F8B51242"
     intent: "required"
     kind: "resource"
-    locator: "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/troubleshooting.md"
+    locator: "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md"
     target_node_id: null
     target_node_name: null
   - topic: "ONB-716FC7DB282B"
     intent: "required"
     kind: "resource"
-    locator: "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/repository-setup.md"
+    locator: "CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md"
     target_node_id: null
     target_node_name: null
 
 # Mapping from author-facing Resource paths to generated package paths.
 resources:
-  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/CONTEXT.md"}
-  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/SECURITY.md"}
-  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/repository-setup.md"}
-  - {"source": null, "published": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/troubleshooting.md"}
   - {"source": null, "published": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md"}
+  - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/CONTEXT.md"}
+  - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/SECURITY.md"}
+  - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md"}
+  - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md"}
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "e00ce1c8a1227f7d33529eedbc58ded5b0de0e50ed67d0fc84ad3df7cb0c841e"
-  package_digest: "0b4478eab1b07ed9d2fdda023d110ec2954955183f15bb189ec0b59525c60cb1"
+  normalized_digest: "8737d0cf572e2df88cc0e0bac5ecd0133bfbcb998cc5d2bae6ffbcb70985b3d9"
+  package_digest: "a3ae6d43bbd4394ee9d15497617a404b1eaa8a01ff6f0b89cc813534887cafc7"

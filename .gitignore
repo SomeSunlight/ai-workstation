@@ -28,3 +28,11 @@ Thumbs.db
 **/.context/onboarding/
 **/.context/candidates/
 contextcanon-onboarding/
+
+# >>> ContextCanon candidate scratch (managed)
+**/.context/candidates/
+**/.context/parent-candidates/
+**/.context/source-reviews/
+**/.context/parent-reviews/
+**/.context/migration-trash/
+# <<< ContextCanon candidate scratch (managed)

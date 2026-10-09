@@ -1,0 +1,30 @@
+{
+  "resources": [
+    {
+      "node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "path": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md",
+      "repo_path": "nodes/library/development-workflow/docs/change-workflow.md"
+    },
+    {
+      "node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "path": "CONTEXT/references/n86fee10195c6f43/CONTEXT.md",
+      "repo_path": "CONTEXT.md"
+    },
+    {
+      "node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "path": "CONTEXT/references/n86fee10195c6f43/SECURITY.md",
+      "repo_path": "SECURITY.md"
+    },
+    {
+      "node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "path": "CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md",
+      "repo_path": "docs/repository-setup.md"
+    },
+    {
+      "node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "path": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md",
+      "repo_path": "docs/troubleshooting.md"
+    }
+  ],
+  "schema": "contextcanon/resource-origins/v1"
+}

@@ -1,37 +1,69 @@
 # Open WebUI — Local Context Source
-<!-- ctx:node id="dbf13d04-e686-4cda-9434-c439e23bb400" name="Open WebUI" version="0.1.2-draft" -->
+<!-- ctx:node id="dbf13d04-e686-4cda-9434-c439e23bb400" name="Open WebUI" version="0.2.0-draft" -->
 
-## Parent Context Node
+<!-- contextcanon:format Node
+Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
+Details: CONTEXT-format.md
+-->
+
+<!-- contextcanon:source-help:intro:start -->
+Edit this local Context source; ContextCanon generates CONTEXT.md from it.
+Some sections use a strict syntax. The comments below show the expected format.
+New Rules, Topics and Resources receive IDs automatically during build; preserve existing IDs.
+See [the source format guide](CONTEXT-format.md) for examples and editing instructions.
+<!-- contextcanon:source-help:intro:end -->
+
+## Context Imports
+
+<!-- contextcanon:format Context Imports
+Format: - [Name](location) — `version` — `relationship=parent|reference`; optional indented Why:, then ctx:source metadata. Preserve exact pins; use source list/adopt/update for package identity.
+Details: CONTEXT-format.md
+-->
 
 <!-- contextcanon-placement-parent:start -->
-- [Containerized application runtimes](..) — `0.1.3-draft`
-  <!-- ctx:parent id="90dd976e-8753-495b-a631-d708b13878d1" version="0.1.3-draft" normalized-digest="e00ce1c8a1227f7d33529eedbc58ded5b0de0e50ed67d0fc84ad3df7cb0c841e" package-digest="0b4478eab1b07ed9d2fdda023d110ec2954955183f15bb189ec0b59525c60cb1" -->
+- [Containerized application runtimes](..) — `0.2.0-draft` — `relationship=parent`
+  <!-- ctx:source id="90dd976e-8753-495b-a631-d708b13878d1" version="0.2.0-draft" normalized-digest="8737d0cf572e2df88cc0e0bac5ecd0133bfbcb998cc5d2bae6ffbcb70985b3d9" package-digest="a3ae6d43bbd4394ee9d15497617a404b1eaa8a01ff6f0b89cc813534887cafc7" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview
 
-<!-- contextcanon-placement-overview:start -->
-<!-- cc:placement-overview id="ONB-15284536311B" -->
-- Open WebUI runs as a persistent Docker service accessed from the Windows browser through WSL localhost forwarding.
+<!-- contextcanon:format Local Overview
+Format: Ordinary Markdown orientation, local to this Node. Any existing placement identity follows its paragraph/item; do not change it.
+Details: CONTEXT-format.md
+-->
 
-<!-- cc:placement-overview id="ONB-57A446045BBD" -->
+<!-- contextcanon-placement-overview:start -->
+- Open WebUI runs as a persistent Docker service accessed from the Windows browser through WSL localhost forwarding.
+  <!-- cc:placement-overview id="ONB-15284536311B" -->
+
 - Open WebUI reaches configured model providers over the network.
+  <!-- cc:placement-overview id="ONB-57A446045BBD" -->
 <!-- contextcanon-placement-overview:end -->
 
 ## Local State
 
+<!-- contextcanon:format Local State
+Format: Ordinary Markdown describing the current local situation. Any existing placement identity follows its paragraph/item; preserve it.
+Details: CONTEXT-format.md
+-->
+
 <!-- contextcanon-placement-state:start -->
-<!-- cc:placement-state id="ONB-9745CD6E1E1C" -->
 - The default Open WebUI address is `http://localhost:3000`.
+  <!-- cc:placement-state id="ONB-9745CD6E1E1C" -->
 
-<!-- cc:placement-state id="ONB-35A21B57D6C3" -->
 - Open WebUI stores its persistent state in a named Docker volume.
+  <!-- cc:placement-state id="ONB-35A21B57D6C3" -->
 
-<!-- cc:placement-state id="ONB-725C7FD86EA6" -->
 - The first Open WebUI account becomes the local administrator.
+  <!-- cc:placement-state id="ONB-725C7FD86EA6" -->
 <!-- contextcanon-placement-state:end -->
 
 ## Local Rules
+
+<!-- contextcanon:format Local Rules
+Format: ### Group, then - **Title:** Statement, then indented Why: Rationale. build adds a missing ctx:rule ID after the entry; preserve existing IDs.
+Details: CONTEXT-format.md
+-->
 
 <!-- contextcanon-placement-rules:start -->
 ### Onboarding placement
