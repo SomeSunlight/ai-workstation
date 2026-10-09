@@ -17,6 +17,16 @@ Writable scope: `README.md`, `bin/aiw`, `bin/aiw-core`, shared `bin/aiw-menu-con
 - [x] Run available focused and release checks; inspect final change diff.
 - [x] Publish a coherent review PR for the project owner; do not merge without approval.
 
+### Owner follow-up — launcher naming/migration (Issue #26)
+
+Extension to writable scope: `bootstrap/windows/Create-Shortcuts.ps1`, `bootstrap/windows/Install-AiWorkstation.ps1`, `docs/troubleshooting.md`, `docs/clean-room-test.md`, `tests/windows/`, `.github/workflows/validate.yml`, and related README/PLAN surfaces. No runtime/WSL provision changes. Preserve installer idempotency and avoid removing arbitrary user shortcuts.
+
+- [x] Check existing installer + standalone shortcut implementations and status logic.
+- [ ] Unify Windows shortcut creation and move to the explicit `Linux …` labels with distro suffixes.
+- [ ] Make legacy link migration owned-only, idempotent and safe for unrelated shortcuts.
+- [ ] Update user documentation and add actual Windows runner checks.
+- [ ] Pass complete CI on the new exact PR head, then present for owner review (no merge).
+
 Review checkpoint: [PR #28](https://github.com/SomeSunlight/ai-workstation/pull/28) is open against main for owner review; **not merged**. Branch `agent/issues-26-27-readme-menu-preview` starts from accepted main `e4f6ee86e746241ea6630bb759b971b7e47012b7`. The code-and-behavior review head `4b7a277017c026c28a951d2203e29daa9eba374e` passed the complete GitHub Validate workflow on Ubuntu 24.04, including the release checks and new menu-preview tests. This plan/test hygiene commit must pass the same check before merge. Full WSL/Docker hardware testing remains owner acceptance. Direct `aiw` CLI invocations remain unchanged; preview applies only to interactive selections.
 
 ## Completed review block — Issue #21: guided application container updates
