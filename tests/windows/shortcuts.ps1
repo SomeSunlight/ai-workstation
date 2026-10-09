@@ -107,6 +107,8 @@ try {
     $installerText = Get-Content -LiteralPath $installer -Raw
     Assert-True ($installerText.Contains("Join-Path `$PSScriptRoot 'Create-Shortcuts.ps1'")) 'Installer does not delegate to shortcut creator'
     Assert-True ($installerText.Contains("'Linux AI Workstation'")) 'Installer default shortcut name outdated'
+    $publicEntry = Get-Content -LiteralPath (Join-Path $root 'install.ps1') -Raw
+    Assert-True ($publicEntry.Contains("'Linux AI Workstation'")) 'Public install.ps1 default name outdated'
 
     Write-Host 'Windows shortcut creation, migration, idempotency and ownership tests passed.'
 }
