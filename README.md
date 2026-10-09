@@ -1,6 +1,23 @@
 # AI Workstation
 
-AI Workstation is a reproducible workstation built around Windows/WSL bootstrap, Ansible-managed Docker host setup, isolated Goose sessions using OpenRouter, and a persistent Open WebUI service. Exact supported platforms, current runtime scope, and planned local-model integration are maintained in [Project Context](CONTEXT.md).
+**Rebuild a complete AI-capable Linux workstation on a supported Windows laptop — without days of manual setup.** One repeatable PowerShell entry point handles Windows/WSL provisioning and hands off to automated Linux installation. Useful for a new computer, a hardware replacement, or a corporate laptop that has been completely reset.
+
+The goal is a **fast, reproducible start-to-finish installation**, across supported hardware, with minimal Linux/Docker expertise:
+
+1. **Windows bootstrap:** `install.ps1` checks/configures WSL 2, the Ubuntu distribution and Windows integration (including launchers), with guided elevation and restart handling where necessary.
+2. **Inside WSL:** the Linux bootstrap and Ansible set up the host toolchain and Docker; AI Workstation installs its managed runtimes and provides the `aiw` command/menu for Goose and Open WebUI. Optional host-local `llama.cpp`/Llama Dispatcher setup is available separately.
+3. **Daily operation:** choose tools from the menu or use the same `aiw ...` commands directly. Re-run the installer safely after interruption; the Git repository remains the reproducible installation specification.
+
+You should not have to reconstruct a working Docker/WSL stack with dozens of ad hoc commands and LLM conversations after a laptop reset. **The installer rebuilds software, not deleted personal data:** restore secrets, user-owned workspaces, models and persistent volumes from their backups. Company security policies, Windows/WSL downloads, reboots and hardware-specific GPU prerequisites can still require attention; installation time varies.
+
+### Two desktop shortcuts, one Ubuntu environment
+
+| Windows shortcut | Opens the same WSL distribution in | Best for |
+| --- | --- | --- |
+| **AI Workstation** | `/home/moresunlight/ai-workstation` | Managing/updating the installation or running `aiw` |
+| **AI Workstation Terminal** | `/home/moresunlight` | General Linux work outside the project |
+
+Both are created on the Desktop and in the Start Menu. Neither starts another Ubuntu instance or automatically launches an AI application. See [Where to find it later](#where-to-find-it-later) for re-creating launchers and troubleshooting.
 
 ## Quick start
 
@@ -49,6 +66,36 @@ aiw
 The interactive menu provides Goose workspace selection, Open WebUI lifecycle
 commands, status, update and help. Direct commands remain available for scripts,
 documentation and troubleshooting.
+
+## Learn the commands behind menu actions
+
+The menu is a starting point, not a requirement. To learn the equivalent commands
+you can run later yourself, choose **Configure AI Workstation (edit YAML settings)**
+in the main `aiw` menu. Your Linux editor opens:
+
+```text
+~/.config/ai-workstation/config.yaml
+```
+
+Change the documented option to:
+
+```yaml
+# Show each actionable menu command and require explicit y/Y before running it.
+menu_command_preview: true
+```
+
+After that, selecting an action shows its direct CLI equivalent, shell-quoted if
+necessary, e.g. `aiw open-webui restart`, followed by `Continue? [y/N]`.
+Press `y` to run it or `n`/Enter to cancel. Menus, editor access and direct
+non-menu `aiw ...` invocations work normally. Existing operation-specific
+confirmation prompts may still appear. The preview intentionally teaches the
+public `aiw` command, not every internal Docker/Ansible subprocess.
+
+The settings are private to your Linux user, survive WSL restarts, and are not
+overwritten by installation updates. Set the option back to `false` to turn
+the mode off. If no explicit editor is configured, Ubuntu's `sensible-editor`
+is used; you can select your preferred editor via `select-editor` or
+`VISUAL`/`EDITOR`.
 
 ## Update Open WebUI or Goose
 
@@ -209,8 +256,9 @@ aiw open-webui down
 
 ## Return after several weeks
 
-Start `AI Workstation` from the Windows Start Menu or Desktop. The companion
-shortcut `AI Workstation Terminal` opens a plain Ubuntu home terminal. The WSL startup
+Start `AI Workstation` from the Windows Start Menu or Desktop to open the
+project checkout; `AI Workstation Terminal` opens the same Ubuntu at the home
+directory. Both launch ordinary WSL shells. The WSL startup
 hint reminds you that the only command you need to remember is:
 
 ```bash

@@ -19,6 +19,7 @@ readonly RUNTIME_ENV_EXAMPLE="${AIW_RUNTIME_ENV_EXAMPLE:-${ROOT}/.env.example}"
 readonly GOOSE_COMPOSE_FILE="${ROOT}/compose/goose.yml"
 readonly OPEN_WEBUI_COMPOSE_FILE="${ROOT}/compose/open-webui.yml"
 readonly DEFAULT_OPEN_WEBUI_PORT="3000"
+source "${ROOT}/bin/aiw-menu-config.sh"
 
 usage() {
     cat <<'EOF_USAGE'
@@ -108,6 +109,24 @@ confirm() {
 }
 
 run_menu_action() {
+    local -a preview=()
+    case "${1:-}" in
+        goose_workspace_list) preview=(aiw goose workspace list) ;;
+        show_goose_status) preview=(aiw goose status) ;;
+        goose_pull) preview=(aiw goose pull) ;;
+        open_webui_open) preview=(aiw open-webui open) ;;
+        open_webui_up) preview=(aiw open-webui up) ;;
+        open_webui_down) preview=(aiw open-webui down) ;;
+        open_webui_restart) preview=(aiw open-webui restart) ;;
+        open_webui_recover_provider_configuration) preview=(aiw open-webui recover) ;;
+        show_open_webui_status) preview=(aiw open-webui status) ;;
+        open_webui_pull) preview=(aiw open-webui pull) ;;
+        show_status) preview=(aiw status) ;;
+        update_repository) preview=(aiw update) ;;
+    esac
+    if (("${#preview[@]}" > 0)) && ! aiw_menu_confirm_command "${preview[@]}"; then
+        return 0
+    fi
     if ! "$@"; then
         printf '\n[XX] The command failed. Review the message above.\n' >&2
     fi
@@ -867,13 +886,20 @@ b) Back
 EOF_MENU
     read -r -p 'Select: ' choice || return 0
     case "$choice" in
-        1) bash "$SCRIPT_PATH" "$tool" update ;;
+        1)
+            aiw_menu_confirm_command aiw "$tool" update || return 0
+            bash "$SCRIPT_PATH" "$tool" update
+            ;;
         2)
             read -r -p 'Version (for example v1.2.3): ' version || return 0
             [[ -n "$version" ]] || return 0
+            aiw_menu_confirm_command aiw "$tool" update "$version" || return 0
             bash "$SCRIPT_PATH" "$tool" update "$version"
             ;;
-        3) bash "$SCRIPT_PATH" "$tool" update --repository ;;
+        3)
+            aiw_menu_confirm_command aiw "$tool" update --repository || return 0
+            bash "$SCRIPT_PATH" "$tool" update --repository
+            ;;
         b|B) return 0 ;;
         *) printf 'Unknown selection.\n' ;;
     esac
@@ -886,6 +912,7 @@ menu_add_workspace() {
     read -r -p 'Short name: ' name || return
     read -r -p "Host directory [${PWD}]: " path || return
     path="${path:-$PWD}"
+    aiw_menu_confirm_command aiw goose workspace add "$name" "$path" || return 0
     goose_workspace_add "$name" "$path"
 }
 
@@ -893,6 +920,7 @@ menu_remove_workspace() {
     local workspace_name=""
     select_goose_workspace workspace_name || return
     confirm "Remove workspace '$workspace_name' from the list?" || return
+    aiw_menu_confirm_command aiw goose workspace remove "$workspace_name" || return 0
     goose_workspace_remove "$workspace_name"
 }
 
@@ -903,6 +931,7 @@ menu_start_goose_session() {
     host_path="$(goose_workspace_path "$workspace_name")"
     printf '\nSelected workspace: %s\nHost path: %s\n' "$workspace_name" "$host_path"
     confirm 'Start isolated Goose session?' || return
+    aiw_menu_confirm_command aiw goose session "$workspace_name" || return 0
     goose_session "$workspace_name"
 }
 
@@ -910,6 +939,7 @@ menu_resume_goose_session() {
     local workspace_name=""
     select_goose_workspace workspace_name || return
     confirm "Resume a Goose session in '$workspace_name'?" || return
+    aiw_menu_confirm_command aiw goose session "$workspace_name" --resume || return 0
     goose_session "$workspace_name" --resume
 }
 
@@ -920,6 +950,7 @@ menu_run_goose_task() {
     read -r -p 'Task: ' task || return
     [[ -n "$task" ]] || return
     confirm "Run this task in '$workspace_name'?" || return
+    aiw_menu_confirm_command aiw goose run "$workspace_name" --text "$task" || return 0
     goose_run "$workspace_name" --text "$task"
 }
 
@@ -1013,7 +1044,7 @@ EOF_MENU
             4) run_menu_action open_webui_restart ;;
             5) run_menu_action open_webui_recover_provider_configuration ;;
             6) run_menu_action show_open_webui_status ;;
-            7) run_menu_action open_webui_logs ;;
+            7) if aiw_menu_confirm_command aiw open-webui logs; then open_webui_logs; fi ;;
             8) run_menu_action open_webui_pull ;;
             9) run_menu_action open_webui_usage ;;
             10) run_menu_action menu_update_application open-webui ;;

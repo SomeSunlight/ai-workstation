@@ -6,6 +6,8 @@ IFS=$'\n\t'
 readonly SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
 readonly ROOT="$(cd -- "$(dirname -- "$SCRIPT_PATH")/.." && pwd -P)"
 readonly CORE="${ROOT}/bin/aiw-core"
+# Both menu layers must use the same persistent config and confirmation semantics.
+source "${ROOT}/bin/aiw-menu-config.sh"
 readonly LOCAL_INFERENCE_MANAGER="${ROOT}/runtimes/local-inference/manage.sh"
 readonly LOCAL_INFERENCE_SERVICE="${ROOT}/runtimes/local-inference/service.sh"
 readonly LOCAL_INFERENCE_CONFIG="${AIW_LOCAL_INFERENCE_CONFIG:-${HOME}/.config/ai-workstation/local-inference.env}"
@@ -21,6 +23,16 @@ pause_menu() {
 }
 
 run_menu_action() {
+    local -a preview=()
+    case "${1:-}" in
+        local_inference) preview=(aiw local-inference "${@:2}") ;;
+        show_status) preview=(aiw status) ;;
+        run_core) preview=(aiw "${@:2}") ;;
+        show_help) preview=(aiw help) ;;
+    esac
+    if (("${#preview[@]}" > 0)) && ! aiw_menu_confirm_command "${preview[@]}"; then
+        return 0
+    fi
     if ! "$@"; then
         printf '\n[XX] The command failed. Review the message above.\n' >&2
     fi
@@ -150,7 +162,7 @@ EOF
             3) run_menu_action local_inference start ;;
             4) run_menu_action local_inference stop ;;
             5) run_menu_action local_inference restart ;;
-            6) local_inference logs ;;
+            6) if aiw_menu_confirm_command aiw local-inference logs; then local_inference logs; fi ;;
             7) run_menu_action local_inference autostart enable ;;
             8) run_menu_action local_inference autostart disable ;;
             9) run_menu_action local_inference llama list ;;
@@ -181,6 +193,7 @@ AI Workstation
 3) Complete system status
 4) Update installation
 5) Command help
+6) Configure AI Workstation (edit YAML settings)
 q) Exit
 EOF
         read -r -p 'Select: ' choice || return
@@ -190,6 +203,7 @@ EOF
             3) run_menu_action show_status ;;
             4) run_menu_action run_core update ;;
             5) run_menu_action show_help ;;
+            6) run_menu_action aiw_menu_edit_config ;;
             q|Q) return ;;
             *) printf 'Unknown selection.\n' ;;
         esac
