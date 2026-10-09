@@ -19,9 +19,10 @@ Writable scope: `README.md`, `bin/aiw`, `bin/aiw-core`, shared `bin/aiw-menu-con
 
 ### Owner follow-up — launcher naming/migration (Issue #26)
 
-Extension to writable scope: `bootstrap/windows/Create-Shortcuts.ps1`, `bootstrap/windows/Install-AiWorkstation.ps1`, `docs/troubleshooting.md`, `docs/clean-room-test.md`, `tests/windows/`, `.github/workflows/validate.yml`, and related README/PLAN surfaces. No runtime/WSL provision changes. Preserve installer idempotency and avoid removing arbitrary user shortcuts.
+Extension to writable scope: `install.ps1`, `bootstrap/windows/Create-Shortcuts.ps1`, `bootstrap/windows/Install-AiWorkstation.ps1`, `docs/troubleshooting.md`, `docs/clean-room-test.md`, `tests/windows/`, `.github/workflows/validate.yml`, and related README/PLAN surfaces. No runtime/WSL provision changes. Preserve installer idempotency and avoid removing arbitrary user shortcuts.
 
 - [x] Check existing installer + standalone shortcut implementations and status logic.
+- [ ] Keep the public `install.ps1` wrapper default consistent with its implementation (found in final cross-check).
 - [x] Unify Windows shortcut creation and move to the explicit `Linux …` labels with distro suffixes.
 - [x] Make legacy link migration owned-only, idempotent and safe for unrelated shortcuts.
 - [x] Update user documentation and add actual Windows runner checks.
