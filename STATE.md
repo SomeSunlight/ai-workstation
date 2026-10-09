@@ -8,7 +8,7 @@ This baseline contains nine authored ContextCanon Nodes: the root plus eight nes
 
 PR #6 was squash-merged to `main` as `76ebf7675188d3159bc6e1cea4146fdf0ee8dcb9`. It establishes the accepted host-local inference **infrastructure checkpoint**. Llama Dispatcher PR #6 subsequently added explicit effective llama.cpp runtime provenance and was squash-merged as `84efaa41684ff11a0fcb7266edf5cbf35efb7bad`; AI Workstation now pins that accepted Dispatcher checkpoint.
 
-The current accepted `main` checkpoint is PR #20, `f72973e764560a4102b7291495fa0fb93effe434`. PR #13 (`1505a8dcce7b5bc94489913b20a5371ba7357d9a`) accepts deleted-review-branch update recovery. PR #18 (`420fe61d2cd98d7e438169ea629cb1581b6d676d`) accepts current Intel NEO provisioning after the real ThinkPad setup/idempotence test. PR #20 removes the legacy repository permission normalizer; tracked executable modes remain Git-owned.
+The current accepted `main` checkpoint is PR #22, `e4f6ee86e746241ea6630bb759b971b7e47012b7`, which adds guided application updates for Goose and Open WebUI. PR #20 was accepted earlier as `f72973e764560a4102b7291495fa0fb93effe434`. PR #13 (`1505a8dcce7b5bc94489913b20a5371ba7357d9a`) accepts deleted-review-branch update recovery. PR #18 (`420fe61d2cd98d7e438169ea629cb1581b6d676d`) accepts current Intel NEO provisioning after the real ThinkPad setup/idempotence test. PR #20 removes the legacy repository permission normalizer; tracked executable modes remain Git-owned.
 
 ## Accepted local-inference infrastructure
 
