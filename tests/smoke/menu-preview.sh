@@ -63,7 +63,7 @@ assert_contains "$output" 'AI Workstation command line'
 assert_absent "$output" 'Command to run:'
 
 # End-of-input during a prompt also fails closed.
-output="$(printf '5\n' | "$CLI" 2>&1)"
+output="$(printf '5\n' | "$CLI" 2>&1 || true)"
 assert_contains "$output" 'Command to run: aiw help'
 assert_absent "$output" 'AI Workstation command line'
 
