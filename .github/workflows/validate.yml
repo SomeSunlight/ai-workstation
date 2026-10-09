@@ -66,8 +66,14 @@ jobs:
   windows-shortcuts:
     runs-on: windows-2025
     steps:
-      - name: Check out repository
+      # ContextCanon snapshots include paths exceeding Windows' legacy MAX_PATH.
+      # This smoke test needs only these two source folders.
+      - name: Check out Windows code and tests
         uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            bootstrap/windows
+            tests/windows
       - name: Verify Windows shortcut creation and safe rename migration
         shell: pwsh
         run: ./tests/windows/shortcuts.ps1
