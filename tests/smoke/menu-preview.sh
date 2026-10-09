@@ -67,6 +67,14 @@ output="$(printf '1\n1\n7\nn\nb\nq\nq\n' | "$CLI" 2>&1)"
 assert_contains "$output" 'Command to run: aiw goose pull'
 assert_absent "$output" 'Docker is not installed'
 
+# Informational actions have public CLI equivalents too.
+output="$(printf '1\n1\n6\ny\n\nb\nq\nq\n' | "$CLI" 2>&1)"
+assert_contains "$output" 'Command to run: aiw goose quick-help'
+assert_contains "$output" 'Goose quick help'
+output="$("$CLI" goose quick-help 2>&1)"
+assert_contains "$output" 'Goose quick help'
+assert_absent "$output" 'Command to run:'
+
 # Nested local-inference menu: dynamically entered arguments are shell-quoted.
 output="$(printf '2\n10\nmodel with spaces\nn\nb\nq\n' | "$CLI" 2>&1)"
 assert_contains "$output" 'Command to run: aiw local-inference llama select model\ with\ spaces'
