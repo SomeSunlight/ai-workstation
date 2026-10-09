@@ -70,10 +70,10 @@ aiw_menu_confirm_command() {
     printf '\n'
     printf 'Continue? [y/N] '
     if ! read -r reply; then
-        printf '\\n'
+        printf '\n'
         return 1
     fi
-    printf '\\n'
+    printf '\n'
     [[ "$reply" == y || "$reply" == Y ]]
 }
 
