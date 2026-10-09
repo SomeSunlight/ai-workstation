@@ -16,13 +16,13 @@ Linux logs:
 
 ## I cannot find Linux in Windows
 
-Do not search for `Linux` or `Debian`. The installed distribution is managed by
-WSL.
+The installed Linux distribution is managed by WSL; it is not a separate
+Windows application named Ubuntu or Debian.
 
 Normal access after installation:
 
 ```text
-Start Menu -> AI Workstation
+Start Menu -> Linux AI Workstation
 ```
 
 Fallback in PowerShell:
@@ -38,7 +38,7 @@ The project lives inside Linux:
 /home/moresunlight/ai-workstation
 ```
 
-## The AI Workstation shortcut is missing
+## The Linux AI Workstation shortcut is missing
 
 Rerun the Windows installer:
 
@@ -46,17 +46,19 @@ Rerun the Windows installer:
 .\install.ps1
 ```
 
-It recreates the Desktop and Start Menu shortcuts. To create only the shortcuts
-from a checkout:
+It recreates **Linux AI Workstation** (project directory) and **Linux Terminal**
+(home directory) on the Desktop and Start Menu. Existing installer-owned links
+under the old names are safely replaced; unrelated shortcuts are preserved.
+For shortcuts only, without Linux reinstall, use:
 
 ```powershell
-.\bootstrap\windows\Create-Shortcuts.ps1
+.\install.ps1 -Action Shortcuts
 ```
 
 For a test distribution:
 
 ```powershell
-.\bootstrap\windows\Create-Shortcuts.ps1 `
+.\install.ps1 -Action Shortcuts `
   -DistroName Ubuntu-24.04-Test
 ```
 
@@ -80,7 +82,7 @@ From PowerShell this fully restarts WSL:
 wsl --shutdown
 ```
 
-Then open the `AI Workstation` shortcut again.
+Then open the `Linux AI Workstation` shortcut again.
 
 ## GitHub CLI login from WSL has no browser
 

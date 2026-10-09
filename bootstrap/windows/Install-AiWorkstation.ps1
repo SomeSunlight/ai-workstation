@@ -25,7 +25,7 @@ param(
     [string]$WslMemory = '48GB',
     [ValidatePattern('^\d+(MB|GB)$')]
     [string]$WslSwap = '8GB',
-    [string]$ShortcutName = 'AI Workstation',
+    [string]$ShortcutName = 'Linux AI Workstation',
     [switch]$NoShortcuts,
 
     [switch]$NoAutomaticRestart,
@@ -642,10 +642,6 @@ function Get-LinuxRepositoryPath {
     return "/home/$LinuxUser/ai-workstation"
 }
 
-function Get-LinuxHomePath {
-    return "/home/$LinuxUser"
-}
-
 function Get-ShortcutDisplayName {
     if ($DistroName -eq 'Ubuntu-24.04') {
         return $ShortcutName
@@ -654,92 +650,12 @@ function Get-ShortcutDisplayName {
     return "$ShortcutName ($DistroName)"
 }
 
-function ConvertTo-SafeFileName {
-    param([Parameter(Mandatory)][string]$Value)
-
-    $safe = $Value
-    foreach ($invalid in [IO.Path]::GetInvalidFileNameChars()) {
-        $safe = $safe.Replace([string]$invalid, '_')
+function Get-TerminalShortcutDisplayName {
+    if ($DistroName -eq 'Ubuntu-24.04') {
+        return 'Linux Terminal'
     }
 
-    return $safe
-}
-
-function New-AiwLauncher {
-    param(
-        [Parameter(Mandatory)][string]$LauncherName,
-        [Parameter(Mandatory)][string]$DisplayName,
-        [Parameter(Mandatory)][string]$LinuxPath
-    )
-
-    $launcherRoot = Join-Path $script:StateRoot 'launchers'
-    New-Item -ItemType Directory -Path $launcherRoot -Force | Out-Null
-
-    $wslExe = Join-Path $env:WINDIR 'System32\wsl.exe'
-    $launcherPath = Join-Path $launcherRoot "$(ConvertTo-SafeFileName -Value $LauncherName).cmd"
-    $content = @"
-@echo off
-setlocal
-echo Starting $DisplayName
-echo WSL distribution: $DistroName
-echo Linux directory: $LinuxPath
-echo.
-"$wslExe" -d $DistroName --cd "$LinuxPath"
-set "AIW_EXIT=%ERRORLEVEL%"
-if not "%AIW_EXIT%"=="0" (
-  echo.
-  echo WSL failed with exit code %AIW_EXIT%.
-  echo.
-  echo Available WSL distributions:
-  "$wslExe" --list --verbose
-  echo.
-  echo If the distribution is listed as Running, WSL itself is already running
-  echo but did not accept this connection attempt.
-  echo.
-  echo Try from PowerShell:
-  echo   wsl --shutdown
-  echo   wsl -d $DistroName
-  echo.
-)
-echo.
-echo This window stays open so WSL messages remain visible.
-echo Type exit to close it.
-"@
-
-    Set-Content -LiteralPath $launcherPath -Value $content -Encoding ASCII
-    return $launcherPath
-}
-
-function New-AiwShortcut {
-    param(
-        [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][string]$DisplayName,
-        [Parameter(Mandatory)][string]$LinuxPath,
-        [Parameter(Mandatory)][string]$LauncherName
-    )
-
-    $wslExe = Join-Path $env:WINDIR 'System32\wsl.exe'
-    if (-not (Test-Path -LiteralPath $wslExe -PathType Leaf)) {
-        throw "wsl.exe not found at $wslExe"
-    }
-
-    $cmdExe = Join-Path $env:WINDIR 'System32\cmd.exe'
-    if (-not (Test-Path -LiteralPath $cmdExe -PathType Leaf)) {
-        throw "cmd.exe not found at $cmdExe"
-    }
-
-    $parent = Split-Path -Parent $Path
-    New-Item -ItemType Directory -Path $parent -Force | Out-Null
-
-    $launcherPath = New-AiwLauncher -LauncherName $LauncherName -DisplayName $DisplayName -LinuxPath $LinuxPath
-    $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut($Path)
-    $shortcut.TargetPath = $cmdExe
-    $shortcut.Arguments = ('/k "{0}"' -f $launcherPath)
-    $shortcut.WorkingDirectory = $env:USERPROFILE
-    $shortcut.IconLocation = "$wslExe,0"
-    $shortcut.Description = "Open $DisplayName in WSL at $LinuxPath"
-    $shortcut.Save()
+    return "Linux Terminal ($DistroName)"
 }
 
 function Ensure-WindowsShortcuts {
@@ -748,36 +664,16 @@ function Ensure-WindowsShortcuts {
         return
     }
 
-    $displayName = Get-ShortcutDisplayName
-    $terminalDisplayName = "$displayName Terminal"
-    $desktop = [Environment]::GetFolderPath('Desktop')
-    $startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
-    $linuxRepositoryPath = Get-LinuxRepositoryPath
-    $linuxHomePath = Get-LinuxHomePath
+    # Single source of truth: identical behavior for -Action Install, -Action
+    # Shortcuts and direct Create-Shortcuts.ps1 use.
+    $scriptPath = Join-Path $PSScriptRoot 'Create-Shortcuts.ps1'
+    & $scriptPath -DistroName $DistroName -LinuxUser $LinuxUser -ShortcutName $ShortcutName
+    if (-not $?) {
+        throw 'Creating Windows shortcuts failed.'
+    }
 
-    New-AiwShortcut `
-        -Path (Join-Path $desktop "$displayName.lnk") `
-        -DisplayName $displayName `
-        -LinuxPath $linuxRepositoryPath `
-        -LauncherName $displayName
-    New-AiwShortcut `
-        -Path (Join-Path $startMenu "$displayName.lnk") `
-        -DisplayName $displayName `
-        -LinuxPath $linuxRepositoryPath `
-        -LauncherName $displayName
-    New-AiwShortcut `
-        -Path (Join-Path $desktop "$terminalDisplayName.lnk") `
-        -DisplayName $terminalDisplayName `
-        -LinuxPath $linuxHomePath `
-        -LauncherName $terminalDisplayName
-    New-AiwShortcut `
-        -Path (Join-Path $startMenu "$terminalDisplayName.lnk") `
-        -DisplayName $terminalDisplayName `
-        -LinuxPath $linuxHomePath `
-        -LauncherName $terminalDisplayName
-
-    Write-Step "Created Windows shortcuts: $displayName and $terminalDisplayName" Ok
-    Write-Step "Start later from the Windows Start Menu: $displayName"
+    Write-Step "Created Windows shortcuts: $(Get-ShortcutDisplayName) and $(Get-TerminalShortcutDisplayName)" Ok
+    Write-Step "Start later from the Windows Start Menu: $(Get-ShortcutDisplayName)"
 }
 
 function Ensure-LinuxRepository {
@@ -854,7 +750,7 @@ function Show-Status {
     }
 
     $displayName = Get-ShortcutDisplayName
-    $terminalDisplayName = "$displayName Terminal"
+    $terminalDisplayName = Get-TerminalShortcutDisplayName
     $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) "$displayName.lnk"
     $startMenuShortcut = Join-Path (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs') "$displayName.lnk"
     $desktopTerminalShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) "$terminalDisplayName.lnk"

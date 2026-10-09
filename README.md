@@ -14,8 +14,8 @@ You should not have to reconstruct a working Docker/WSL stack with dozens of ad 
 
 | Windows shortcut | Opens the same WSL distribution in | Best for |
 | --- | --- | --- |
-| **AI Workstation** | `/home/moresunlight/ai-workstation` | Managing/updating the installation or running `aiw` |
-| **AI Workstation Terminal** | `/home/moresunlight` | General Linux work outside the project |
+| **Linux AI Workstation** | `/home/moresunlight/ai-workstation` | Managing/updating the installation or running `aiw` |
+| **Linux Terminal** | `/home/moresunlight` | General Linux work outside the project |
 
 Both are created on the Desktop and in the Start Menu. Neither starts another Ubuntu instance or automatically launches an AI application. See [Where to find it later](#where-to-find-it-later) for re-creating launchers and troubleshooting.
 
@@ -256,8 +256,8 @@ aiw open-webui down
 
 ## Return after several weeks
 
-Start `AI Workstation` from the Windows Start Menu or Desktop to open the
-project checkout; `AI Workstation Terminal` opens the same Ubuntu at the home
+Start `Linux AI Workstation` from the Windows Start Menu or Desktop to open the
+project checkout; `Linux Terminal` opens the same Ubuntu at the home
 directory. Both launch ordinary WSL shells. The WSL startup
 hint reminds you that the only command you need to remember is:
 
@@ -278,7 +278,7 @@ aiw update
 After installation, start AI Workstation from Windows:
 
 ```text
-Start Menu -> AI Workstation
+Start Menu -> Linux AI Workstation
 ```
 
 A Desktop shortcut with the same name is created as well. The shortcut opens the
@@ -291,8 +291,8 @@ correct WSL distribution directly inside:
 The installer also creates:
 
 ```text
-Start Menu -> AI Workstation Terminal
-Desktop    -> AI Workstation Terminal
+Start Menu -> Linux Terminal
+Desktop    -> Linux Terminal
 ```
 
 This second shortcut opens:
@@ -301,7 +301,9 @@ This second shortcut opens:
 /home/moresunlight
 ```
 
-Refresh only the Windows shortcuts without rerunning the Linux installation:
+Refresh only the Windows shortcuts without rerunning the Linux installation.
+The refresh also removes older **AI Workstation** / **AI Workstation Terminal**
+links when they can be identified as installer-created; other shortcuts are preserved:
 
 ```powershell
 .\install.ps1 -Action Shortcuts
@@ -359,7 +361,8 @@ working reference distribution:
 This creates a separate Windows shortcut named:
 
 ```text
-AI Workstation (Ubuntu-24.04-Test)
+Linux AI Workstation (Ubuntu-24.04-Test)
+Linux Terminal (Ubuntu-24.04-Test)
 ```
 
 See [Clean-room test](docs/clean-room-test.md).

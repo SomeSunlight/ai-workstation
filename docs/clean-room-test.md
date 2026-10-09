@@ -22,7 +22,8 @@ names are unsupported, it stops before creating the test distribution.
 After the test succeeds, start it from Windows:
 
 ```text
-Start Menu -> AI Workstation (Ubuntu-24.04-Test)
+Start Menu -> Linux AI Workstation (Ubuntu-24.04-Test)
+Start Menu -> Linux Terminal (Ubuntu-24.04-Test)
 ```
 
 Fallback:
