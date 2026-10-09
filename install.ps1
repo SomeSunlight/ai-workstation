@@ -18,7 +18,7 @@ param(
     [string]$WslMemory = '48GB',
     [ValidatePattern('^\d+(MB|GB)$')]
     [string]$WslSwap = '8GB',
-    [string]$ShortcutName = 'AI Workstation',
+    [string]$ShortcutName = 'Linux AI Workstation',
     [switch]$NoShortcuts,
     [switch]$NoAutomaticRestart,
     [switch]$SkipLinuxInstall,

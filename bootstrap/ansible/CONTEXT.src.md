@@ -1,34 +1,66 @@
 # Ansible host configuration — Local Context Source
-<!-- ctx:node id="ad9cbb59-ae04-4290-9c53-5d70cfefe434" name="Ansible host configuration" version="0.1.2-draft" -->
+<!-- ctx:node id="ad9cbb59-ae04-4290-9c53-5d70cfefe434" name="Ansible host configuration" version="0.2.0-draft" -->
 
-## Parent Context Node
+<!-- contextcanon:format Node
+Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
+Details: CONTEXT-format.md
+-->
+
+<!-- contextcanon:source-help:intro:start -->
+Edit this local Context source; ContextCanon generates CONTEXT.md from it.
+Some sections use a strict syntax. The comments below show the expected format.
+New Rules, Topics and Resources receive IDs automatically during build; preserve existing IDs.
+See [the source format guide](CONTEXT-format.md) for examples and editing instructions.
+<!-- contextcanon:source-help:intro:end -->
+
+## Context Imports
+
+<!-- contextcanon:format Context Imports
+Format: - [Name](location) — `version` — `relationship=parent|reference`; optional indented Why:, then ctx:source metadata. Preserve exact pins; use source list/adopt/update for package identity.
+Details: CONTEXT-format.md
+-->
 
 <!-- contextcanon-placement-parent:start -->
-- [Bootstrap](..) — `0.1.2-draft`
-  <!-- ctx:parent id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.1.2-draft" normalized-digest="a5acfe9353cd48188dafb8149a9b0401aca7415e9c1accc53ef2be907976828f" package-digest="956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9" -->
+- [Bootstrap](..) — `0.2.0-draft` — `relationship=parent`
+  <!-- ctx:source id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.2.0-draft" normalized-digest="59cc67c06924af00df20ae1aff6fc6f206b3e2d2dd4ca626834a68a1ee16c8f2" package-digest="1c63971d5569ceacda28e0b95f350c499badbb4a08356b26893bf4d3ad39d327" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview
 
+<!-- contextcanon:format Local Overview
+Format: Ordinary Markdown orientation, local to this Node. Any existing placement identity follows its paragraph/item; do not change it.
+Details: CONTEXT-format.md
+-->
+
 <!-- contextcanon-placement-overview:start -->
-<!-- cc:placement-overview id="ONB-444A1E93B553" -->
 - Ansible owns Ubuntu host state and Docker Engine.
+  <!-- cc:placement-overview id="ONB-444A1E93B553" -->
 <!-- contextcanon-placement-overview:end -->
 
 ## Local State
 
+<!-- contextcanon:format Local State
+Format: Ordinary Markdown describing the current local situation. Any existing placement identity follows its paragraph/item; preserve it.
+Details: CONTEXT-format.md
+-->
+
 <!-- contextcanon-placement-state:start -->
-<!-- cc:placement-state id="ONB-F7A368F3CAE1" -->
 - The automation environment requires Python 3.12.*.
+  <!-- cc:placement-state id="ONB-F7A368F3CAE1" -->
 
-<!-- cc:placement-state id="ONB-73F6A9557DB5" -->
 - `ansible-core` is pinned to 2.21.1.
+  <!-- cc:placement-state id="ONB-73F6A9557DB5" -->
 
-<!-- cc:placement-state id="ONB-D32F29A7A6AB" -->
 - `ansible-lint` is pinned to 26.6.0.
+  <!-- cc:placement-state id="ONB-D32F29A7A6AB" -->
 <!-- contextcanon-placement-state:end -->
 
 ## Local Rules
+
+<!-- contextcanon:format Local Rules
+Format: ### Group, then - **Title:** Statement, then indented Why: Rationale. build adds a missing ctx:rule ID after the entry; preserve existing IDs.
+Details: CONTEXT-format.md
+-->
 
 <!-- contextcanon-placement-rules:start -->
 ### Onboarding placement

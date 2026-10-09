@@ -1,38 +1,75 @@
 # Containerized application runtimes — Local Context Source
-<!-- ctx:node id="90dd976e-8753-495b-a631-d708b13878d1" name="Containerized application runtimes" version="0.1.3-draft" -->
+<!-- ctx:node id="90dd976e-8753-495b-a631-d708b13878d1" name="Containerized application runtimes" version="0.2.0-draft" -->
 
-## Parent Context Node
+<!-- contextcanon:format Node
+Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
+Details: CONTEXT-format.md
+-->
+
+<!-- contextcanon:source-help:intro:start -->
+Edit this local Context source; ContextCanon generates CONTEXT.md from it.
+Some sections use a strict syntax. The comments below show the expected format.
+New Rules, Topics and Resources receive IDs automatically during build; preserve existing IDs.
+See [the source format guide](CONTEXT-format.md) for examples and editing instructions.
+<!-- contextcanon:source-help:intro:end -->
+
+## Context Imports
+
+<!-- contextcanon:format Context Imports
+Format: - [Name](location) — `version` — `relationship=parent|reference`; optional indented Why:, then ctx:source metadata. Preserve exact pins; use source list/adopt/update for package identity.
+Details: CONTEXT-format.md
+-->
 
 <!-- contextcanon-placement-parent:start -->
-- [ai-workstation](..) — `0.1.2`
-  <!-- ctx:parent id="aea56adf-2a26-43f0-b712-3bbeab7a3097" version="0.1.2" normalized-digest="2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf" package-digest="faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82" -->
+- [ai-workstation](..) — `0.2.0` — `relationship=parent`
+  <!-- ctx:source id="aea56adf-2a26-43f0-b712-3bbeab7a3097" version="0.2.0" normalized-digest="d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739" package-digest="0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview
 
-<!-- contextcanon-placement-overview:start -->
-<!-- cc:placement-overview id="ONB-C188029871F5" -->
-- Dockerfiles define the contents of service images.
+<!-- contextcanon:format Local Overview
+Format: Ordinary Markdown orientation, local to this Node. Any existing placement identity follows its paragraph/item; do not change it.
+Details: CONTEXT-format.md
+-->
 
-<!-- cc:placement-overview id="ONB-DBF6C3D9FAA2" -->
+<!-- contextcanon-placement-overview:start -->
+- Dockerfiles define the contents of service images.
+  <!-- cc:placement-overview id="ONB-C188029871F5" -->
+
 - Compose defines services, mounts, networks and resource limits.
+  <!-- cc:placement-overview id="ONB-DBF6C3D9FAA2" -->
 <!-- contextcanon-placement-overview:end -->
 
 ## Local State
 
+<!-- contextcanon:format Local State
+Format: Ordinary Markdown describing the current local situation. Any existing placement identity follows its paragraph/item; preserve it.
+Details: CONTEXT-format.md
+-->
+
 <!-- contextcanon-placement-state:start -->
-<!-- cc:placement-state id="ONB-5475B681ADB6" -->
 - The currently integrated application runtimes are Goose and Open WebUI.
+  <!-- cc:placement-state id="ONB-5475B681ADB6" -->
 <!-- contextcanon-placement-state:end -->
 
 ## Local Plan
 
+<!-- contextcanon:format Local Plan
+Format: Ordinary Markdown describing intended local work. Any existing placement identity follows its paragraph/item; preserve it.
+Details: CONTEXT-format.md
+-->
+
 <!-- contextcanon-placement-plan:start -->
-<!-- cc:placement-plan id="ONB-F2E85C95052E" -->
 - Goose supports operator-selected local/self-hosted and public model connections through its native configuration; hardware inference provisioning remains a separate host runtime concern.
+  <!-- cc:placement-plan id="ONB-F2E85C95052E" -->
 <!-- contextcanon-placement-plan:end -->
 
 ## Local Rules
+
+<!-- contextcanon:format Local Rules
+Format: ### Group, then - **Title:** Statement, then indented Why: Rationale. build adds a missing ctx:rule ID after the entry; preserve existing IDs.
+Details: CONTEXT-format.md
+-->
 
 <!-- contextcanon-placement-rules:start -->
 ### Onboarding placement

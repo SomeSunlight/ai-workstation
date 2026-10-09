@@ -2,6 +2,45 @@
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
+
+## Current review block — Issues #26 and #27 (post-PR #24 integration): recovery-first README and learnable aiw menu
+
+Purpose: explain the full Windows-to-WSL-to-AI installation and its two shortcuts up front; make every actionable interactive menu operation teach its equivalent direct CLI invocation before optional execution.
+
+Writable scope: `README.md`, `bin/aiw`, `bin/aiw-core`, shared `bin/aiw-menu-config.sh`, focused `tests/smoke/`, `tools/release-check.sh`, `PLAN.md`, `STATE.md`. Do not change bootstrap/WSL lifecycle, runtime isolation, central versions or generated ContextCanon files. This block is delegated for coherent implementation and owner review; no merge authorized.
+
+- [x] Read ContextCanon workflow and inspect current command surface, launchers, existing tests and current main.
+- [x] Create Issues #26 and #27 and a dedicated branch.
+- [x] Implement persistent commented YAML configuration, editor entry and reusable command-preview/confirmation.
+- [x] Cover top-level, Goose, Open WebUI, workspace, and local-inference actions, including dynamic parameters.
+- [x] Put recovery-first value proposition and launcher distinction at the start of README.
+- [x] Add behavioral tests for preview on/off, y/n/EOF, quoting, persistence, invalid config and editor.
+- [x] Run available focused and release checks; inspect final change diff.
+- [x] Publish a coherent review PR for the project owner; do not merge without approval.
+
+### Owner follow-up — launcher naming/migration (Issue #26)
+
+Extension to writable scope: `install.ps1`, `bootstrap/windows/Create-Shortcuts.ps1`, `bootstrap/windows/Install-AiWorkstation.ps1`, `docs/troubleshooting.md`, `docs/clean-room-test.md`, `tests/windows/`, `.github/workflows/validate.yml`, and related README/PLAN surfaces. No runtime/WSL provision changes. Preserve installer idempotency and avoid removing arbitrary user shortcuts.
+
+- [x] Check existing installer + standalone shortcut implementations and status logic.
+- [x] Keep the public `install.ps1` wrapper default consistent with its implementation (found in final cross-check).
+- [x] Unify Windows shortcut creation and move to the explicit `Linux …` labels with distro suffixes.
+- [x] Make legacy link migration owned-only, idempotent and safe for unrelated shortcuts.
+- [x] Update user documentation and add actual Windows runner checks.
+- [x] Pass complete CI on the shortcut-implementation review head and present for owner review (no merge).
+
+Validation checkpoint: Windows GitHub Actions `windows-shortcuts` job passed on code head `b4a001eabb8fcd82256c516ba90b0b0212077337`, covering shortcut targets, legacy ownership checks, reruns and separate distro labels. Full GitHub Actions validation passed on `1622601e80649cf7e7e92312fd32d9dade8b05ed` in [run 37918181020](https://github.com/SomeSunlight/ai-workstation/actions/runs/37918181020): both Ubuntu verify/lint/syntax and Windows shortcut creation/migration tests are green. The final Windows-script smoke test now also covers the public `install.ps1` default. On the latest source head `46a87ea6cf0e7b7318b448baa1e3b802ab7c5030`, the Windows job passed; exact-head Ubuntu checks were running at this checkpoint. As usual, the latest PR head still needs green CI before owner merge. Because of the ContextCanon archive's very long paths, the Windows job uses a deliberately narrow sparse checkout.
+
+Review checkpoint: [PR #28](https://github.com/SomeSunlight/ai-workstation/pull/28) is open against main for owner review; **not merged**; accepted PR #24 was merged into the review branch, preserving native Goose configuration. Branch `agent/issues-26-27-readme-menu-preview` starts from accepted original main `e4f6ee86e746241ea6630bb759b971b7e47012b7`. The code-and-behavior review head `4b7a277017c026c28a951d2203e29daa9eba374e` passed the complete GitHub Validate workflow on Ubuntu 24.04, including the release checks and new menu-preview tests. The latest source/test changes and owner-requested Windows shortcut rename passed both Linux and Windows CI; the latest reviewed PR head must pass CI again after this planning checkpoint before owner merge. Full WSL/Docker hardware testing remains owner acceptance. Direct `aiw` CLI invocations remain unchanged; preview applies only to interactive selections.
+
+Integration checkpoint: [GitHub Actions run 37951781424](https://github.com/SomeSunlight/ai-workstation/actions/runs/37951781424) passed on actual merge head `59e6901d096e2abc5a792597fa5ccf80adae4d8a` (Ubuntu full release/Goose tests + Windows shortcuts). PR #28 is mergeable again with no commits behind `main`. Source `bin/aiw-core` retains PR #24 Goose native configuration and includes command previews for `goose configure`, `goose env`, and `goose check`; update-recovery fixture and release-check retain both PRs' tests. The owner has not approved merging PR #28 and will perform the real WSL acceptance test next.
+
+### Reconcile merged PR #24 before owner test
+
+- [x] Confirm PR #24 was accepted on main, inspect Goose native provider settings and changed tests.
+- [x] Integrate menu preview into the accepted Goose provider workflows without restoring obsolete OpenRouter assumptions.
+- [x] Re-run Ubuntu + Windows CI and record review-ready conflict resolution; leave PR #28 open for owner acceptance.
+
 ## Owner-test follow-up — Issue #25: clean Goose Compose ownership
 
 Purpose: address the owner's repeated volume ownership warning without permanent compatibility behavior for the old Compose project name.

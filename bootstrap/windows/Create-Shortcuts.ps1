@@ -9,21 +9,25 @@ param(
     [string]$DistroName = 'Ubuntu-24.04',
     [ValidatePattern('^[a-z_][a-z0-9_-]*$')]
     [string]$LinuxUser = 'moresunlight',
-    [string]$ShortcutName = 'AI Workstation'
+    [string]$ShortcutName = 'Linux AI Workstation',
+    # Test-only path overrides; normal installation uses the Windows user folders.
+    [string]$DesktopDirectory = [Environment]::GetFolderPath('Desktop'),
+    [string]$StartMenuDirectory = (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'),
+    [string]$LauncherDirectory = (Join-Path $env:LOCALAPPDATA 'AiWorkstationBootstrap\launchers')
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $displayName = if ($DistroName -eq 'Ubuntu-24.04') { $ShortcutName } else { "$ShortcutName ($DistroName)" }
-$terminalDisplayName = "$displayName Terminal"
+$terminalDisplayName = if ($DistroName -eq 'Ubuntu-24.04') { 'Linux Terminal' } else { "Linux Terminal ($DistroName)" }
 $linuxPath = "/home/$LinuxUser/ai-workstation"
 $linuxHome = "/home/$LinuxUser"
 $wslExe = Join-Path $env:WINDIR 'System32\wsl.exe'
 $cmdExe = Join-Path $env:WINDIR 'System32\cmd.exe'
-$desktop = [Environment]::GetFolderPath('Desktop')
-$startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
-$launcherRoot = Join-Path $env:LOCALAPPDATA 'AiWorkstationBootstrap\launchers'
+$desktop = $DesktopDirectory
+$startMenu = $StartMenuDirectory
+$launcherRoot = $LauncherDirectory
 $shell = New-Object -ComObject WScript.Shell
 
 function ConvertTo-SafeFileName {
@@ -58,6 +62,11 @@ set "AIW_EXIT=%ERRORLEVEL%"
 if not "%AIW_EXIT%"=="0" (
   echo.
   echo WSL failed with exit code %AIW_EXIT%.
+  echo.
+  echo Available WSL distributions:
+  "$wslExe" --list --verbose
+  echo.
+  echo If a distribution shows Running, WSL is already running but could not accept this connection.
   echo.
   echo Try from PowerShell:
   echo   wsl --shutdown
@@ -97,6 +106,48 @@ function New-AiwShortcut {
     Write-Host "Created $path"
 }
 
+
+# Recognize only the exact links made by older AI Workstation installers.
+# Do not delete an unrelated shortcut merely because it has the same name.
+function Remove-LegacyAiwShortcut {
+    param(
+        [Parameter(Mandatory)][string]$Folder,
+        [Parameter(Mandatory)][string]$LegacyName,
+        [Parameter(Mandatory)][string]$LegacyLinuxPath
+    )
+
+    $path = Join-Path $Folder "$LegacyName.lnk"
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
+        $LegacyName -eq $displayName -or $LegacyName -eq $terminalDisplayName) {
+        return
+    }
+
+    $originalLauncher = Join-Path $launcherRoot "$(ConvertTo-SafeFileName -Value $LegacyName).cmd"
+    $expectedArguments = '/k "{0}"' -f $originalLauncher
+    $expectedDescription = "Open $LegacyName in WSL at $LegacyLinuxPath"
+
+    try {
+        $existing = $shell.CreateShortcut($path)
+        if ($existing.TargetPath -ieq $cmdExe -and
+            $existing.Arguments -eq $expectedArguments -and
+            $existing.Description -eq $expectedDescription) {
+            Remove-Item -LiteralPath $path
+            Write-Host "Removed obsolete AI Workstation shortcut $path"
+        }
+        else {
+            Write-Host "Preserved non-owned or customized shortcut $path"
+        }
+    }
+    catch {
+        Write-Warning "Could not inspect legacy shortcut '$path'; leaving it unchanged: $_"
+    }
+}
+
+# The old launchers are left untouched: they are harmless without .lnk links,
+# and may still be used by a user-created shortcut.
+$legacyDisplayName = if ($DistroName -eq 'Ubuntu-24.04') { 'AI Workstation' } else { "AI Workstation ($DistroName)" }
+$legacyTerminalName = "$legacyDisplayName Terminal"
+
 foreach ($folder in @($desktop, $startMenu)) {
     New-AiwShortcut `
         -Folder $folder `
@@ -107,4 +158,8 @@ foreach ($folder in @($desktop, $startMenu)) {
         -Folder $folder `
         -ShortcutDisplayName $terminalDisplayName `
         -ShortcutLinuxPath $linuxHome
+
+    # Create/refresh both replacements before removing old links.
+    Remove-LegacyAiwShortcut -Folder $folder -LegacyName $legacyDisplayName -LegacyLinuxPath $linuxPath
+    Remove-LegacyAiwShortcut -Folder $folder -LegacyName $legacyTerminalName -LegacyLinuxPath $linuxHome
 }
