@@ -69,7 +69,7 @@ assert_absent "$output" 'Docker is not installed'
 
 # Nested local-inference menu: dynamically entered arguments are shell-quoted.
 output="$(printf '2\n10\nmodel with spaces\nn\nb\nq\n' | "$CLI" 2>&1)"
-assert_contains "$output" 'Command to run: aiw local-inference llama select model\\ with\\ spaces'
+assert_contains "$output" 'Command to run: aiw local-inference llama select model\ with\ spaces'
 
 # Invalid or duplicate setting must refuse execution (fail closed), not become false.
 printf 'menu_command_preview: maybe\n' > "$AIW_MENU_CONFIG_FILE"
