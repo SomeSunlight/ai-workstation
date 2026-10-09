@@ -59,6 +59,7 @@ Usage:
   aiw goose workspace list
   aiw goose workspace remove NAME
   aiw goose help
+  aiw goose quick-help      Show Goose slash-key shortcuts
 
 Notes:
   - A session container is created only for the selected workspace.
@@ -112,8 +113,10 @@ run_menu_action() {
     local -a preview=()
     case "${1:-}" in
         goose_workspace_list) preview=(aiw goose workspace list) ;;
+        goose_quick_help) preview=(aiw goose quick-help) ;;
         show_goose_status) preview=(aiw goose status) ;;
         goose_pull) preview=(aiw goose pull) ;;
+        open_webui_usage) preview=(aiw open-webui help) ;;
         open_webui_open) preview=(aiw open-webui open) ;;
         open_webui_up) preview=(aiw open-webui up) ;;
         open_webui_down) preview=(aiw open-webui down) ;;
@@ -121,6 +124,7 @@ run_menu_action() {
         open_webui_recover_provider_configuration) preview=(aiw open-webui recover) ;;
         show_open_webui_status) preview=(aiw open-webui status) ;;
         open_webui_pull) preview=(aiw open-webui pull) ;;
+        usage) preview=(aiw help) ;;
         show_status) preview=(aiw status) ;;
         update_repository) preview=(aiw update) ;;
     esac
@@ -601,6 +605,9 @@ goose_command() {
         logs)
             printf '[..] Goose session containers are removed when sessions end.\n'
             printf '[..] Session output is shown directly in the terminal.\n'
+            ;;
+        quick-help)
+            goose_quick_help
             ;;
         help|-h|--help)
             goose_usage
