@@ -22,10 +22,12 @@ Writable scope: `README.md`, `bin/aiw`, `bin/aiw-core`, shared `bin/aiw-menu-con
 Extension to writable scope: `bootstrap/windows/Create-Shortcuts.ps1`, `bootstrap/windows/Install-AiWorkstation.ps1`, `docs/troubleshooting.md`, `docs/clean-room-test.md`, `tests/windows/`, `.github/workflows/validate.yml`, and related README/PLAN surfaces. No runtime/WSL provision changes. Preserve installer idempotency and avoid removing arbitrary user shortcuts.
 
 - [x] Check existing installer + standalone shortcut implementations and status logic.
-- [ ] Unify Windows shortcut creation and move to the explicit `Linux …` labels with distro suffixes.
-- [ ] Make legacy link migration owned-only, idempotent and safe for unrelated shortcuts.
-- [ ] Update user documentation and add actual Windows runner checks.
+- [x] Unify Windows shortcut creation and move to the explicit `Linux …` labels with distro suffixes.
+- [x] Make legacy link migration owned-only, idempotent and safe for unrelated shortcuts.
+- [x] Update user documentation and add actual Windows runner checks.
 - [ ] Pass complete CI on the new exact PR head, then present for owner review (no merge).
+
+Validation checkpoint: Windows GitHub Actions `windows-shortcuts` job passed on code head `b4a001eabb8fcd82256c516ba90b0b0212077337`, covering shortcut targets, legacy ownership checks, reruns and separate distro labels. Ubuntu validation passed repository and smoke checks on that head; full lint/syntax is still running. Because of the ContextCanon archive's very long paths, the Windows job uses a deliberately narrow sparse checkout.
 
 Review checkpoint: [PR #28](https://github.com/SomeSunlight/ai-workstation/pull/28) is open against main for owner review; **not merged**. Branch `agent/issues-26-27-readme-menu-preview` starts from accepted main `e4f6ee86e746241ea6630bb759b971b7e47012b7`. The code-and-behavior review head `4b7a277017c026c28a951d2203e29daa9eba374e` passed the complete GitHub Validate workflow on Ubuntu 24.04, including the release checks and new menu-preview tests. This plan/test hygiene commit must pass the same check before merge. Full WSL/Docker hardware testing remains owner acceptance. Direct `aiw` CLI invocations remain unchanged; preview applies only to interactive selections.
 
