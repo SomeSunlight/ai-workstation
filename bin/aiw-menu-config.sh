@@ -68,7 +68,12 @@ aiw_menu_confirm_command() {
     printf '\nCommand to run:'
     printf ' %q' "$@"
     printf '\n'
-    read -r -p 'Continue? [y/N] ' reply || return 1
+    printf 'Continue? [y/N] '
+    if ! read -r reply; then
+        printf '\\n'
+        return 1
+    fi
+    printf '\\n'
     [[ "$reply" == y || "$reply" == Y ]]
 }
 
