@@ -14,6 +14,9 @@ bash ./tests/smoke/local-inference-runtime.sh
 bash ./tests/smoke/container-updates.sh
 bash ./tests/smoke/interactive-menu.sh
 bash ./tests/smoke/menu-preview.sh
+bash ./tests/smoke/goose-runtime.sh
+bash ./tests/smoke/goose-provider-config.sh
+bash ./tests/smoke/goose-compose-config.sh
 
 if [[ -x "${HOME}/.local/bin/uv" ]]; then
   "${HOME}/.local/bin/uv" lock --check --python /usr/bin/python3

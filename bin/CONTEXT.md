@@ -8,15 +8,15 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** aiw operator interface  
-**Context version:** `0.1.1-draft`
+**Context version:** `0.1.2-draft`
 
-**Parent Context Node:** [ai-workstation](.context/sources/f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613/CONTEXT.md) — `0.1.1`  
-**Accepted Parent package:** `f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613`
+**Parent Context Node:** [ai-workstation](.context/sources/faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82/CONTEXT.md) — `0.1.2`  
+**Accepted Parent package:** `faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82`
 
 **Resulting imported Contexts:**
 
-- **Development Workflow** — `0.3.0-draft` — via Parent Context Node **ai-workstation** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](.context/sources/f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613/CONTEXT.md)
-- **ai-workstation** — `0.1.1` — direct Parent Context Node — [inspect accepted carrier](.context/sources/f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613/CONTEXT.md)
+- **Development Workflow** — `0.3.0-draft` — via Parent Context Node **ai-workstation** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](.context/sources/faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82/CONTEXT.md)
+- **ai-workstation** — `0.1.2` — direct Parent Context Node — [inspect accepted carrier](.context/sources/faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82/CONTEXT.md)
 
 ## Local Overview
 

@@ -77,6 +77,16 @@ output="$(printf '1\n2\n4\nn\nb\nq\nq\n' | "$CLI" 2>&1)"
 assert_contains "$output" 'Command to run: aiw open-webui restart'
 assert_absent "$output" 'Docker is not installed'
 
+# The native Goose provider options introduced by accepted PR #24 also need
+# truthful previews, and declining them must not invoke Docker or an editor.
+for spec in '9|configure' '10|env' '11|check'; do
+    choice="${spec%%|*}"
+    subcommand="${spec#*|}"
+    output="$(printf '1\n1\n%s\nn\nb\nq\nq\n' "$choice" | "$CLI" 2>&1)"
+    assert_contains "$output" "Command to run: aiw goose $subcommand"
+    assert_absent "$output" 'Docker is not installed'
+done
+
 # Informational actions have public CLI equivalents too.
 output="$(printf '1\n1\n6\ny\n\nb\nq\nq\n' | "$CLI" 2>&1)"
 assert_contains "$output" 'Command to run: aiw goose quick-help'

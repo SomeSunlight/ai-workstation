@@ -17,6 +17,7 @@ readonly COLLECTIONS_DIR="${ROOT}/.ansible/collections"
 readonly RUNTIME_ENV_FILE="${AIW_RUNTIME_ENV_FILE:-${ROOT}/.env}"
 readonly RUNTIME_ENV_EXAMPLE="${AIW_RUNTIME_ENV_EXAMPLE:-${ROOT}/.env.example}"
 readonly GOOSE_COMPOSE_FILE="${ROOT}/compose/goose.yml"
+readonly GOOSE_ENV_FILE="$(readlink -m -- "${AIW_GOOSE_ENV_FILE:-${CONFIG_DIR}/goose.env}")"
 readonly OPEN_WEBUI_COMPOSE_FILE="${ROOT}/compose/open-webui.yml"
 readonly DEFAULT_OPEN_WEBUI_PORT="3000"
 source "${ROOT}/bin/aiw-menu-config.sh"
@@ -49,6 +50,9 @@ Goose commands
 
 Usage:
   aiw goose init
+  aiw goose configure        Configure any provider using the native Goose menu
+  aiw goose env              Edit optional Goose-only environment settings
+  aiw goose check            Test the selected connection without a workspace
   aiw goose status
   aiw goose pull
   aiw goose update [VERSION|--repository] [--yes]
@@ -113,6 +117,9 @@ run_menu_action() {
     local -a preview=()
     case "${1:-}" in
         goose_workspace_list) preview=(aiw goose workspace list) ;;
+        goose_configure) preview=(aiw goose configure) ;;
+        goose_edit_env) preview=(aiw goose env) ;;
+        goose_check) preview=(aiw goose check) ;;
         goose_quick_help) preview=(aiw goose quick-help) ;;
         show_goose_status) preview=(aiw goose status) ;;
         goose_pull) preview=(aiw goose pull) ;;
@@ -406,15 +413,11 @@ EOF_USAGE
 # Goose runtime --------------------------------------------------------------
 
 goose_compose() {
-    compose_for ai-workstation-goose "$GOOSE_COMPOSE_FILE" "$@"
-}
-
-legacy_goose_compose() {
-    compose_for ai-workstation "$GOOSE_COMPOSE_FILE" "$@"
-}
-
-cleanup_legacy_goose_runtime() {
-    legacy_goose_compose down --remove-orphans >/dev/null 2>&1 || true
+    if [[ -f "$GOOSE_ENV_FILE" ]] && ! chmod 600 "$GOOSE_ENV_FILE"; then
+        warn 'Cannot protect the Goose-only environment file.'
+        return 1
+    fi
+    AIW_GOOSE_ENV_FILE="$GOOSE_ENV_FILE" compose_for ai-workstation-goose "$GOOSE_COMPOSE_FILE" "$@"
 }
 
 goose_init() {
@@ -426,23 +429,11 @@ goose_init() {
     if [[ -n "$(env_value AIW_GOOSE_WORKSPACE "$RUNTIME_ENV_FILE")" ]]; then
         warn "AIW_GOOSE_WORKSPACE is obsolete and ignored. Use the Goose workspace registry instead."
     fi
-    printf '[..] Set OPENROUTER_API_KEY and GOOSE_MODEL in %s.\n' "$RUNTIME_ENV_FILE"
+    printf '[..] Choose your provider and model with: aiw goose configure\n'
 }
 
-require_goose_configuration() {
-    [[ -f "$RUNTIME_ENV_FILE" ]] || fail "Goose configuration is missing. Run: aiw goose init"
-    chmod 600 "$RUNTIME_ENV_FILE"
-
-    local provider model api_key
-    provider="$(env_value GOOSE_PROVIDER "$RUNTIME_ENV_FILE")"
-    model="$(env_value GOOSE_MODEL "$RUNTIME_ENV_FILE")"
-    api_key="$(env_value OPENROUTER_API_KEY "$RUNTIME_ENV_FILE")"
-
-    [[ "${provider:-openrouter}" == "openrouter" ]] || \
-        fail "This runtime layer currently supports GOOSE_PROVIDER=openrouter only."
-    [[ -n "$model" ]] || fail "GOOSE_MODEL is empty in .env. Set an OpenRouter model ID."
-    [[ -n "$api_key" ]] || fail "OPENROUTER_API_KEY is empty in .env."
-}
+# Native configuration, connection checks and optional provider environment.
+source "${ROOT}/tools/goose-config.sh"
 
 goose_quick_help() {
     cat <<'EOF_HELP'
@@ -461,30 +452,23 @@ EOF_HELP
 }
 
 show_goose_status() {
-    local config_status="missing"
-    local model="not configured"
     local workspace_count=0
-
-    if [[ -f "$RUNTIME_ENV_FILE" ]]; then
-        if [[ -n "$(env_value OPENROUTER_API_KEY "$RUNTIME_ENV_FILE")" && \
-              -n "$(env_value GOOSE_MODEL "$RUNTIME_ENV_FILE")" ]]; then
-            config_status="configured"
-        else
-            config_status="incomplete"
-        fi
-        model="$(env_value GOOSE_MODEL "$RUNTIME_ENV_FILE")"
-        [[ -n "$model" ]] || model="not configured"
-    fi
     if [[ -d "$GOOSE_WORKSPACES_DIR" ]]; then
         workspace_count="$(find "$GOOSE_WORKSPACES_DIR" -mindepth 1 -maxdepth 1 -type l | wc -l)"
     fi
 
     printf 'Goose Compose        : %s\n' "$([[ -f "$GOOSE_COMPOSE_FILE" ]] && printf 'present' || printf 'missing')"
     printf 'Goose selected image : %s\n' "$(runtime_selected_image goose GOOSE_IMAGE)"
-    printf 'Goose configuration  : %s\n' "$config_status"
-    printf 'Goose model          : %s\n' "$model"
+    printf 'Goose settings       : persistent goose-home volume (native Goose)\n'
+    printf 'Goose environment    : %s (%s)\n' "$GOOSE_ENV_FILE" "$([[ -f "$GOOSE_ENV_FILE" ]] && printf 'present' || printf 'optional; absent')"
     printf 'Goose workspaces     : %s\n' "$workspace_count"
     printf 'Goose container mode : isolated per session\n'
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 && \
+        docker image inspect "$(runtime_selected_image goose GOOSE_IMAGE)" >/dev/null 2>&1; then
+        goose_config_summary status || warn 'Cannot read native Goose configuration; no provider was selected automatically.'
+    else
+        printf 'Goose connection     : unavailable for inspection (Docker or selected image unavailable)\n'
+    fi
 }
 
 goose_pull() {
@@ -495,8 +479,7 @@ goose_pull() {
 goose_down() {
     require_docker
     goose_compose down --remove-orphans
-    cleanup_legacy_goose_runtime
-    printf '[OK] Goose session containers and the legacy utility container are stopped.\n'
+    printf '[OK] Goose session containers are stopped.\n'
 }
 
 goose_version() {
@@ -524,7 +507,6 @@ goose_run_in_workspace() {
 
     require_docker
     require_goose_configuration
-    cleanup_legacy_goose_runtime
     local host_path container_path
     host_path="$(goose_workspace_path "$workspace_name")"
     container_path="/workspaces/${workspace_name}"
@@ -573,6 +555,15 @@ goose_command() {
     case "$subcommand" in
         init)
             goose_init
+            ;;
+        configure)
+            goose_configure
+            ;;
+        env)
+            goose_edit_env
+            ;;
+        check)
+            goose_check
             ;;
         status)
             show_goose_status
@@ -1001,6 +992,9 @@ Goose
 6) Show quick help
 7) Pull pinned Goose image
 8) Update application
+9) Configure provider, model and extensions
+10) Edit Goose environment (advanced)
+11) Test selected connection (no workspace)
 b) Back
 q) Exit
 EOF_MENU
@@ -1014,6 +1008,9 @@ EOF_MENU
             6) run_menu_action goose_quick_help ;;
             7) run_menu_action goose_pull ;;
             8) run_menu_action menu_update_application goose ;;
+            9) run_menu_action goose_configure ;;
+            10) run_menu_action goose_edit_env ;;
+            11) run_menu_action goose_check ;;
             b|B) return ;;
             q|Q) exit 0 ;;
             *) printf 'Unknown selection.\n' ;;

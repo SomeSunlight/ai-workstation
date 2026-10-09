@@ -130,21 +130,32 @@ Inside Ubuntu:
 aiw status
 ```
 
-## Configure the shared OpenRouter key
+## Configure Goose's model connection
 
-Goose and Open WebUI use the same Git-ignored `.env` file:
+Open `aiw` → **Standard tools** → **Goose** → **Configure provider, model and extensions**.
+This opens Goose's native configuration menu in its container without mounting a
+project. Select a supported local/self-hosted or public provider and your model.
+OpenRouter is an optional first test; it is not required.
 
 ```bash
-cd ~/ai-workstation
-aiw goose init
-nano .env
+aiw goose configure
+aiw goose check
 ```
 
-Set at least:
+Goose keeps settings and credentials in its existing home volume. The launcher
+does not override them with a public provider or import shared OpenRouter keys.
+Advanced provider/subagent environment settings can be edited from the same menu
+or with `aiw goose env`. See [Goose configuration](docs/goose-configuration.md)
+for a local OpenAI-compatible API, main/subagent models, migration and
+confidential-workflow boundaries.
+
+## Configure Open WebUI's optional OpenRouter key
+
+Run `aiw open-webui init`, then edit the Git-ignored `.env` file in the
+workstation checkout and set:
 
 ```dotenv
 OPENROUTER_API_KEY=replace-with-your-key
-GOOSE_MODEL=provider/model-id
 ```
 
 The `.env` file is ignored by Git and changed to mode `600` by `aiw`. Do not put
@@ -192,6 +203,9 @@ Other Goose commands:
 
 ```bash
 aiw goose init
+aiw goose configure
+aiw goose env
+aiw goose check
 aiw goose status
 aiw goose pull
 aiw goose update
@@ -240,7 +254,7 @@ The service:
 - uses the pinned official Open WebUI image;
 - binds only to `127.0.0.1` on the WSL host;
 - persists accounts, chats, settings and knowledge data in a named Docker volume;
-- connects to OpenRouter through the shared API key;
+- initially connects to OpenRouter through its `.env` API key;
 - disables the unused Ollama connection for this phase;
 - does not receive the Docker socket or a host workspace.
 

@@ -5,14 +5,13 @@ prototype. Normal users start with the root `README.md`.
 
 ## 1. Prepare the new tree
 
-Extract the repository seed on Windows, then copy its directory into the WSL
-Linux filesystem as `~/ai-workstation-next`. Do not operate the new tree under
-`/mnt/c`. Because Windows archive extraction does not preserve Linux modes, run:
+This section documents the historical prototype-publication workflow. Normal
+installations now clone the repository directly from GitHub into the WSL Linux
+filesystem and therefore preserve Git-tracked executable bits.
 
-```bash
-cd ~/ai-workstation-next
-bash ./tools/normalize-permissions.sh
-```
+Do not operate the repository under `/mnt/c`. If a one-off imported tree came
+through Windows and lost Unix file modes, prefer a fresh Linux-side Git clone
+instead of applying repository-wide permission rewriting.
 
 ## 2. Adopt the tested lockfile
 

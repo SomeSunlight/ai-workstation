@@ -1,6 +1,7 @@
 # Goose runtime
 
-The runtime uses the pinned official image configured in `compose/goose.yml`.
+The runtime uses the official image selected through `compose/goose.yml` and
+machine-local image overrides.
 No derivative image is currently required.
 
 Security boundaries:
@@ -9,9 +10,17 @@ Security boundaries:
 - the Docker socket is not mounted;
 - Linux capabilities are dropped and privilege escalation is disabled;
 - the root filesystem is read-only;
-- only `/workspace`, the persistent `/home/goose` volume and `/tmp` are writable;
-- OpenRouter credentials are injected from the Git-ignored `.env` file.
+- exactly one registered host workspace is mounted at `/workspaces/NAME`;
+- the persistent `/home/goose` volume and `/tmp` remain writable;
+- configuration and connection checks use the same image/home without a project mount.
 
-The official image contains the Goose CLI. AI Workstation therefore models it as
-a long-running Compose utility container and starts sessions with `goose session`
-inside that container. It does not pretend to expose an unsupported HTTP daemon.
+Sessions run in short-lived containers. Goose owns provider, model, extension
+and secret configuration in `ai-workstation_goose-home`. Optional Goose-only
+environment values come from the protected file exposed by `aiw goose env`.
+Shared `.env` OpenRouter/provider/model entries are not injected into Goose.
+No public provider is selected automatically by AI Workstation.
+
+Network access remains available for chosen APIs and extensions; workspace
+isolation is not a network allowlist. See
+[Goose configuration](../../docs/goose-configuration.md) for local API setup,
+subagent defaults and confidential-workflow limits.

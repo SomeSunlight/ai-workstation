@@ -29,7 +29,8 @@ grep -Fq 'name: ai-workstation_goose-home' "$compose_file"
 ! grep -Fq '/var/run/docker.sock' "$compose_file"
 ! grep -Fq 'AIW_GOOSE_WORKSPACE' "$compose_file"
 
-grep -Eq '^GOOSE_MODEL=$' "$env_example"
+! grep -Eq '^GOOSE_(PROVIDER|MODEL)=' "$env_example"
+! grep -Eq 'GOOSE_PROVIDER:|GOOSE_MODEL:|OPENROUTER_API_KEY:' "$compose_file"
 grep -Eq '^OPENROUTER_API_KEY=$' "$env_example"
 grep -Fq 'aiw goose workspace add NAME [PATH]' < <("$cli" goose help)
 grep -Fq 'isolated per session' < <(HOME="$(mktemp -d)" "$cli" goose status)
@@ -55,6 +56,9 @@ printf '%s\n' "$*" >> "${MOCK_DOCKER_LOG}"
 if [[ "${1:-}" == "compose" && "${2:-}" == "version" ]]; then
   printf 'Docker Compose version v5.3.0\n'
 fi
+if [[ " $* " == *' --entrypoint /bin/sh '* ]]; then
+  printf ':\n:\n:\n:\nactive_provider: local-openai\nproviders:\n  local-openai:\n    model: sparringpartner\n'
+fi
 MOCK_DOCKER
 chmod +x "${mock_bin}/docker"
 cat > "$mock_env" <<EOF_ENV
@@ -72,6 +76,17 @@ grep -Fq -- '--project-name ai-workstation-goose' <<< "$mock_command"
 grep -Fq -- "--volume ${temp_project}:/workspaces/sample" <<< "$mock_command"
 grep -Fq -- '--workdir /workspaces/sample' <<< "$mock_command"
 grep -Fq -- 'goose session --help' <<< "$mock_command"
+
+# Routine launch/shutdown belongs only to the current Goose Compose project.
+# In particular, never run old-project `down --remove-orphans`, which could
+# affect other services that used to share that project.
+PATH="${mock_bin}:$PATH" MOCK_DOCKER_LOG="$mock_log" AIW_RUNTIME_ENV_FILE="$mock_env" \
+  HOME="$temp_home" "$cli" goose down >/dev/null
+mock_command="$(tail -n 1 "$mock_log")"
+grep -Fq -- '--project-name ai-workstation-goose' <<< "$mock_command"
+grep -Fq -- 'down --remove-orphans' <<< "$mock_command"
+! grep -Eq '^compose --project-name ai-workstation ' "$mock_log"
+! grep -Eq -- '--volumes|volume (create|rm)|prune' "$mock_log"
 
 HOME="$temp_home" "$cli" goose workspace remove sample >/dev/null
 [[ ! -e "$temp_home/.config/ai-workstation/goose-workspaces/sample" ]]

@@ -1,11 +1,11 @@
 # Goose — Local Context Source
-<!-- ctx:node id="3fd2ae4e-d712-4232-917a-7059b03a3cd4" name="Goose" version="0.1.1-draft" -->
+<!-- ctx:node id="3fd2ae4e-d712-4232-917a-7059b03a3cd4" name="Goose" version="0.1.3-draft" -->
 
 ## Parent Context Node
 
 <!-- contextcanon-placement-parent:start -->
-- [Containerized application runtimes](..) — `0.1.1-draft`
-  <!-- ctx:parent id="90dd976e-8753-495b-a631-d708b13878d1" version="0.1.1-draft" normalized-digest="3c8c8688e839f71a61853766e3f70a38a34bea57632b06a4d3782ba3d83e4539" package-digest="2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa" -->
+- [Containerized application runtimes](..) — `0.1.3-draft`
+  <!-- ctx:parent id="90dd976e-8753-495b-a631-d708b13878d1" version="0.1.3-draft" normalized-digest="e00ce1c8a1227f7d33529eedbc58ded5b0de0e50ed67d0fc84ad3df7cb0c841e" package-digest="0b4478eab1b07ed9d2fdda023d110ec2954955183f15bb189ec0b59525c60cb1" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview
@@ -59,3 +59,9 @@
   Why: Keeps publication of agent-made repository changes under human control.
   <!-- ctx:rule id="ONB-A0D929FAD90A" -->
 <!-- contextcanon-placement-rules:end -->
+
+### Provider configuration
+
+- **Operator-selected Goose connections:** The launcher exposes native Goose provider, model and extension configuration without an application-specific provider whitelist, forced public credentials or implicit public-provider fallback. Configuration and connection checks run without a host project mount; Goose settings remain in its persistent home volume.
+  Why: Supports both local confidential workflows and explicitly selected remote providers while preserving one-workspace isolation.
+  <!-- ctx:rule id="RULE-3DBB4AA55D53" -->

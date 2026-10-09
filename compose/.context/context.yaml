@@ -9,16 +9,16 @@ compiler_version: "0.6.0"
 node:
   id: "90dd976e-8753-495b-a631-d708b13878d1"
   name: "Containerized application runtimes"
-  version: "0.1.1-draft"
+  version: "0.1.3-draft"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
 parents:
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.1.1"
+    version: "0.1.2"
     locator: ".."
-    normalized_digest: "d8fce480dca898b6065ff14ff1ec111b1cc4f03db80af71fc205b28d1beb4530"
-    package_digest: "f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613"
+    normalized_digest: "2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf"
+    package_digest: "faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82"
 
 # Accepted reusable Source packages used by this build. Both digests are exact pins.
 sources: []
@@ -33,17 +33,17 @@ imports:
     why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.1.1"
-    normalized_digest: "d8fce480dca898b6065ff14ff1ec111b1cc4f03db80af71fc205b28d1beb4530"
-    package_digest: "f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613"
+    version: "0.1.2"
+    normalized_digest: "2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf"
+    package_digest: "faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82"
 
 # Elements authored in this Node's CONTEXT.src.md.
 local:
   state: "<!-- contextcanon-placement-state:start -->\n<!-- cc:placement-state id=\"ONB-5475B681ADB6\" -->\n- The currently integrated application runtimes are Goose and Open WebUI.\n<!-- contextcanon-placement-state:end -->"
-  plan: "<!-- contextcanon-placement-plan:start -->\n<!-- cc:placement-plan id=\"ONB-F2E85C95052E\" -->\n- Local model integration is intentionally deferred to the next phase.\n<!-- contextcanon-placement-plan:end -->"
+  plan: "<!-- contextcanon-placement-plan:start -->\n<!-- cc:placement-plan id=\"ONB-F2E85C95052E\" -->\n- Goose supports operator-selected local/self-hosted and public model connections through its native configuration; hardware inference provisioning remains a separate host runtime concern.\n<!-- contextcanon-placement-plan:end -->"
   rules:
     - {"id": "ONB-C582F0CA4FCE", "title": "Application containers do not receive the Docker socket", "group": "Onboarding placement"}
-    - {"id": "ONB-E7F7BAC0BF5F", "title": "Runtime credentials use the protected env file", "group": "Onboarding placement"}
+    - {"id": "ONB-E7F7BAC0BF5F", "title": "Runtime credentials use protected local storage", "group": "Onboarding placement"}
   changes: []
   topics: []
 
@@ -68,7 +68,7 @@ official:
     - {"id": "ONB-BE08FE3A5E3D", "title": "Run release check before committing", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-DCF5EB952F7D", "title": "Keep secrets out of Git images and Compose", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-C582F0CA4FCE", "title": "Application containers do not receive the Docker socket", "origin_node_id": "90dd976e-8753-495b-a631-d708b13878d1", "origin_node_name": "Containerized application runtimes", "local": true, "overrides": []}
-    - {"id": "ONB-E7F7BAC0BF5F", "title": "Runtime credentials use the protected env file", "origin_node_id": "90dd976e-8753-495b-a631-d708b13878d1", "origin_node_name": "Containerized application runtimes", "local": true, "overrides": []}
+    - {"id": "ONB-E7F7BAC0BF5F", "title": "Runtime credentials use protected local storage", "origin_node_id": "90dd976e-8753-495b-a631-d708b13878d1", "origin_node_name": "Containerized application runtimes", "local": true, "overrides": []}
   removed_rules: []
   topic_ids: ["CCW-TOPIC-CHANGE-WORKFLOW", "ONB-FA47F00F43A9", "ONB-0513F8B51242", "ONB-716FC7DB282B"]
   resource_root: "CONTEXT/"
@@ -110,5 +110,5 @@ resources:
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "3c8c8688e839f71a61853766e3f70a38a34bea57632b06a4d3782ba3d83e4539"
-  package_digest: "2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa"
+  normalized_digest: "e00ce1c8a1227f7d33529eedbc58ded5b0de0e50ed67d0fc84ad3df7cb0c841e"
+  package_digest: "0b4478eab1b07ed9d2fdda023d110ec2954955183f15bb189ec0b59525c60cb1"
