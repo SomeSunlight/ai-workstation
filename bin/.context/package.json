@@ -2,13 +2,13 @@
   "changes": [],
   "compiler_version": "0.6.0",
   "digests": {
-    "normalized": "295de8c087d2ed11801eb71d21aeb0d3e58cb536b4e1067b2b55208605424106",
-    "package": "36ad0c95cbb1bf275bcdd67f1abd3dfe7d7f854d1e5b1f912dd0180a8a0f90af"
+    "normalized": "071ac788eba865902a37fff1ad7802491868c2c018a95fdb585e725e4a5c092e",
+    "package": "b0d4faad6b4fc55e98ed4e26850740936a5c871e9c6abd5749c08ec4a4d889ae"
   },
   "files": [
     {
       "path": "CONTEXT.md",
-      "sha256": "dd2438b10de75ef6b3c843a1c0323daf860bd278c75fe512b9d0e95994ddbfa3",
+      "sha256": "d8ede048559994eedb0c019d806b98eb61690727a1502701c4ac87056ca626bc",
       "size": 8402
     },
     {
@@ -28,13 +28,13 @@
     },
     {
       "path": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/repository-setup.md",
-      "sha256": "1d54e84bfb37512c7fa395f78427a4924cd1702020bddee5d7bddb6095a0becc",
-      "size": 2112
+      "sha256": "6b348ebc0c4f23aca4229f5a6886bc2eb964fc80bd5ea458c1170823ee2d0c9f",
+      "size": 2233
     },
     {
       "path": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/troubleshooting.md",
-      "sha256": "025b723d0680d83f67d42bea2c49d50306153ffd3dad6f8ac760ed6123778cc8",
-      "size": 3138
+      "sha256": "86689c32e8c60ddef0cfc67bfd6f52cb4ca458fb3cf6655c6ce4d3db5d7224a7",
+      "size": 3254
     },
     {
       "path": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md",
@@ -54,24 +54,24 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "d8fce480dca898b6065ff14ff1ec111b1cc4f03db80af71fc205b28d1beb4530",
-      "package_digest": "f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613",
-      "version": "0.1.1",
+      "normalized_digest": "2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf",
+      "package_digest": "faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82",
+      "version": "0.1.2",
       "why": null
     }
   ],
   "node": {
     "id": "6417ee7c-a9d0-40c7-ada3-6762d4a3900b",
     "name": "aiw operator interface",
-    "version": "0.1.1-draft"
+    "version": "0.1.2-draft"
   },
   "parents": [
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "d8fce480dca898b6065ff14ff1ec111b1cc4f03db80af71fc205b28d1beb4530",
-      "package_digest": "f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613",
-      "version": "0.1.1",
+      "normalized_digest": "2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf",
+      "package_digest": "faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82",
+      "version": "0.1.2",
       "why": null
     }
   ],

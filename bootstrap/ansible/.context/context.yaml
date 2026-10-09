@@ -9,16 +9,16 @@ compiler_version: "0.6.0"
 node:
   id: "ad9cbb59-ae04-4290-9c53-5d70cfefe434"
   name: "Ansible host configuration"
-  version: "0.1.1-draft"
+  version: "0.1.2-draft"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
 parents:
   - id: "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
     name: "Bootstrap"
-    version: "0.1.1-draft"
+    version: "0.1.2-draft"
     locator: ".."
-    normalized_digest: "c06dc761e452dc1b5c4270ec4fabfaa3ff375163f57decfd30bfb9731033c00a"
-    package_digest: "898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a"
+    normalized_digest: "a5acfe9353cd48188dafb8149a9b0401aca7415e9c1accc53ef2be907976828f"
+    package_digest: "956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9"
 
 # Accepted reusable Source packages used by this build. Both digests are exact pins.
 sources: []
@@ -33,14 +33,14 @@ imports:
     why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.1.1"
-    normalized_digest: "d8fce480dca898b6065ff14ff1ec111b1cc4f03db80af71fc205b28d1beb4530"
-    package_digest: "f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613"
+    version: "0.1.2"
+    normalized_digest: "2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf"
+    package_digest: "faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82"
   - id: "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
     name: "Bootstrap"
-    version: "0.1.1-draft"
-    normalized_digest: "c06dc761e452dc1b5c4270ec4fabfaa3ff375163f57decfd30bfb9731033c00a"
-    package_digest: "898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a"
+    version: "0.1.2-draft"
+    normalized_digest: "a5acfe9353cd48188dafb8149a9b0401aca7415e9c1accc53ef2be907976828f"
+    package_digest: "956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9"
 
 # Elements authored in this Node's CONTEXT.src.md.
 local:
@@ -120,5 +120,5 @@ resources:
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "85ef5b9cba08e5222504b28d1e1bcef0250a16ec42430bcdec64bf43cc3809b2"
-  package_digest: "d52470df4175639f8ba8ad40fc450dff9aaf689e04273bf0e8b3c41ec079575b"
+  normalized_digest: "ed8b7185991621c2820fa86303af806c2f2d7e1c2cc3131900831584278cc4fd"
+  package_digest: "4da61b535f5915abad65070d1f20d477a13576f3125ae76dbdc7b5bb0d931b40"

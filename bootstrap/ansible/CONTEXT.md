@@ -8,16 +8,16 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** Ansible host configuration  
-**Context version:** `0.1.1-draft`
+**Context version:** `0.1.2-draft`
 
-**Parent Context Node:** [Bootstrap](.context/sources/898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a/CONTEXT.md) — `0.1.1-draft`  
-**Accepted Parent package:** `898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a`
+**Parent Context Node:** [Bootstrap](.context/sources/956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9/CONTEXT.md) — `0.1.2-draft`  
+**Accepted Parent package:** `956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9`
 
 **Resulting imported Contexts:**
 
-- **Development Workflow** — `0.3.0-draft` — via Parent Context Node **Bootstrap** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](.context/sources/898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a/CONTEXT.md)
-- **ai-workstation** — `0.1.1` — via Parent Context Node **Bootstrap** — [inspect accepted carrier](.context/sources/898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a/CONTEXT.md)
-- **Bootstrap** — `0.1.1-draft` — direct Parent Context Node — [inspect accepted carrier](.context/sources/898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a/CONTEXT.md)
+- **Development Workflow** — `0.3.0-draft` — via Parent Context Node **Bootstrap** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](.context/sources/956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9/CONTEXT.md)
+- **ai-workstation** — `0.1.2` — via Parent Context Node **Bootstrap** — [inspect accepted carrier](.context/sources/956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9/CONTEXT.md)
+- **Bootstrap** — `0.1.2-draft` — direct Parent Context Node — [inspect accepted carrier](.context/sources/956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9/CONTEXT.md)
 
 ## Local Overview
 

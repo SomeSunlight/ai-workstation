@@ -9,7 +9,7 @@ compiler_version: "0.6.0"
 node:
   id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
   name: "ai-workstation"
-  version: "0.1.1"
+  version: "0.1.2"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
 parents: []
@@ -109,5 +109,5 @@ resources:
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "d8fce480dca898b6065ff14ff1ec111b1cc4f03db80af71fc205b28d1beb4530"
-  package_digest: "f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613"
+  normalized_digest: "2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf"
+  package_digest: "faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82"

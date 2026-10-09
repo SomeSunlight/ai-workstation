@@ -2,13 +2,13 @@
   "changes": [],
   "compiler_version": "0.6.0",
   "digests": {
-    "normalized": "319bad6e626dac9311f61fbf57ccf3874e16eb4002058a9d63ee4aba64159d76",
-    "package": "f62f2fef9a3036f0c028d545574f5aeb988db42b4f6009121fd2a26b4aeb15c8"
+    "normalized": "a856a79ccaa84d195005c571fbd67dd6299f2e355cb6305381d1c63dd7328b6f",
+    "package": "c567ed41b2f4a7d24b22d63d52b3c354b28804bd2add648b48f6a29423893581"
   },
   "files": [
     {
       "path": "CONTEXT.md",
-      "sha256": "d794e793a855c9181a0147213f9cfd9991632aeb240f4d7f7420c793f14e0c87",
+      "sha256": "6d937ab2668c140298a87d4fc85e7511bcca607c38738823ff7035154e3266c8",
       "size": 9010
     },
     {
@@ -28,13 +28,13 @@
     },
     {
       "path": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/repository-setup.md",
-      "sha256": "1d54e84bfb37512c7fa395f78427a4924cd1702020bddee5d7bddb6095a0becc",
-      "size": 2112
+      "sha256": "6b348ebc0c4f23aca4229f5a6886bc2eb964fc80bd5ea458c1170823ee2d0c9f",
+      "size": 2233
     },
     {
       "path": "CONTEXT/references/aea56adf-2a26-43f0-b712-3bbeab7a3097/docs/troubleshooting.md",
-      "sha256": "025b723d0680d83f67d42bea2c49d50306153ffd3dad6f8ac760ed6123778cc8",
-      "size": 3138
+      "sha256": "86689c32e8c60ddef0cfc67bfd6f52cb4ca458fb3cf6655c6ce4d3db5d7224a7",
+      "size": 3254
     },
     {
       "path": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md",
@@ -54,32 +54,32 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "d8fce480dca898b6065ff14ff1ec111b1cc4f03db80af71fc205b28d1beb4530",
-      "package_digest": "f08e5ab3eb59e3c5252282bba9f2879bf891ffc995b97def0b1619647346c613",
-      "version": "0.1.1",
+      "normalized_digest": "2622d3482e9b3f0f657c7f385ae6662c0028159e1ba0e69204e274b30d1d99cf",
+      "package_digest": "faa3552482ada2cf0231776b7cf078713929e1b3d4b52db114669d03470d5f82",
+      "version": "0.1.2",
       "why": null
     },
     {
       "id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
       "name": "Bootstrap",
-      "normalized_digest": "c06dc761e452dc1b5c4270ec4fabfaa3ff375163f57decfd30bfb9731033c00a",
-      "package_digest": "898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a",
-      "version": "0.1.1-draft",
+      "normalized_digest": "a5acfe9353cd48188dafb8149a9b0401aca7415e9c1accc53ef2be907976828f",
+      "package_digest": "956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9",
+      "version": "0.1.2-draft",
       "why": null
     }
   ],
   "node": {
     "id": "1e85ca79-6021-4b66-ae0c-4da90f78d6e9",
     "name": "Linux bootstrap",
-    "version": "0.1.1-draft"
+    "version": "0.1.2-draft"
   },
   "parents": [
     {
       "id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
       "name": "Bootstrap",
-      "normalized_digest": "c06dc761e452dc1b5c4270ec4fabfaa3ff375163f57decfd30bfb9731033c00a",
-      "package_digest": "898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a",
-      "version": "0.1.1-draft",
+      "normalized_digest": "a5acfe9353cd48188dafb8149a9b0401aca7415e9c1accc53ef2be907976828f",
+      "package_digest": "956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9",
+      "version": "0.1.2-draft",
       "why": null
     }
   ],

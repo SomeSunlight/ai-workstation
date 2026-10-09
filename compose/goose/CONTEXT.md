@@ -8,16 +8,16 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** Goose  
-**Context version:** `0.1.1-draft`
+**Context version:** `0.1.3-draft`
 
-**Parent Context Node:** [Containerized application runtimes](.context/sources/2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa/CONTEXT.md) — `0.1.1-draft`  
-**Accepted Parent package:** `2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa`
+**Parent Context Node:** [Containerized application runtimes](.context/sources/0b4478eab1b07ed9d2fdda023d110ec2954955183f15bb189ec0b59525c60cb1/CONTEXT.md) — `0.1.3-draft`  
+**Accepted Parent package:** `0b4478eab1b07ed9d2fdda023d110ec2954955183f15bb189ec0b59525c60cb1`
 
 **Resulting imported Contexts:**
 
-- **Development Workflow** — `0.3.0-draft` — via Parent Context Node **Containerized application runtimes** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](.context/sources/2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa/CONTEXT.md)
-- **ai-workstation** — `0.1.1` — via Parent Context Node **Containerized application runtimes** — [inspect accepted carrier](.context/sources/2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa/CONTEXT.md)
-- **Containerized application runtimes** — `0.1.1-draft` — direct Parent Context Node — [inspect accepted carrier](.context/sources/2e55f91777eb6610ec8281815d545365623db66cb3e0b21c6e380e251a3856fa/CONTEXT.md)
+- **Development Workflow** — `0.3.0-draft` — via Parent Context Node **Containerized application runtimes** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](.context/sources/0b4478eab1b07ed9d2fdda023d110ec2954955183f15bb189ec0b59525c60cb1/CONTEXT.md)
+- **ai-workstation** — `0.1.2` — via Parent Context Node **Containerized application runtimes** — [inspect accepted carrier](.context/sources/0b4478eab1b07ed9d2fdda023d110ec2954955183f15bb189ec0b59525c60cb1/CONTEXT.md)
+- **Containerized application runtimes** — `0.1.3-draft` — direct Parent Context Node — [inspect accepted carrier](.context/sources/0b4478eab1b07ed9d2fdda023d110ec2954955183f15bb189ec0b59525c60cb1/CONTEXT.md)
 
 ## Local Overview
 
@@ -131,9 +131,9 @@ Secrets must not be committed, copied into images or stored in Compose files.
 
 Agent and application containers do not receive the Docker socket.
 
-#### `ONB-E7F7BAC0BF5F` — Runtime credentials use the protected env file
+#### `ONB-E7F7BAC0BF5F` — Runtime credentials use protected local storage
 
-Runtime credentials are read from the Git-ignored `.env` file with mode `600`.
+Runtime credentials stay outside Git, images and authored Compose definitions. Applications may use their native persistent secret store; environment-based credentials use a protected untracked file with mode `600`, scoped to the intended application.
 
 ## Local Rules
 
@@ -170,6 +170,12 @@ The selected workspace is delegated authority: Goose can edit or delete files in
 #### `ONB-A0D929FAD90A` — Review Goose changes before publishing
 
 Review Goose changes before committing or pushing them.
+
+### Provider configuration
+
+#### `RULE-3DBB4AA55D53` — Operator-selected Goose connections
+
+The launcher exposes native Goose provider, model and extension configuration without an application-specific provider whitelist, forced public credentials or implicit public-provider fallback. Configuration and connection checks run without a host project mount; Goose settings remain in its persistent home volume.
 
 ## Topics from Development Workflow
 

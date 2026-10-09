@@ -2,7 +2,52 @@
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
-## Current review block — Issue #21: guided application container updates
+## Owner-test follow-up — Issue #25: clean Goose Compose ownership
+
+Purpose: address the owner's repeated volume ownership warning without permanent compatibility behavior for the old Compose project name.
+
+Writable scope: the Goose lifecycle in `bin/aiw-core`, existing Goose smoke tests, `docs/goose-configuration.md`, project version/changelog, this recovery checkpoint and PR #24. Keep the current Compose project and stable home volume name. No Context semantics change is needed.
+
+Decisions: the home stays a normal Compose-managed volume. The owner accepts reconfiguring after an explicit one-time home reset; deletion is an owner-run operation on WSL, not automatic launcher behavior. Remove routine cleanup of the old `ai-workstation` Compose project. Preserve Goose's optional environment file, workspace registry, project files, images and Open WebUI data.
+
+- [x] Inspect the warning, current Compose ownership and old-project cleanup; record Issue #25 and the owner's reset preference.
+- [x] Remove legacy project cleanup and verify routine Goose operations target only the current project.
+- [x] Document the one-time reset and recreated ownership check; align release metadata.
+- [x] Run focused behavior/Compose checks and the complete release gate.
+- [x] Publish the follow-up in PR #24 without merging.
+
+Recovery: continue on `agent/issue-23-goose-provider-freedom` after `da7b372ee3db3bf3ba5f4968da33102bff20939b`. Docker Engine and the owner's WSL are unavailable here; native volume deletion/recreation remains an explicit owner operation. PR #24 remains unmerged and has no merge authorization.
+
+Verification: focused lifecycle tests and real Compose 5.3.0 rendering pass. The complete release gate also passes with an unrelated host XDG path; ContextCanon 0.7.3 reports all nine Nodes `ok` with no generated drift. No authored Context or Ansible implementation changed in this follow-up. The recreated Docker volume's labels still require the documented real WSL check.
+
+Publication: implementation commit `5611c6f8ed860f10f56446f1a7563cf7a58f9c4d` is on the existing PR #24 branch; its GitHub tree matches the locally verified `fe160367fd40fbb94aca7382bdf6b850cfb1892c` exactly. Next: current-head Validate and the owner's one-time reset/native reconfiguration/ownership test. Neither automatic deletion nor a merge has occurred.
+
+## Current review block — Issue #23: unrestricted Goose provider configuration
+
+Purpose: expose native Goose configuration through the operator menu, support local/self-hosted and public providers equally, and preserve one-project container isolation without forcing or falling back to a public LLM.
+
+Writable scope: `bin/aiw-core`, Goose helpers and smoke tests, `compose/goose.yml`, `.env.example`, operator documentation, versions/changelog, and the authored Compose/Goose Contexts plus their generated dependent packages. The owner explicitly replaces the old Compose-only credential assumption with protected application-native storage and optional Goose-only environment configuration. Hardware inference provisioning and Open WebUI provider behavior are outside this block.
+
+Decisions: native Goose settings in the existing `ai-workstation_goose-home` volume are authoritative; configuration runs without a project mount. OpenRouter is an optional first test. Existing `.env` provider/model/key entries are not silently imported. Advanced provider/subagent environment settings use a separately protected, explicitly edited Goose-only file. Preserve arbitrary native supported provider/model choices and CLI arguments; document release-dependent subagent behavior and recipe/session overrides rather than promising automatic optimal model selection or network isolation.
+
+- [x] Read required Contexts and inspect pinned Goose CLI/source behavior; create Issue #23.
+- [x] After owner approval and exact-head green Validate/release checks, squash-merge tested PR #22 as `e4f6ee86e746241ea6630bb759b971b7e47012b7` and start from that accepted baseline.
+- [x] Implement configuration/menu access and protected Goose-only environment settings without a project mount or public-provider defaults.
+- [x] Verify configuration before mounting a workspace; preserve the existing home volume, workspace boundaries and native CLI arguments.
+- [x] Add meaningful regression tests for local/custom providers, missing/legacy configuration, secrets, menu routing and container boundaries.
+- [x] Update migration/model-routing guidance, Context rules and generated dependent packages, release metadata and accepted baseline state.
+- [x] Run focused checks, ContextCanon validation and the complete release gate; inspect the coherent diff.
+- [x] Commit/publish the review candidate and open a PR against `main`; leave the new PR unmerged pending owner review.
+
+Recovery: branch `agent/issue-23-goose-provider-freedom`, accepted base `e4f6ee86e746241ea6630bb759b971b7e47012b7`. Docker Engine is unavailable here; deterministic command tests cover launch semantics, while real interactive configuration/provider acceptance requires the owner's Docker installation. Baseline ContextCanon check also found stale root frozen setup/troubleshooting resources from earlier accepted edits; regenerate those resources and review all affected downstream package pins using the matching ContextCanon 0.7.3 compiler, without changing unrelated normative rules.
+
+Verification checkpoint: complete release gate passes with actual Docker Compose 5.3.0 rendering, including provider-neutral launch/migration/menu behavior, primary/subagent overrides, literal environment values, missing/malformed configuration, empty overrides, failed reads/checks/configuration and one-workspace boundaries. Existing Open WebUI/local-inference service checks, locked `uv sync`/lock check, Ansible lint and both playbook syntax checks pass. ContextCanon 0.7.3 `check --all .` reports all nine Nodes `ok`; only generated Markdown's intentional hard-break whitespace is excluded from authored diff hygiene. Real Docker Engine/native-menu/LLM acceptance remains an owner test.
+
+Review checkpoint: [PR #24](https://github.com/SomeSunlight/ai-workstation/pull/24) is open against `main`. Implementation commit `deb9dbd1edd018057355d0f7a35bc9f5ab6a0602` has the exact locally tested tree `fcb2cec01a54ef5516a4f97e09df90e967717203`, verified when publishing through the GitHub connector. Next external gate: owner tests the native menu, intended main/subagent endpoints and persistent configuration on WSL/Docker, then explicitly approves before any merge. PR #24 has no merge authorization.
+
+CI recovery: the first review run exposed host `XDG_CONFIG_HOME` leaking into the Docker test double. The mock now clears host routing/path variables like real Compose, and the regression gate passes with an intentionally unrelated host XDG path. Status also skips inspection if the selected image is absent, avoiding unintended Docker resource creation during a fresh-install status check. The follow-up stays in PR #24 and requires a green current-head Validate run.
+
+## Completed review block — Issue #21: guided application container updates
 
 Purpose: let an operator update Open WebUI and Goose from `aiw`, from any WSL directory, without remembering Docker commands or mistaking a pull of an old pinned tag for an application upgrade.
 
@@ -21,7 +66,7 @@ Decisions: resolve official latest stable GitHub releases to exact tags; persist
 
 Focused verification: `container-updates.sh`, `interactive-menu.sh`, `check-version-consistency.py`, Bash syntax and diff hygiene pass. The complete `./tools/release-check.sh` and existing Goose/Open WebUI/local-inference service smoke tests pass; new update checks also cover concurrent-update locking and unexpected recovery-volume mounts. Behavior tests cover download/API failures, duplicate image entries, backup failures for running/stopped services, startup/health failures, fresh installs, unreadable volumes, exported override conflicts and return-to-menu after errors.
 
-Review checkpoint: [PR #22](https://github.com/SomeSunlight/ai-workstation/pull/22) is open against `main`; implementation commit `691bdeddeae8b193f0c1869950a921175441e755` has the exact locally tested tree `46908f85f62fea0e86b4e5bb52d419701ebdde14`. All requested implementation/documentation work is complete. Next external gate: owner tests the real Docker-volume update on the laptop, reviews the result, and explicitly approves before any merge. No merge is authorized by this block.
+Accepted checkpoint: the owner reported PR #22 tested and explicitly approved merging it. Exact review head `f4c5ca304a2ccaf98934befa1f8662a7f0c3071a` passed Validate run `37532821370` and the repeated release gate. PR #22 was squash-merged as `e4f6ee86e746241ea6630bb759b971b7e47012b7` on 2026-10-07.
 
 Recovery checkpoint: working branch `agent/issue-21-container-updates`, accepted base `f72973e764560a4102b7291495fa0fb93effe434`. Latest stable release metadata observed on 2026-10-06: Open WebUI `v0.11.4`, Goose `v1.53.0`; implementation must discover releases at execution time rather than hard-code these observations. Docker Engine is unavailable in this development workspace, so container behavior is exercised with deterministic command mocks and real-volume acceptance remains an owner test.
 

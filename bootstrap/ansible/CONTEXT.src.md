@@ -1,11 +1,11 @@
 # Ansible host configuration — Local Context Source
-<!-- ctx:node id="ad9cbb59-ae04-4290-9c53-5d70cfefe434" name="Ansible host configuration" version="0.1.1-draft" -->
+<!-- ctx:node id="ad9cbb59-ae04-4290-9c53-5d70cfefe434" name="Ansible host configuration" version="0.1.2-draft" -->
 
 ## Parent Context Node
 
 <!-- contextcanon-placement-parent:start -->
-- [Bootstrap](..) — `0.1.1-draft`
-  <!-- ctx:parent id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.1.1-draft" normalized-digest="c06dc761e452dc1b5c4270ec4fabfaa3ff375163f57decfd30bfb9731033c00a" package-digest="898e4f83ebac2f77cc6f9d9d2884eac144200db0f42ad64795aaf57f9a557f5a" -->
+- [Bootstrap](..) — `0.1.2-draft`
+  <!-- ctx:parent id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.1.2-draft" normalized-digest="a5acfe9353cd48188dafb8149a9b0401aca7415e9c1accc53ef2be907976828f" package-digest="956857de1196cada340f3d64f467cb6fa123e9b34ea93558b3959dcd13d1cbc9" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview
