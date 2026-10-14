@@ -1,5 +1,21 @@
 # AI Workstation Plan
 
+## Current review block — Issue #29: reliable WSL launch and visual entrypoints
+
+Purpose: ensure both Windows penguin shortcuts start an installed stopped WSL distro automatically, give immediate manual PowerShell commands, and make failures diagnosable. Provide a compact visual README illustration of the two launchers and central `aiw` menu. This takes precedence over Issue #30 (Intel SYCL regression).
+
+Writable scope: `bootstrap/windows/Create-Shortcuts.ps1`, `tests/windows/shortcuts.ps1`, `README.md`, `docs/troubleshooting.md`, `CHANGELOG.md`, and this PLAN. No WSL distribution re-registration, removal, driver changes, runtime installation, ContextCanon source/package changes or inference changes. Work from accepted `main` on `agent/issue-29-wsl-cold-start`.
+
+- [x] Record and expand Issue #29; read applicable Windows/bootstrap/Development Workflow Context and existing launcher code/tests.
+- [ ] Implement explicit WSL cold-start preflight for both launchers, bounded retry, visible manual commands and distinct failure paths.
+- [ ] Improve the README entrypoint visual and manual startup/recovery guidance.
+- [ ] Cover both links, custom distro names, successful cold startup and failure reporting with Windows mocks; preserve ownership/migration/idempotency tests.
+- [ ] Run focused and full release gates where executable; disclose unavailable Windows/WSL validation.
+- [ ] Publish review PR; require actual Windows cold-boot owner acceptance and owner-approved merge.
+
+Known diagnostic uncertainty: `wsl --distribution NAME --cd PATH` already ought to start a stopped distro. The contradictory `WSL_E_DISTRO_NOT_FOUND` alongside an installed distro list could be transient WSL startup/registration or launcher invocation, not a confirmed missing prestart command.
+
+
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
 
