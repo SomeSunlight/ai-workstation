@@ -27,7 +27,8 @@ After a real Windows restart and ten minutes idle, the updated launcher printed 
 - [x] Compare the literal full System32 wsl.exe invocation from PowerShell with `call` through ordinary cmd.exe and inspect the executable resolved by PowerShell: same account and absolute `System32/wsl.exe` returns `WSL_OK` and exit 0 from PowerShell 7.6.6, but prints `WSL_E_DISTRO_NOT_FOUND` and exits -1 from `cmd.exe` with `call`. **The CMD-vs-CALL distinction remains untested; do not attribute the bug to CALL alone.**
 - [x] Replace the Windows shortcut's `cmd.exe /k` + `call wsl.exe` path with PowerShell 7 via a dedicated `bootstrap/windows/Launch-Wsl.ps1`, copied into standalone per-icon scripts under LocalAppData. Preserve manual commands, actual Linux readiness marker, bounded retry and distinct error paths.
 - [x] Adapt Windows smoke tests for PowerShell shortcut targets, per-icon scripts, success/failure modes, custom distros, legacy cleanup and repeated installation. Both jobs succeeded on [run 38564510422](https://github.com/SomeSunlight/ai-workstation/actions/runs/38564510422).
-- [ ] Repeat exact-current-head GitHub Windows and complete release checks after final documentation update; arrange real cold-reboot owner acceptance.
+- [x] Repeat Windows and complete release checks after the final documentation update; both GitHub jobs succeeded on code/documentation head `58f892d1e314bc417aa420bec46ac6276828c164` in [run 38564779999](https://github.com/SomeSunlight/ai-workstation/actions/runs/38564779999). The PLAN-only checkpoint after this validation does not change executable behavior.
+- [ ] Owner must refresh installed launcher scripts and test both penguins from stopped WSL (ideally also after Windows cold boot), then explicitly approve any merge.
 - [ ] Continue diagnosis based on owner results before attempting registry, reinstall, or service changes.
 
 
