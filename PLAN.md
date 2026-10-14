@@ -16,6 +16,18 @@ Writable scope: `bootstrap/windows/Create-Shortcuts.ps1`, `tests/windows/shortcu
 
 Known diagnostic uncertainty: `wsl --distribution NAME --cd PATH` already ought to start a stopped distro. The contradictory `WSL_E_DISTRO_NOT_FOUND` alongside an installed distro list could be transient WSL startup/registration or launcher invocation, not a confirmed missing prestart command.
 
+### Owner cold-boot result and follow-up — 2026-10-14
+
+After a real Windows restart and ten minutes idle, the updated launcher printed `WSL_E_DISTRO_NOT_FOUND` during `--exec /bin/true` **and nevertheless printed `[OK] WSL distribution is running`**, then the same error when opening the target directory. Therefore the preflight's exit-code-only success test is **insufficient**, regardless of whether the root cause lies in WSL or `cmd.exe` / `call` return handling. A bounded retry alone is not a solution.
+
+- [x] Reproduce the false-success class in a Windows fake-WSL test, including an error message with process exit code zero.
+- [x] Require exact stdout sentinel from a real `/bin/echo` command inside Ubuntu *and* zero exit code before reporting WSL running; preserve error text and bounded retry.
+- [ ] Verify the additional Windows regression test and full release gate on revised PR head.
+- [ ] Ask the owner to run plain `wsl -d Ubuntu-24.04 --exec /bin/echo WSL_OK` in an ordinary, non-elevated PowerShell, capturing `$LASTEXITCODE`, `wsl -l -v`, status and version. Do not assume the actual distro-not-found problem is a launcher bug.
+- [ ] Continue diagnosis based on owner results before attempting registry, reinstall, or service changes.
+
+
+
 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
