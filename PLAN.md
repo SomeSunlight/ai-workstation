@@ -23,7 +23,8 @@ After a real Windows restart and ten minutes idle, the updated launcher printed 
 - [x] Reproduce the false-success class in a Windows fake-WSL test, including an error message with process exit code zero.
 - [x] Require exact stdout sentinel from a real `/bin/echo` command inside Ubuntu *and* zero exit code before reporting WSL running; preserve error text and bounded retry.
 - [x] Verify the additional Windows regression test and full release gate on revised PR code head `164c5a1066ade7ee5e9a556e0a0b334c6e86803b`. Both Windows and Linux validation jobs passed in [run 38561787523](https://github.com/SomeSunlight/ai-workstation/actions/runs/38561787523).
-- [ ] Ask the owner to run plain `wsl -d Ubuntu-24.04 --exec /bin/echo WSL_OK` in an ordinary, non-elevated PowerShell, capturing `$LASTEXITCODE`, `wsl -l -v`, status and version. Do not assume the actual distro-not-found problem is a launcher bug.
+- [x] Owner PowerShell test (2026-10-14): `wsl -d Ubuntu-24.04 --exec /bin/echo WSL_OK` printed `WSL_OK`, `$LASTEXITCODE=0`, `wsl -l -v` lists the distro stopped, WSL 2.7.14.0 / kernel 6.18.33.2-2. PowerShell ran after failed penguin attempts, so the first-use effect is not excluded. Record in Issue #29.
+- [ ] Compare the literal full System32 wsl.exe invocation from PowerShell with `call` through ordinary cmd.exe and inspect the executable resolved by PowerShell; check for account/environment differences before modifying WSL.
 - [ ] Continue diagnosis based on owner results before attempting registry, reinstall, or service changes.
 
 
