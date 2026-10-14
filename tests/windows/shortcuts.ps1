@@ -110,7 +110,91 @@ try {
     $publicEntry = Get-Content -LiteralPath (Join-Path $root 'install.ps1') -Raw
     Assert-True ($publicEntry.Contains("'Linux AI Workstation'")) 'Public install.ps1 default name outdated'
 
-    Write-Host 'Windows shortcut creation, migration, idempotency and ownership tests passed.'
+    # Exercise the generated cmd launchers without requiring an installed WSL
+    # distribution on the Windows CI runner. Call the fake batch file as a real
+    # child command to cover cmd.exe control flow, exit codes and retry behavior.
+    $fakeWsl = Join-Path $fixture 'fake-wsl.cmd'
+    Set-Content -LiteralPath $fakeWsl -Encoding ASCII -Value @'
+@echo off
+if /I "%~1"=="--list" (
+  echo NAME STATE VERSION
+  echo Ubuntu-24.04 Stopped 2
+  exit /b 0
+)
+if defined FAKE_WSL_TRACE >>"%FAKE_WSL_TRACE%" echo %*
+if /I "%FAKE_WSL_MODE%"=="missing" exit /b 3
+if /I "%FAKE_WSL_MODE%"=="first-fail" if not exist "%FAKE_WSL_MARKER%" (
+  >"%FAKE_WSL_MARKER%" echo first-failed
+  exit /b 7
+)
+if /I "%FAKE_WSL_MODE%"=="shell-fail" if /I "%~3"=="--cd" exit /b 5
+exit /b 0
+'@
+
+    $mockDesktop = Join-Path $fixture 'mock/Desktop'
+    $mockStart = Join-Path $fixture 'mock/Start'
+    $mockLaunchers = Join-Path $fixture 'mock/Launchers'
+    & $creator -DistroName Ubuntu-24.04 -LinuxUser moresunlight `
+        -DesktopDirectory $mockDesktop -StartMenuDirectory $mockStart `
+        -LauncherDirectory $mockLaunchers -WslExecutable $fakeWsl
+    $mockWorkstation = Join-Path $mockLaunchers 'Linux AI Workstation.cmd'
+    $mockTerminal = Join-Path $mockLaunchers 'Linux Terminal.cmd'
+
+    function Invoke-MockLauncher {
+        param([string]$Path, [string]$Mode)
+        $env:FAKE_WSL_MODE = $Mode
+        $env:FAKE_WSL_TRACE = Join-Path $fixture 'wsl-calls.txt'
+        $env:FAKE_WSL_MARKER = Join-Path $fixture 'first-attempt.txt'
+        Remove-Item -LiteralPath $env:FAKE_WSL_TRACE, $env:FAKE_WSL_MARKER `
+            -ErrorAction SilentlyContinue
+        try {
+            $output = (& $Path 2>&1 | Out-String)
+            $code = $LASTEXITCODE
+            $calls = if (Test-Path -LiteralPath $env:FAKE_WSL_TRACE) {
+                @(Get-Content -LiteralPath $env:FAKE_WSL_TRACE)
+            }
+            else { @() }
+            return @{ Output = $output; Code = $code; Calls = $calls }
+        }
+        finally {
+            Remove-Item Env:FAKE_WSL_MODE, Env:FAKE_WSL_TRACE, Env:FAKE_WSL_MARKER `
+                -ErrorAction SilentlyContinue
+        }
+    }
+
+    foreach ($entry in @(
+        @{ File = $mockWorkstation; Path = '/home/moresunlight/ai-workstation' },
+        @{ File = $mockTerminal; Path = '/home/moresunlight' }
+    )) {
+        $out = Invoke-MockLauncher -Path $entry.File -Mode 'ok'
+        Assert-True ($out.Code -eq 0) "Launcher failed: $($entry.File)"
+        Assert-True ($out.Output.Contains('Manual start from PowerShell:')) 'Missing always-visible command hint'
+        Assert-True ($out.Output.Contains('wsl -d Ubuntu-24.04')) 'Missing manual distro command'
+        Assert-True ($out.Calls.Count -eq 2) 'Expected WSL startup preflight followed by shell'
+        Assert-True ($out.Calls[0] -match '--exec /bin/true') 'Preflight did not run first'
+        Assert-True ($out.Calls[1].Contains("--cd `"$($entry.Path)`"")) 'Shell was not opened at target path'
+    }
+
+    $retry = Invoke-MockLauncher -Path $mockWorkstation -Mode 'first-fail'
+    Assert-True ($retry.Code -eq 0) 'Transient cold-start error did not recover'
+    Assert-True ($retry.Calls.Count -eq 3) 'Transient error must retry once before shell'
+    $missing = Invoke-MockLauncher -Path $mockTerminal -Mode 'missing'
+    Assert-True ($missing.Code -ne 0) 'Missing distribution must fail visibly'
+    Assert-True ($missing.Output.Contains('Distributions registered for this Windows user:')) 'Missing distribution diagnostics'
+    $shellFailure = Invoke-MockLauncher -Path $mockWorkstation -Mode 'shell-fail'
+    Assert-True ($shellFailure.Code -ne 0) 'Shell failure must not masquerade as success'
+    Assert-True ($shellFailure.Output.Contains('WSL started, but opening')) 'Missing separate shell error diagnostic'
+
+    # Additional distro names survive all the way through startup and cd.
+    & $creator -DistroName Ubuntu-24.04-Test -LinuxUser moresunlight `
+        -DesktopDirectory $mockDesktop -StartMenuDirectory $mockStart `
+        -LauncherDirectory $mockLaunchers -WslExecutable $fakeWsl
+    $custom = Invoke-MockLauncher -Path (Join-Path $mockLaunchers 'Linux Terminal (Ubuntu-24.04-Test).cmd') -Mode 'ok'
+    Assert-True ($custom.Code -eq 0) 'Custom distro launcher failed'
+    Assert-True ($custom.Calls[0].Contains('--distribution "Ubuntu-24.04-Test"')) 'Custom distro lost in preflight'
+    Assert-True ($custom.Output.Contains('wsl -d Ubuntu-24.04-Test')) 'Custom distro missing in manual hint'
+
+    Write-Host 'Windows shortcut creation, migration, cold-start, retry, diagnostics and ownership tests passed.'
 }
 finally {
     Remove-Item -LiteralPath $fixture -Recurse -Force -ErrorAction SilentlyContinue
