@@ -17,7 +17,36 @@ You should not have to reconstruct a working Docker/WSL stack with dozens of ad 
 | **Linux AI Workstation** | `/home/moresunlight/ai-workstation` | Managing/updating the installation or running `aiw` |
 | **Linux Terminal** | `/home/moresunlight` | General Linux work outside the project |
 
-Both are created on the Desktop and in the Start Menu. Neither starts another Ubuntu instance or automatically launches an AI application. See [Where to find it later](#where-to-find-it-later) for re-creating launchers and troubleshooting.
+![The Linux AI Workstation and Linux Terminal penguin shortcuts](https://github.com/user-attachments/assets/afb5b9c6-cfff-4bc4-ae28-86a557472a79)
+
+Both penguins are created on the Desktop and in the Start Menu. **Clicking either one automatically starts the existing WSL/Ubuntu distribution if it is stopped**, then opens a Linux shell in the corresponding directory. No preparatory PowerShell command is needed. The shortcuts do **not** install a second distribution or automatically launch an AI application. The launcher also shows the equivalent manual commands at the top of its window.
+
+To start Linux manually from **Windows PowerShell**, use:
+
+```powershell
+wsl -d Ubuntu-24.04
+wsl -d Ubuntu-24.04 --cd /home/moresunlight/ai-workstation
+```
+
+The first command opens Linux normally; the second enters the workstation checkout. If WSL fails after a Windows restart, try the plain first command and inspect `wsl --list --verbose`; a distribution listed as `Stopped` is installed and normally starts automatically. See [WSL shortcut troubleshooting](docs/troubleshooting.md#the-penguin-shortcut-cannot-start-wsl) and [Where to find it later](#where-to-find-it-later) for refreshing the links.
+
+### Inside Linux: the AI Workstation front desk
+
+Run `aiw` from the Linux shell to open the main menu:
+
+```text
+AI Workstation
+==============
+1) Standard tools (Goose / Open WebUI)
+2) Local inference (llama.cpp / Llama Dispatcher)
+3) Complete system status
+4) Update installation
+5) Command help
+6) Configure AI Workstation (edit YAML settings)
+q) Exit
+```
+
+The menu evolves as new capabilities are added; the example above is a snapshot and is updated periodically.
 
 ## Quick start
 
