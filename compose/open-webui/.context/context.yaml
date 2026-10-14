@@ -9,7 +9,7 @@ compiler_version: "0.8.0"
 node:
   id: "dbf13d04-e686-4cda-9434-c439e23bb400"
   name: "Open WebUI"
-  version: "0.2.0-draft"
+  version: "0.2.1-draft"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
 parents: []
@@ -18,11 +18,11 @@ parents: []
 sources:
   - id: "90dd976e-8753-495b-a631-d708b13878d1"
     name: "Containerized application runtimes"
-    version: "0.2.0-draft"
+    version: "0.2.1-draft"
     relationship: "parent"
     locator: ".."
-    normalized_digest: "8737d0cf572e2df88cc0e0bac5ecd0133bfbcb998cc5d2bae6ffbcb70985b3d9"
-    package_digest: "a3ae6d43bbd4394ee9d15497617a404b1eaa8a01ff6f0b89cc813534887cafc7"
+    normalized_digest: "f13e52872c981885879b987fdb935a659114a13d52ccf8693284131be8f0f4b9"
+    package_digest: "82cc2035ff42d44f7a5877108ce79118317612203f50d261d0893c43963497d1"
 
 # Direct informational References. Their Rules are not effective and they are not exported to Children.
 references: []
@@ -37,14 +37,14 @@ imports:
     why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.2.0"
-    normalized_digest: "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739"
-    package_digest: "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e"
+    version: "0.2.1"
+    normalized_digest: "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a"
+    package_digest: "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb"
   - id: "90dd976e-8753-495b-a631-d708b13878d1"
     name: "Containerized application runtimes"
-    version: "0.2.0-draft"
-    normalized_digest: "8737d0cf572e2df88cc0e0bac5ecd0133bfbcb998cc5d2bae6ffbcb70985b3d9"
-    package_digest: "a3ae6d43bbd4394ee9d15497617a404b1eaa8a01ff6f0b89cc813534887cafc7"
+    version: "0.2.1-draft"
+    normalized_digest: "f13e52872c981885879b987fdb935a659114a13d52ccf8693284131be8f0f4b9"
+    package_digest: "82cc2035ff42d44f7a5877108ce79118317612203f50d261d0893c43963497d1"
 
 # Elements authored in this Node's CONTEXT.src.md.
 local:
@@ -129,5 +129,5 @@ resources:
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "f3e230688c9a297a81032f826ae73b05224e150e63190536e836534dc3638221"
-  package_digest: "9a1d5c2bfc37f63af06120235b905e668c00866acd27e72dbc36265eba077fc6"
+  normalized_digest: "ff7d58544c67bb89dc4cc9617ab730b5cafa6e0e17ea285e1889051773c3ea71"
+  package_digest: "78696e6793e0a6a52c159b600451fbc555965823d9d03362db5f956e605b60ba"

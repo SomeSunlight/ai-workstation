@@ -1,5 +1,5 @@
 # Ansible host configuration — Local Context Source
-<!-- ctx:node id="ad9cbb59-ae04-4290-9c53-5d70cfefe434" name="Ansible host configuration" version="0.2.0-draft" -->
+<!-- ctx:node id="ad9cbb59-ae04-4290-9c53-5d70cfefe434" name="Ansible host configuration" version="0.2.1-draft" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
@@ -21,8 +21,8 @@ Details: CONTEXT-format.md
 -->
 
 <!-- contextcanon-placement-parent:start -->
-- [Bootstrap](..) — `0.2.0-draft` — `relationship=parent`
-  <!-- ctx:source id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.2.0-draft" normalized-digest="59cc67c06924af00df20ae1aff6fc6f206b3e2d2dd4ca626834a68a1ee16c8f2" package-digest="1c63971d5569ceacda28e0b95f350c499badbb4a08356b26893bf4d3ad39d327" -->
+- [Bootstrap](..) — `0.2.1-draft` — `relationship=parent`
+  <!-- ctx:source id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.2.1-draft" normalized-digest="d1ce55c3070f7d5265d2d4ba28523d1efe41f2cf1cb55fa64eadb4cac4155831" package-digest="8ae276c530d72401d155eb5f25fb0abd44d4b2a2ecc207fd1b374dc300dc34a5" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview

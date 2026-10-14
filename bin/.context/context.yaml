@@ -9,7 +9,7 @@ compiler_version: "0.8.0"
 node:
   id: "6417ee7c-a9d0-40c7-ada3-6762d4a3900b"
   name: "aiw operator interface"
-  version: "0.2.0-draft"
+  version: "0.2.1-draft"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
 parents: []
@@ -18,11 +18,11 @@ parents: []
 sources:
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.2.0"
+    version: "0.2.1"
     relationship: "parent"
     locator: ".."
-    normalized_digest: "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739"
-    package_digest: "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e"
+    normalized_digest: "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a"
+    package_digest: "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb"
 
 # Direct informational References. Their Rules are not effective and they are not exported to Children.
 references: []
@@ -37,9 +37,9 @@ imports:
     why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.2.0"
-    normalized_digest: "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739"
-    package_digest: "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e"
+    version: "0.2.1"
+    normalized_digest: "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a"
+    package_digest: "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb"
 
 # Elements authored in this Node's CONTEXT.src.md.
 local:
@@ -110,5 +110,5 @@ resources:
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "afdc5481090868d6da8ce7d196395dd724ac5844a3d8eb7078b3ea26f57ce0c9"
-  package_digest: "3457e696f2df6c132af86593a1cfc02ee556bcd33f51ad959ed0049562dcd2fb"
+  normalized_digest: "b227c3966aa79d768cfcf26671812030cbfad6e0bd870c44c368bfa50843934d"
+  package_digest: "9e3685ffe30a6806436639dda4d5d41efc997bc118a262c338ef1c3252729ae3"

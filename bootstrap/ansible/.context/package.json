@@ -2,8 +2,8 @@
   "changes": [],
   "compiler_version": "0.8.0",
   "digests": {
-    "normalized": "1d5ad6070b014952ff87eaec30c52cd6ad09501d91c7292e1790705d963a2164",
-    "package": "95c239624d7339e49d268844b7352cf711bd7d78ea42df1ec554244bcb19678c"
+    "normalized": "a02c98e5b7d369c7d21ae78b7d931770c83557fe04cd5eb08f2bc1409851eb87",
+    "package": "a83a46dc8573639723b7989ca327b822b8f369aef59f423555bc85b943798fc2"
   },
   "files": [
     {
@@ -13,7 +13,7 @@
     },
     {
       "path": "CONTEXT.md",
-      "sha256": "2f56a1e116aac455bfa6c7b8676c4aa60f0f52b9a7320c48b3c45863e14f0e4d",
+      "sha256": "7b9f276c22f9f91d4e6ae2750c89e2588d10cef28a8945560b9891be38b2890c",
       "size": 9394
     },
     {
@@ -43,8 +43,8 @@
     },
     {
       "path": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md",
-      "sha256": "7da20c430972776523a89549e4a3154bcc8558cdd85e116a0a7f228e45a5983a",
-      "size": 3475
+      "sha256": "c0403fd56f695723f90edc9dcb1ff276f9775b15c42dcc75b883e6c463b4e12c",
+      "size": 5644
     }
   ],
   "imports": [
@@ -59,24 +59,24 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739",
-      "package_digest": "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e",
-      "version": "0.2.0",
+      "normalized_digest": "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a",
+      "package_digest": "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb",
+      "version": "0.2.1",
       "why": null
     },
     {
       "id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
       "name": "Bootstrap",
-      "normalized_digest": "59cc67c06924af00df20ae1aff6fc6f206b3e2d2dd4ca626834a68a1ee16c8f2",
-      "package_digest": "1c63971d5569ceacda28e0b95f350c499badbb4a08356b26893bf4d3ad39d327",
-      "version": "0.2.0-draft",
+      "normalized_digest": "d1ce55c3070f7d5265d2d4ba28523d1efe41f2cf1cb55fa64eadb4cac4155831",
+      "package_digest": "8ae276c530d72401d155eb5f25fb0abd44d4b2a2ecc207fd1b374dc300dc34a5",
+      "version": "0.2.1-draft",
       "why": null
     }
   ],
   "node": {
     "id": "ad9cbb59-ae04-4290-9c53-5d70cfefe434",
     "name": "Ansible host configuration",
-    "version": "0.2.0-draft"
+    "version": "0.2.1-draft"
   },
   "parents": [],
   "removed_rules": [],
@@ -317,10 +317,10 @@
     {
       "id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
       "name": "Bootstrap",
-      "normalized_digest": "59cc67c06924af00df20ae1aff6fc6f206b3e2d2dd4ca626834a68a1ee16c8f2",
-      "package_digest": "1c63971d5569ceacda28e0b95f350c499badbb4a08356b26893bf4d3ad39d327",
+      "normalized_digest": "d1ce55c3070f7d5265d2d4ba28523d1efe41f2cf1cb55fa64eadb4cac4155831",
+      "package_digest": "8ae276c530d72401d155eb5f25fb0abd44d4b2a2ecc207fd1b374dc300dc34a5",
       "relationship": "parent",
-      "version": "0.2.0-draft",
+      "version": "0.2.1-draft",
       "why": null
     }
   ],

@@ -2,8 +2,8 @@
   "changes": [],
   "compiler_version": "0.8.0",
   "digests": {
-    "normalized": "8737d0cf572e2df88cc0e0bac5ecd0133bfbcb998cc5d2bae6ffbcb70985b3d9",
-    "package": "a3ae6d43bbd4394ee9d15497617a404b1eaa8a01ff6f0b89cc813534887cafc7"
+    "normalized": "f13e52872c981885879b987fdb935a659114a13d52ccf8693284131be8f0f4b9",
+    "package": "82cc2035ff42d44f7a5877108ce79118317612203f50d261d0893c43963497d1"
   },
   "files": [
     {
@@ -13,7 +13,7 @@
     },
     {
       "path": "CONTEXT.md",
-      "sha256": "0a7371a126ecbaf08a3200d7b6934c1e1bd1974c16dcddeaf5d4f4588fc19040",
+      "sha256": "d5fd3ef104c92436b88d583324f967a17c03610052549437509efdf673747f7e",
       "size": 9163
     },
     {
@@ -43,8 +43,8 @@
     },
     {
       "path": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md",
-      "sha256": "7da20c430972776523a89549e4a3154bcc8558cdd85e116a0a7f228e45a5983a",
-      "size": 3475
+      "sha256": "c0403fd56f695723f90edc9dcb1ff276f9775b15c42dcc75b883e6c463b4e12c",
+      "size": 5644
     }
   ],
   "imports": [
@@ -59,16 +59,16 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739",
-      "package_digest": "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e",
-      "version": "0.2.0",
+      "normalized_digest": "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a",
+      "package_digest": "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb",
+      "version": "0.2.1",
       "why": null
     }
   ],
   "node": {
     "id": "90dd976e-8753-495b-a631-d708b13878d1",
     "name": "Containerized application runtimes",
-    "version": "0.2.0-draft"
+    "version": "0.2.1-draft"
   },
   "parents": [],
   "removed_rules": [],
@@ -269,10 +269,10 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739",
-      "package_digest": "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e",
+      "normalized_digest": "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a",
+      "package_digest": "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb",
       "relationship": "parent",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "why": null
     }
   ],

@@ -8,13 +8,13 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** Open WebUI  
-**Context version:** `0.2.0-draft`
+**Context version:** `0.2.1-draft`
 
 **Resulting imported Contexts:**
 
-- **Development Workflow** — `0.3.0-draft` — via Parent Context **Containerized application runtimes** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../../.context/versions/0643cccfe12d1c88/CONTEXT.md)
-- **ai-workstation** — `0.2.0` — via Parent Context **Containerized application runtimes** — [inspect accepted carrier](../../.context/versions/0643cccfe12d1c88/CONTEXT.md)
-- **Containerized application runtimes** — `0.2.0-draft` — direct Parent Context — [inspect accepted carrier](../../.context/versions/0643cccfe12d1c88/CONTEXT.md)
+- **Development Workflow** — `0.3.0-draft` — via Parent Context **Containerized application runtimes** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../../.context/versions/5cef73d38ee95d3b/CONTEXT.md)
+- **ai-workstation** — `0.2.1` — via Parent Context **Containerized application runtimes** — [inspect accepted carrier](../../.context/versions/5cef73d38ee95d3b/CONTEXT.md)
+- **Containerized application runtimes** — `0.2.1-draft` — direct Parent Context — [inspect accepted carrier](../../.context/versions/5cef73d38ee95d3b/CONTEXT.md)
 
 ## Local Overview
 

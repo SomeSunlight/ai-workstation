@@ -2,8 +2,8 @@
   "changes": [],
   "compiler_version": "0.8.0",
   "digests": {
-    "normalized": "afdc5481090868d6da8ce7d196395dd724ac5844a3d8eb7078b3ea26f57ce0c9",
-    "package": "3457e696f2df6c132af86593a1cfc02ee556bcd33f51ad959ed0049562dcd2fb"
+    "normalized": "b227c3966aa79d768cfcf26671812030cbfad6e0bd870c44c368bfa50843934d",
+    "package": "9e3685ffe30a6806436639dda4d5d41efc997bc118a262c338ef1c3252729ae3"
   },
   "files": [
     {
@@ -13,7 +13,7 @@
     },
     {
       "path": "CONTEXT.md",
-      "sha256": "e874428d0631efc57e9833498ea8b33509840ebeb4fe2b4c91d5124992a6bdfc",
+      "sha256": "d6cb3319e04c97662de733b8fa0dd08a5eee12dc1abab57f6e8e40bce005d2c5",
       "size": 7939
     },
     {
@@ -43,8 +43,8 @@
     },
     {
       "path": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md",
-      "sha256": "7da20c430972776523a89549e4a3154bcc8558cdd85e116a0a7f228e45a5983a",
-      "size": 3475
+      "sha256": "c0403fd56f695723f90edc9dcb1ff276f9775b15c42dcc75b883e6c463b4e12c",
+      "size": 5644
     }
   ],
   "imports": [
@@ -59,16 +59,16 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739",
-      "package_digest": "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e",
-      "version": "0.2.0",
+      "normalized_digest": "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a",
+      "package_digest": "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb",
+      "version": "0.2.1",
       "why": null
     }
   ],
   "node": {
     "id": "6417ee7c-a9d0-40c7-ada3-6762d4a3900b",
     "name": "aiw operator interface",
-    "version": "0.2.0-draft"
+    "version": "0.2.1-draft"
   },
   "parents": [],
   "removed_rules": [],
@@ -249,10 +249,10 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739",
-      "package_digest": "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e",
+      "normalized_digest": "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a",
+      "package_digest": "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb",
       "relationship": "parent",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "why": null
     }
   ],

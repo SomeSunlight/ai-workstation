@@ -8,7 +8,7 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** ai-workstation  
-**Context version:** `0.2.0`
+**Context version:** `0.2.1`
 
 **Resulting imported Contexts:**
 
