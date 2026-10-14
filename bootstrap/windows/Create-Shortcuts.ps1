@@ -13,7 +13,9 @@ param(
     # Test-only path overrides; normal installation uses the Windows user folders.
     [string]$DesktopDirectory = [Environment]::GetFolderPath('Desktop'),
     [string]$StartMenuDirectory = (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'),
-    [string]$LauncherDirectory = (Join-Path $env:LOCALAPPDATA 'AiWorkstationBootstrap\launchers')
+    [string]$LauncherDirectory = (Join-Path $env:LOCALAPPDATA 'AiWorkstationBootstrap\launchers'),
+    # Test-only override for executable behavior checks without real WSL.
+    [string]$WslExecutable = (Join-Path $env:WINDIR 'System32\wsl.exe')
 )
 
 Set-StrictMode -Version Latest
@@ -23,7 +25,7 @@ $displayName = if ($DistroName -eq 'Ubuntu-24.04') { $ShortcutName } else { "$Sh
 $terminalDisplayName = if ($DistroName -eq 'Ubuntu-24.04') { 'Linux Terminal' } else { "Linux Terminal ($DistroName)" }
 $linuxPath = "/home/$LinuxUser/ai-workstation"
 $linuxHome = "/home/$LinuxUser"
-$wslExe = Join-Path $env:WINDIR 'System32\wsl.exe'
+$wslExe = $WslExecutable
 $cmdExe = Join-Path $env:WINDIR 'System32\cmd.exe'
 $desktop = $DesktopDirectory
 $startMenu = $StartMenuDirectory
@@ -57,25 +59,53 @@ echo Starting $LauncherDisplayName
 echo WSL distribution: $DistroName
 echo Linux directory: $LauncherLinuxPath
 echo.
-"$wslExe" --distribution "$DistroName" --cd "$LauncherLinuxPath"
-set "AIW_EXIT=%ERRORLEVEL%"
-if not "%AIW_EXIT%"=="0" (
-  echo.
-  echo WSL failed with exit code %AIW_EXIT%.
-  echo.
-  echo Available WSL distributions:
-  "$wslExe" --list --verbose
-  echo.
-  echo If a distribution shows Running, WSL is already running but could not accept this connection.
-  echo.
-  echo Try from PowerShell:
-  echo   wsl --shutdown
-  echo   wsl -d $DistroName
-  echo.
-)
+echo Manual start from PowerShell:
+echo   wsl -d $DistroName
+echo   wsl -d $DistroName --cd $LauncherLinuxPath
+echo.
+echo [..] Starting or checking the WSL distribution...
+call "$wslExe" --distribution "$DistroName" --exec /bin/true
+if not errorlevel 1 goto :wsl_ready
+echo [..] First WSL start attempt failed. Retrying once...
+timeout /t 2 /nobreak >nul
+call "$wslExe" --distribution "$DistroName" --exec /bin/true
+if errorlevel 1 goto :wsl_start_failed
+
+:wsl_ready
+echo [OK] WSL distribution is running. Opening Linux shell...
+call "$wslExe" --distribution "$DistroName" --cd "$LauncherLinuxPath"
+if errorlevel 1 goto :wsl_shell_failed
+goto :done
+
+:wsl_start_failed
+set "AIW_FAILURE=1"
+echo [ERROR] WSL could not start the requested distribution.
+echo A stopped distribution normally starts automatically; no manual prestart is required.
+goto :diagnostics
+
+:wsl_shell_failed
+set "AIW_FAILURE=1"
+echo [ERROR] WSL started, but opening the requested Linux directory or shell failed.
+echo Try the plain command above first, then inspect the requested Linux directory.
+goto :diagnostics
+
+:diagnostics
+echo.
+echo Distributions registered for this Windows user:
+call "$wslExe" --list --verbose
+echo.
+echo If $DistroName is absent, check the Windows user or distribution registration.
+echo If it is listed but cannot start, inspect the WSL error above.
+echo For further diagnosis in PowerShell: wsl --status
+echo To restart WSL manually if no other WSL jobs are running: wsl --shutdown
+echo.
+
+:done
 echo.
 echo This window stays open so WSL messages remain visible.
 echo Type exit to close it.
+if defined AIW_FAILURE exit /b 1
+exit /b 0
 "@
 
     Set-Content -LiteralPath $launcherPath -Value $content -Encoding ASCII
@@ -100,7 +130,7 @@ function New-AiwShortcut {
     $shortcut.TargetPath = $cmdExe
     $shortcut.Arguments = ('/k "{0}"' -f $launcherPath)
     $shortcut.WorkingDirectory = $env:USERPROFILE
-    $shortcut.IconLocation = "$wslExe,0"
+    $shortcut.IconLocation = "$(Join-Path $env:WINDIR 'System32\wsl.exe'),0"
     $shortcut.Description = "Open $ShortcutDisplayName in WSL at $ShortcutLinuxPath"
     $shortcut.Save()
     Write-Host "Created $path"
