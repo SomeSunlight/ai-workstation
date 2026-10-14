@@ -123,11 +123,16 @@ if /I "%~1"=="--list" (
 )
 if defined FAKE_WSL_TRACE >>"%FAKE_WSL_TRACE%" echo %*
 if /I "%FAKE_WSL_MODE%"=="missing" exit /b 3
+if /I "%FAKE_WSL_MODE%"=="false-success" (
+  echo Wsl/Service/WSL_E_DISTRO_NOT_FOUND 1>&2
+  exit /b 0
+)
 if /I "%FAKE_WSL_MODE%"=="first-fail" if not exist "%FAKE_WSL_MARKER%" (
   >"%FAKE_WSL_MARKER%" echo first-failed
   exit /b 7
 )
 if /I "%FAKE_WSL_MODE%"=="shell-fail" if /I "%~3"=="--cd" exit /b 5
+if /I "%~3"=="--exec" echo AIW_WSL_READY
 exit /b 0
 '@
 
@@ -171,13 +176,23 @@ exit /b 0
         Assert-True ($out.Output.Contains('Manual start from PowerShell:')) 'Missing always-visible command hint'
         Assert-True ($out.Output.Contains('wsl -d Ubuntu-24.04')) 'Missing manual distro command'
         Assert-True ($out.Calls.Count -eq 2) 'Expected WSL startup preflight followed by shell'
-        Assert-True ($out.Calls[0] -match '--exec /bin/true') 'Preflight did not run first'
+        Assert-True ($out.Calls[0] -match '--exec /bin/echo AIW_WSL_READY') 'Preflight did not run first'
         Assert-True ($out.Calls[1].Contains("--cd `"$($entry.Path)`"")) 'Shell was not opened at target path'
     }
 
     $retry = Invoke-MockLauncher -Path $mockWorkstation -Mode 'first-fail'
     Assert-True ($retry.Code -eq 0) 'Transient cold-start error did not recover'
     Assert-True ($retry.Calls.Count -eq 3) 'Transient error must retry once before shell'
+    # Real owner regression: WSL printed DISTRO_NOT_FOUND and the previous
+    # launcher falsely continued to [OK]. Even exit code 0 is not sufficient;
+    # the marker can only come from an actually executed Linux command.
+    $falseSuccess = Invoke-MockLauncher -Path $mockWorkstation -Mode 'false-success'
+    Assert-True ($falseSuccess.Code -ne 0) 'WSL error with exit 0 was falsely accepted'
+    Assert-True ($falseSuccess.Calls.Count -eq 2) 'WSL error should retry exactly once'
+    Assert-True (-not $falseSuccess.Output.Contains('[OK] Linux command')) 'False WSL success was printed'
+    Assert-True ($falseSuccess.Output.Contains('WSL_E_DISTRO_NOT_FOUND')) 'Lost WSL diagnostic'
+    Assert-True ($falseSuccess.Output.Contains('no successful Linux execution marker')) 'Missing clear probe failure'
+
     $missing = Invoke-MockLauncher -Path $mockTerminal -Mode 'missing'
     Assert-True ($missing.Code -ne 0) 'Missing distribution must fail visibly'
     Assert-True ($missing.Output.Contains('Distributions registered for this Windows user:')) 'Missing distribution diagnostics'
