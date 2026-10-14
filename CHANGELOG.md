@@ -2,7 +2,8 @@
 
 ## Unreleased (Issue #29)
 - Show the two Windows penguin launchers and current main `aiw` menu prominently in README, with manual PowerShell startup commands.
-- Make both shortcuts preflight/start a stopped WSL distribution, retry one initial failure, and distinguish WSL start from working-directory/shell failures.
+- Replace `cmd.exe` / `call wsl.exe` launcher with directly invoked PowerShell 7 after host-specific WSL launch failure; keep the installed scripts standalone and preserve both icons.
+- Make both shortcuts preflight/start a stopped WSL distribution, require actual Linux execution evidence, retry one initial failure, and distinguish WSL start from working-directory/shell failures.
 - Add mocked Windows cold-start/diagnostic tests and non-destructive WSL recovery guidance.
 ## 0.6.8
 - Remove implicit cleanup of the old Goose Compose project from routine launch and shutdown.
