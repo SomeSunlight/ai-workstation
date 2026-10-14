@@ -8,13 +8,13 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** Windows and WSL bootstrap  
-**Context version:** `0.2.0-draft`
+**Context version:** `0.2.1-draft`
 
 **Resulting imported Contexts:**
 
-- **Development Workflow** — `0.3.0-draft` — via Parent Context **Bootstrap** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../../.context/versions/18794f3b46c24451/CONTEXT.md)
-- **ai-workstation** — `0.2.0` — via Parent Context **Bootstrap** — [inspect accepted carrier](../../.context/versions/18794f3b46c24451/CONTEXT.md)
-- **Bootstrap** — `0.2.0-draft` — direct Parent Context — [inspect accepted carrier](../../.context/versions/18794f3b46c24451/CONTEXT.md)
+- **Development Workflow** — `0.3.0-draft` — via Parent Context **Bootstrap** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../../.context/versions/0294a3aff9e1d337/CONTEXT.md)
+- **ai-workstation** — `0.2.1` — via Parent Context **Bootstrap** — [inspect accepted carrier](../../.context/versions/0294a3aff9e1d337/CONTEXT.md)
+- **Bootstrap** — `0.2.1-draft` — direct Parent Context — [inspect accepted carrier](../../.context/versions/0294a3aff9e1d337/CONTEXT.md)
 
 ## Local Overview
 

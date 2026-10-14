@@ -1,5 +1,39 @@
 # AI Workstation Plan
 
+## Current review block — Issue #29: reliable WSL launch and visual entrypoints
+
+Purpose: ensure both Windows penguin shortcuts start an installed stopped WSL distro automatically, give immediate manual PowerShell commands, and make failures diagnosable. Provide a compact visual README illustration of the two launchers and central `aiw` menu. This takes precedence over Issue #30 (Intel SYCL regression).
+
+Writable scope: `bootstrap/windows/Create-Shortcuts.ps1`, `bootstrap/windows/Launch-Wsl.ps1` (new), `tests/windows/shortcuts.ps1`, `README.md`, `docs/troubleshooting.md`, `CHANGELOG.md`, and this PLAN. No WSL distribution re-registration, removal, driver changes, runtime installation, ContextCanon source/package changes or inference changes. Work from accepted `main` on `agent/issue-29-wsl-cold-start`.
+
+- [x] Record and expand Issue #29; read applicable Windows/bootstrap/Development Workflow Context and existing launcher code/tests.
+- [x] Implement explicit WSL cold-start preflight for both launchers, bounded retry, visible manual commands and distinct failure paths.
+- [x] Improve the README entrypoint visual and manual startup/recovery guidance.
+- [x] Run new Windows mock tests for both links, custom distro names, successful cold startup and failure reporting; preserve ownership/migration/idempotency tests. GitHub Windows runner passed.
+- [x] Run focused Windows smoke and complete repository release gate in GitHub Actions; disclose unavailable real Windows/WSL cold-start validation. GitHub Validate run [38552549675](https://github.com/SomeSunlight/ai-workstation/actions/runs/38552549675) passed both jobs on code head `66bc5eb6f3ae20886348d0841c6c88f522c28a4a`.
+- [x] Publish [review PR #32](https://github.com/SomeSunlight/ai-workstation/pull/32); keep open without merge.
+- [ ] Owner acceptance: refresh shortcuts from updated Windows checkout; test both shortcuts from a stopped distro after a full Windows reboot; merge only with owner approval.
+
+Known diagnostic uncertainty: `wsl --distribution NAME --cd PATH` already ought to start a stopped distro. The contradictory `WSL_E_DISTRO_NOT_FOUND` alongside an installed distro list could be transient WSL startup/registration or launcher invocation, not a confirmed missing prestart command.
+
+### Owner cold-boot result and follow-up — 2026-10-14
+
+After a real Windows restart and ten minutes idle, the updated launcher printed `WSL_E_DISTRO_NOT_FOUND` during `--exec /bin/true` **and nevertheless printed `[OK] WSL distribution is running`**, then the same error when opening the target directory. Therefore the preflight's exit-code-only success test is **insufficient**, regardless of whether the root cause lies in WSL or `cmd.exe` / `call` return handling. A bounded retry alone is not a solution.
+
+- [x] Reproduce the false-success class in a Windows fake-WSL test, including an error message with process exit code zero.
+- [x] Require exact stdout sentinel from a real `/bin/echo` command inside Ubuntu *and* zero exit code before reporting WSL running; preserve error text and bounded retry.
+- [x] Verify the additional Windows regression test and full release gate on revised PR code head `164c5a1066ade7ee5e9a556e0a0b334c6e86803b`. Both Windows and Linux validation jobs passed in [run 38561787523](https://github.com/SomeSunlight/ai-workstation/actions/runs/38561787523).
+- [x] Owner PowerShell test (2026-10-14): `wsl -d Ubuntu-24.04 --exec /bin/echo WSL_OK` printed `WSL_OK`, `$LASTEXITCODE=0`, `wsl -l -v` lists the distro stopped, WSL 2.7.14.0 / kernel 6.18.33.2-2. PowerShell ran after failed penguin attempts, so the first-use effect is not excluded. Record in Issue #29.
+- [x] Compare the literal full System32 wsl.exe invocation from PowerShell with `call` through ordinary cmd.exe and inspect the executable resolved by PowerShell: same account and absolute `System32/wsl.exe` returns `WSL_OK` and exit 0 from PowerShell 7.6.6, but prints `WSL_E_DISTRO_NOT_FOUND` and exits -1 from `cmd.exe` with `call`. **The CMD-vs-CALL distinction remains untested; do not attribute the bug to CALL alone.**
+- [x] Replace the Windows shortcut's `cmd.exe /k` + `call wsl.exe` path with PowerShell 7 via a dedicated `bootstrap/windows/Launch-Wsl.ps1`, copied into standalone per-icon scripts under LocalAppData. Preserve manual commands, actual Linux readiness marker, bounded retry and distinct error paths.
+- [x] Adapt Windows smoke tests for PowerShell shortcut targets, per-icon scripts, success/failure modes, custom distros, legacy cleanup and repeated installation. Both jobs succeeded on [run 38564510422](https://github.com/SomeSunlight/ai-workstation/actions/runs/38564510422).
+- [x] Repeat Windows and complete release checks after the final documentation update; both GitHub jobs succeeded on code/documentation head `58f892d1e314bc417aa420bec46ac6276828c164` in [run 38564779999](https://github.com/SomeSunlight/ai-workstation/actions/runs/38564779999). The PLAN-only checkpoint after this validation does not change executable behavior.
+- [ ] Owner must refresh installed launcher scripts and test both penguins from stopped WSL (ideally also after Windows cold boot), then explicitly approve any merge.
+- [ ] Continue diagnosis based on owner results before attempting registry, reinstall, or service changes.
+
+
+
+
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
 

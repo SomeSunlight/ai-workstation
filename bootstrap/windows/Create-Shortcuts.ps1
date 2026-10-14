@@ -9,6 +9,7 @@ param(
     [string]$DistroName = 'Ubuntu-24.04',
     [ValidatePattern('^[a-z_][a-z0-9_-]*$')]
     [string]$LinuxUser = 'moresunlight',
+    [ValidatePattern('^[^"]+$')]
     [string]$ShortcutName = 'Linux AI Workstation',
     # Test-only path overrides; normal installation uses the Windows user folders.
     [string]$DesktopDirectory = [Environment]::GetFolderPath('Desktop'),
@@ -24,6 +25,7 @@ $terminalDisplayName = if ($DistroName -eq 'Ubuntu-24.04') { 'Linux Terminal' } 
 $linuxPath = "/home/$LinuxUser/ai-workstation"
 $linuxHome = "/home/$LinuxUser"
 $wslExe = Join-Path $env:WINDIR 'System32\wsl.exe'
+$pwshExe = Join-Path $PSHOME 'pwsh.exe'
 $cmdExe = Join-Path $env:WINDIR 'System32\cmd.exe'
 $desktop = $DesktopDirectory
 $startMenu = $StartMenuDirectory
@@ -42,43 +44,13 @@ function ConvertTo-SafeFileName {
 }
 
 function New-AiwLauncher {
-    param(
-        [Parameter(Mandatory)][string]$LauncherName,
-        [Parameter(Mandatory)][string]$LauncherDisplayName,
-        [Parameter(Mandatory)][string]$LauncherLinuxPath
-    )
+    param([Parameter(Mandatory)][string]$LauncherName)
 
     New-Item -ItemType Directory -Path $launcherRoot -Force | Out-Null
-    $launcherPath = Join-Path $launcherRoot "$(ConvertTo-SafeFileName -Value $LauncherName).cmd"
-    $content = @"
-@echo off
-setlocal
-echo Starting $LauncherDisplayName
-echo WSL distribution: $DistroName
-echo Linux directory: $LauncherLinuxPath
-echo.
-"$wslExe" --distribution "$DistroName" --cd "$LauncherLinuxPath"
-set "AIW_EXIT=%ERRORLEVEL%"
-if not "%AIW_EXIT%"=="0" (
-  echo.
-  echo WSL failed with exit code %AIW_EXIT%.
-  echo.
-  echo Available WSL distributions:
-  "$wslExe" --list --verbose
-  echo.
-  echo If a distribution shows Running, WSL is already running but could not accept this connection.
-  echo.
-  echo Try from PowerShell:
-  echo   wsl --shutdown
-  echo   wsl -d $DistroName
-  echo.
-)
-echo.
-echo This window stays open so WSL messages remain visible.
-echo Type exit to close it.
-"@
-
-    Set-Content -LiteralPath $launcherPath -Value $content -Encoding ASCII
+    $launcherPath = Join-Path $launcherRoot "$(ConvertTo-SafeFileName -Value $LauncherName).ps1"
+    # Keep the Windows-side scripts working even after deleting the source checkout.
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Launch-Wsl.ps1') `
+        -Destination $launcherPath -Force
     return $launcherPath
 }
 
@@ -91,14 +63,14 @@ function New-AiwShortcut {
 
     New-Item -ItemType Directory -Path $Folder -Force | Out-Null
     $path = Join-Path $Folder "$ShortcutDisplayName.lnk"
-    $launcherPath = New-AiwLauncher `
-        -LauncherName $ShortcutDisplayName `
-        -LauncherDisplayName $ShortcutDisplayName `
-        -LauncherLinuxPath $ShortcutLinuxPath
+    $launcherPath = New-AiwLauncher -LauncherName $ShortcutDisplayName
 
     $shortcut = $shell.CreateShortcut($path)
-    $shortcut.TargetPath = $cmdExe
-    $shortcut.Arguments = ('/k "{0}"' -f $launcherPath)
+    # The same System32 wsl.exe works under PowerShell on the owner's laptop
+    # but fails from cmd.exe / call under the same Windows account.
+    $shortcut.TargetPath = $pwshExe
+    $shortcut.Arguments = ('-NoLogo -NoProfile -NoExit -File "{0}" -DistroName "{1}" -LinuxDirectory "{2}" -LauncherName "{3}"' -f `
+        $launcherPath, $DistroName, $ShortcutLinuxPath, $ShortcutDisplayName)
     $shortcut.WorkingDirectory = $env:USERPROFILE
     $shortcut.IconLocation = "$wslExe,0"
     $shortcut.Description = "Open $ShortcutDisplayName in WSL at $ShortcutLinuxPath"

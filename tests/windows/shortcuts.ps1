@@ -8,6 +8,7 @@ $creator = Join-Path $root 'bootstrap/windows/Create-Shortcuts.ps1'
 $installer = Join-Path $root 'bootstrap/windows/Install-AiWorkstation.ps1'
 $fixture = Join-Path ([IO.Path]::GetTempPath()) ('aiw-shortcuts-' + [Guid]::NewGuid().ToString('N'))
 $shell = New-Object -ComObject WScript.Shell
+$PSNativeCommandUseErrorActionPreference = $false
 
 function Assert-True {
     param([bool]$Condition, [string]$Message)
@@ -42,12 +43,18 @@ function Assert-Link {
     $path = Join-Path $Folder "$Name.lnk"
     Assert-True (Test-Path -LiteralPath $path -PathType Leaf) "Missing shortcut: $path"
     $link = $shell.CreateShortcut($path)
-    Assert-True ($link.TargetPath -ieq (Join-Path $env:WINDIR 'System32/cmd.exe')) "Unexpected target: $path"
-    $cmdPath = Join-Path $Launchers "$Name.cmd"
-    Assert-True ($link.Arguments -eq ('/k "{0}"' -f $cmdPath)) "Incorrect launcher: $path"
-    $body = Get-Content -LiteralPath $cmdPath -Raw
-    Assert-True ($body.Contains("--distribution `"$Distro`" --cd `"$LinuxPath`"")) "Incorrect WSL target: $cmdPath"
+    $pwsh = Join-Path $PSHOME 'pwsh.exe'
+    Assert-True ($link.TargetPath -ieq $pwsh) "Launcher does not use PowerShell: $path"
+    $launcherPath = Join-Path $Launchers "$Name.ps1"
+    $expected = ('-NoLogo -NoProfile -NoExit -File "{0}" -DistroName "{1}" -LinuxDirectory "{2}" -LauncherName "{3}"' -f `
+        $launcherPath, $Distro, $LinuxPath, $Name)
+    Assert-True ($link.Arguments -eq $expected) "Unexpected PowerShell launcher arguments: $path"
+    Assert-True (Test-Path -LiteralPath $launcherPath -PathType Leaf) "Missing installed launcher script: $launcherPath"
+    $body = Get-Content -LiteralPath $launcherPath -Raw
+    Assert-True ($body.Contains('Manual start from PowerShell:')) "Missing launch diagnostics: $launcherPath"
+    Assert-True ($body.Contains('--exec /bin/echo')) "Missing WSL startup probe: $launcherPath"
 }
+
 
 try {
     $desktop = Join-Path $fixture 'default/Desktop'
@@ -110,7 +117,108 @@ try {
     $publicEntry = Get-Content -LiteralPath (Join-Path $root 'install.ps1') -Raw
     Assert-True ($publicEntry.Contains("'Linux AI Workstation'")) 'Public install.ps1 default name outdated'
 
-    Write-Host 'Windows shortcut creation, migration, idempotency and ownership tests passed.'
+    # Real PowerShell process and installed per-icon PS1 script, with an isolated
+    # mock executable. No actual WSL distribution is needed on the CI runner.
+    $fakeWsl = Join-Path $fixture 'fake-wsl.cmd'
+    Set-Content -LiteralPath $fakeWsl -Encoding ASCII -Value @'
+@echo off
+if /I "%~1"=="--list" (
+  echo NAME STATE VERSION
+  echo Ubuntu-24.04 Stopped 2
+  exit /b 0
+)
+if defined FAKE_WSL_TRACE >>"%FAKE_WSL_TRACE%" echo %*
+if /I "%FAKE_WSL_MODE%"=="missing" exit /b 3
+if /I "%FAKE_WSL_MODE%"=="false-success" (
+  echo Wsl/Service/WSL_E_DISTRO_NOT_FOUND 1>&2
+  exit /b 0
+)
+if /I "%FAKE_WSL_MODE%"=="first-fail" if not exist "%FAKE_WSL_MARKER%" (
+  >"%FAKE_WSL_MARKER%" echo first-failed
+  exit /b 7
+)
+if /I "%FAKE_WSL_MODE%"=="shell-fail" if /I "%~3"=="--cd" exit /b 5
+if /I "%~3"=="--exec" echo AIW_WSL_READY
+exit /b 0
+'@
+
+    $mockDesktop = Join-Path $fixture 'mock/Desktop'
+    $mockStart = Join-Path $fixture 'mock/Start'
+    $mockLaunchers = Join-Path $fixture 'mock/Launchers'
+    Invoke-TestShortcuts -Distro Ubuntu-24.04 -Desktop $mockDesktop -Start $mockStart -Launchers $mockLaunchers
+
+    $mockWorkstation = Join-Path $mockLaunchers 'Linux AI Workstation.ps1'
+    $mockTerminal = Join-Path $mockLaunchers 'Linux Terminal.ps1'
+    $pwshExecutable = Join-Path $PSHOME 'pwsh.exe'
+
+    function Invoke-MockLauncher {
+        param([string]$Path, [string]$Mode, [string]$Distro = 'Ubuntu-24.04',
+              [string]$LinuxPath = '/home/moresunlight/ai-workstation',
+              [string]$Label = 'Linux AI Workstation')
+        $env:FAKE_WSL_MODE = $Mode
+        $env:FAKE_WSL_TRACE = Join-Path $fixture 'wsl-calls.txt'
+        $env:FAKE_WSL_MARKER = Join-Path $fixture 'first-attempt.txt'
+        Remove-Item -LiteralPath $env:FAKE_WSL_TRACE, $env:FAKE_WSL_MARKER `
+            -ErrorAction SilentlyContinue
+        try {
+            $output = (& $pwshExecutable -NoLogo -NoProfile -File $Path `
+                -DistroName $Distro -LinuxDirectory $LinuxPath `
+                -LauncherName $Label -WslExecutable $fakeWsl 2>&1 | Out-String)
+            $code = $LASTEXITCODE
+            $calls = if (Test-Path -LiteralPath $env:FAKE_WSL_TRACE) {
+                @(Get-Content -LiteralPath $env:FAKE_WSL_TRACE)
+            }
+            else { @() }
+            return @{ Output = $output; Code = $code; Calls = $calls }
+        }
+        finally {
+            Remove-Item Env:FAKE_WSL_MODE, Env:FAKE_WSL_TRACE, Env:FAKE_WSL_MARKER `
+                -ErrorAction SilentlyContinue
+        }
+    }
+
+    foreach ($entry in @(
+        @{ File = $mockWorkstation; Path = '/home/moresunlight/ai-workstation'; Label = 'Linux AI Workstation' },
+        @{ File = $mockTerminal; Path = '/home/moresunlight'; Label = 'Linux Terminal' }
+    )) {
+        $out = Invoke-MockLauncher -Path $entry.File -Mode 'ok' -LinuxPath $entry.Path -Label $entry.Label
+        Assert-True ($out.Code -eq 0) "Launcher failed: $($entry.File). $($out.Output)"
+        Assert-True ($out.Output.Contains('Manual start from PowerShell:')) 'Missing manual command hint'
+        Assert-True ($out.Output.Contains('wsl -d Ubuntu-24.04')) 'Missing distro command hint'
+        Assert-True ($out.Calls.Count -eq 2) 'Expected Linux probe followed by shell'
+        Assert-True ($out.Calls[0] -match '--exec /bin/echo AIW_WSL_READY') 'Linux readiness probe missing'
+        Assert-True ($out.Calls[1].Contains("--cd $($entry.Path)")) 'Shell did not use requested directory'
+    }
+
+    $retry = Invoke-MockLauncher -Path $mockWorkstation -Mode 'first-fail'
+    Assert-True ($retry.Code -eq 0 -and $retry.Calls.Count -eq 3) 'Transient WSL failure did not retry once'
+
+    $falseSuccess = Invoke-MockLauncher -Path $mockWorkstation -Mode 'false-success'
+    Assert-True ($falseSuccess.Code -ne 0) 'Native return code 0 with WSL error must fail'
+    Assert-True ($falseSuccess.Calls.Count -eq 2) 'False success should be retried once'
+    Assert-True (-not $falseSuccess.Output.Contains('[OK] Linux command')) 'False success reported'
+    Assert-True ($falseSuccess.Output.Contains('WSL_E_DISTRO_NOT_FOUND')) 'Lost original WSL error'
+
+    $missing = Invoke-MockLauncher -Path $mockTerminal -Mode 'missing'
+    Assert-True ($missing.Code -ne 0) 'Missing distribution incorrectly accepted'
+    Assert-True ($missing.Output.Contains('Registered distributions')) 'No distribution diagnostics'
+
+    $shellFailure = Invoke-MockLauncher -Path $mockWorkstation -Mode 'shell-fail'
+    Assert-True ($shellFailure.Code -ne 0) 'Shell launch error was ignored'
+    Assert-True ($shellFailure.Output.Contains('[ERROR] WSL started but')) 'Shell failure not distinguished'
+
+    # A custom distro must use its own link/script and must not rewrite the
+    # default distro launchers.
+    Invoke-TestShortcuts -Distro Ubuntu-24.04-Test -Desktop $mockDesktop -Start $mockStart -Launchers $mockLaunchers
+    $custom = Invoke-MockLauncher `
+        -Path (Join-Path $mockLaunchers 'Linux Terminal (Ubuntu-24.04-Test).ps1') `
+        -Mode 'ok' -Distro 'Ubuntu-24.04-Test' -LinuxPath '/home/moresunlight' `
+        -Label 'Linux Terminal (Ubuntu-24.04-Test)'
+    Assert-True ($custom.Code -eq 0) 'Custom distro PowerShell launcher failed'
+    Assert-True ($custom.Calls[0].Contains('--distribution Ubuntu-24.04-Test')) 'Custom distro did not reach WSL'
+    Assert-True ($custom.Output.Contains('wsl -d Ubuntu-24.04-Test')) 'Custom distro manual command missing'
+
+    Write-Host 'Windows PowerShell shortcut launch, legacy migration, retry and failure tests passed.'
 }
 finally {
     Remove-Item -LiteralPath $fixture -Recurse -Force -ErrorAction SilentlyContinue

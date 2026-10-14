@@ -8,12 +8,12 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** Bootstrap  
-**Context version:** `0.2.0-draft`
+**Context version:** `0.2.1-draft`
 
 **Resulting imported Contexts:**
 
-- **Development Workflow** — `0.3.0-draft` — via Parent Context **ai-workstation** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../.context/versions/a8d2fb449c1d8ac5/CONTEXT.md)
-- **ai-workstation** — `0.2.0` — direct Parent Context — [inspect accepted carrier](../.context/versions/a8d2fb449c1d8ac5/CONTEXT.md)
+- **Development Workflow** — `0.3.0-draft` — via Parent Context **ai-workstation** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../.context/versions/3f96cd5379088631/CONTEXT.md)
+- **ai-workstation** — `0.2.1` — direct Parent Context — [inspect accepted carrier](../.context/versions/3f96cd5379088631/CONTEXT.md)
 
 ## How to use this context
 

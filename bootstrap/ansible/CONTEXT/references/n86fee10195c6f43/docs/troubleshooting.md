@@ -38,6 +38,51 @@ The project lives inside Linux:
 /home/moresunlight/ai-workstation
 ```
 
+## The penguin shortcut cannot start WSL
+
+Both **Linux AI Workstation** and **Linux Terminal** start the existing Ubuntu
+WSL distribution automatically, even when `wsl --list --verbose` reports
+`Stopped`. You do **not** have to open a separate PowerShell session first.
+The generated shortcut opens **PowerShell 7** directly, executes an actual
+Linux command to check startup, retries once after a failure, and leaves the
+window open to show the error. The older `cmd.exe` launcher could report
+`WSL_E_DISTRO_NOT_FOUND` under `call wsl.exe` even though **the exact same
+System32 `wsl.exe` invocation worked from PowerShell** under the same user.
+This observation does not establish whether `call` or CMD itself was at fault.
+
+Manual equivalents in ordinary **Windows PowerShell**:
+
+```powershell
+wsl --list --verbose
+wsl -d Ubuntu-24.04
+wsl -d Ubuntu-24.04 --cd /home/moresunlight/ai-workstation
+```
+
+If the launcher says `Wsl/Service/WSL_E_DISTRO_NOT_FOUND` but the **same**
+Windows account's `wsl --list --verbose` also lists `Ubuntu-24.04`, do not
+unregister or reinstall the distribution. A stopped distribution is registered;
+the contradiction may be transient WSL initialization, account/registration
+state, or an invocation problem. The error alone does not establish the cause.
+
+Try the plain `wsl -d Ubuntu-24.04` first, without `--cd`. If that opens
+Linux, check whether `/home/moresunlight/ai-workstation` exists and then
+test the second command. If the plain command fails, inspect `wsl --status`
+and the message directly above the failure. When no other WSL work is running,
+you may try `wsl --shutdown` from PowerShell followed by the plain command.
+`wsl --shutdown` stops **all** running WSL distributions; the launcher never
+runs it automatically.
+
+After updating the Windows-side AI Workstation checkout, recreate **only**
+the Windows shortcuts (no WSL reinstall needed):
+
+```powershell
+.\install.ps1 -Action Shortcuts
+```
+
+For a non-default distribution, include `-DistroName` so both icons target
+that name. If WSL remains inaccessible, capture the complete launcher output
+and the results of the PowerShell commands above before changing packages.
+
 ## The Linux AI Workstation shortcut is missing
 
 Rerun the Windows installer:

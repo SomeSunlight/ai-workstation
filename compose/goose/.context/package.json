@@ -2,8 +2,8 @@
   "changes": [],
   "compiler_version": "0.8.0",
   "digests": {
-    "normalized": "4b5f52f18b44d9150ce1411c75494d3ff8e0fb875d67024cecf521be59d65864",
-    "package": "2d63be9a4209c1a6f39524430b894a23124ddfa01d1b78667f03c01d123b8d25"
+    "normalized": "a5d5af65a66489cf1a67bf971549d4e35b70790d7227f5435e144cd622f8dcdd",
+    "package": "46975034fba7d6bc3fd1cfec293630a434c28c8627ce6d28bb7bf6dec7708496"
   },
   "files": [
     {
@@ -13,7 +13,7 @@
     },
     {
       "path": "CONTEXT.md",
-      "sha256": "d7474e7e4bb030be94b056f1ceaa579699e71c9fb72a94c7041345beb5774a81",
+      "sha256": "234766826c391e4ba7d2587b926b82e181d933b31ab5446bb9646a4b66d204dd",
       "size": 10699
     },
     {
@@ -43,8 +43,8 @@
     },
     {
       "path": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md",
-      "sha256": "7da20c430972776523a89549e4a3154bcc8558cdd85e116a0a7f228e45a5983a",
-      "size": 3475
+      "sha256": "c0403fd56f695723f90edc9dcb1ff276f9775b15c42dcc75b883e6c463b4e12c",
+      "size": 5644
     }
   ],
   "imports": [
@@ -59,24 +59,24 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "d44fb759965592aa294658f6c1f9de875e410a025972937e4b9d126238cd6739",
-      "package_digest": "0120798b912bb39f68c061496ff551fd07d7233aa0f03c94558dd1b0024d1a5e",
-      "version": "0.2.0",
+      "normalized_digest": "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a",
+      "package_digest": "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb",
+      "version": "0.2.1",
       "why": null
     },
     {
       "id": "90dd976e-8753-495b-a631-d708b13878d1",
       "name": "Containerized application runtimes",
-      "normalized_digest": "8737d0cf572e2df88cc0e0bac5ecd0133bfbcb998cc5d2bae6ffbcb70985b3d9",
-      "package_digest": "a3ae6d43bbd4394ee9d15497617a404b1eaa8a01ff6f0b89cc813534887cafc7",
-      "version": "0.2.0-draft",
+      "normalized_digest": "f13e52872c981885879b987fdb935a659114a13d52ccf8693284131be8f0f4b9",
+      "package_digest": "82cc2035ff42d44f7a5877108ce79118317612203f50d261d0893c43963497d1",
+      "version": "0.2.1-draft",
       "why": null
     }
   ],
   "node": {
     "id": "3fd2ae4e-d712-4232-917a-7059b03a3cd4",
     "name": "Goose",
-    "version": "0.2.0-draft"
+    "version": "0.2.1-draft"
   },
   "parents": [],
   "removed_rules": [],
@@ -367,10 +367,10 @@
     {
       "id": "90dd976e-8753-495b-a631-d708b13878d1",
       "name": "Containerized application runtimes",
-      "normalized_digest": "8737d0cf572e2df88cc0e0bac5ecd0133bfbcb998cc5d2bae6ffbcb70985b3d9",
-      "package_digest": "a3ae6d43bbd4394ee9d15497617a404b1eaa8a01ff6f0b89cc813534887cafc7",
+      "normalized_digest": "f13e52872c981885879b987fdb935a659114a13d52ccf8693284131be8f0f4b9",
+      "package_digest": "82cc2035ff42d44f7a5877108ce79118317612203f50d261d0893c43963497d1",
       "relationship": "parent",
-      "version": "0.2.0-draft",
+      "version": "0.2.1-draft",
       "why": null
     }
   ],

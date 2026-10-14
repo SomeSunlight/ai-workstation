@@ -1,5 +1,5 @@
 # Open WebUI — Local Context Source
-<!-- ctx:node id="dbf13d04-e686-4cda-9434-c439e23bb400" name="Open WebUI" version="0.2.0-draft" -->
+<!-- ctx:node id="dbf13d04-e686-4cda-9434-c439e23bb400" name="Open WebUI" version="0.2.1-draft" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
@@ -21,8 +21,8 @@ Details: CONTEXT-format.md
 -->
 
 <!-- contextcanon-placement-parent:start -->
-- [Containerized application runtimes](..) — `0.2.0-draft` — `relationship=parent`
-  <!-- ctx:source id="90dd976e-8753-495b-a631-d708b13878d1" version="0.2.0-draft" normalized-digest="8737d0cf572e2df88cc0e0bac5ecd0133bfbcb998cc5d2bae6ffbcb70985b3d9" package-digest="a3ae6d43bbd4394ee9d15497617a404b1eaa8a01ff6f0b89cc813534887cafc7" -->
+- [Containerized application runtimes](..) — `0.2.1-draft` — `relationship=parent`
+  <!-- ctx:source id="90dd976e-8753-495b-a631-d708b13878d1" version="0.2.1-draft" normalized-digest="f13e52872c981885879b987fdb935a659114a13d52ccf8693284131be8f0f4b9" package-digest="82cc2035ff42d44f7a5877108ce79118317612203f50d261d0893c43963497d1" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview
