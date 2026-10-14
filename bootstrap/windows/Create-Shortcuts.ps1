@@ -64,15 +64,31 @@ echo   wsl -d $DistroName
 echo   wsl -d $DistroName --cd $LauncherLinuxPath
 echo.
 echo [..] Starting or checking the WSL distribution...
-call "$wslExe" --distribution "$DistroName" --exec /bin/true
-if not errorlevel 1 goto :wsl_ready
+set "AIW_ATTEMPT=1"
+
+:probe_wsl
+rem Do not trust wsl.exe's exit status alone. A user observed WSL_E_DISTRO_NOT_FOUND
+rem followed by [OK] with the old --exec /bin/true preflight.
+rem A genuine Linux process must produce this exact marker on stdout.
+set "AIW_PROBE=%TEMP%\aiw-wsl-%RANDOM%-%RANDOM%.txt"
+call "$wslExe" --distribution "$DistroName" --exec /bin/echo AIW_WSL_READY >"%AIW_PROBE%"
+set "AIW_EXIT=%ERRORLEVEL%"
+findstr /x /c:"AIW_WSL_READY" "%AIW_PROBE%" >nul 2>&1
+set "AIW_MARKER_EXIT=%ERRORLEVEL%"
+if not "%AIW_MARKER_EXIT%"=="0" (
+  echo [..] WSL produced no successful Linux execution marker. Output:
+  type "%AIW_PROBE%"
+)
+del /q "%AIW_PROBE%" >nul 2>&1
+if "%AIW_EXIT%"=="0" if "%AIW_MARKER_EXIT%"=="0" goto :wsl_ready
+if "%AIW_ATTEMPT%"=="2" goto :wsl_start_failed
 echo [..] First WSL start attempt failed. Retrying once...
+set "AIW_ATTEMPT=2"
 timeout /t 2 /nobreak >nul
-call "$wslExe" --distribution "$DistroName" --exec /bin/true
-if errorlevel 1 goto :wsl_start_failed
+goto :probe_wsl
 
 :wsl_ready
-echo [OK] WSL distribution is running. Opening Linux shell...
+echo [OK] Linux command executed successfully; opening the requested shell...
 call "$wslExe" --distribution "$DistroName" --cd "$LauncherLinuxPath"
 if errorlevel 1 goto :wsl_shell_failed
 goto :done
