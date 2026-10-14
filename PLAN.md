@@ -9,9 +9,10 @@ Writable scope: `bootstrap/windows/Create-Shortcuts.ps1`, `tests/windows/shortcu
 - [x] Record and expand Issue #29; read applicable Windows/bootstrap/Development Workflow Context and existing launcher code/tests.
 - [x] Implement explicit WSL cold-start preflight for both launchers, bounded retry, visible manual commands and distinct failure paths.
 - [x] Improve the README entrypoint visual and manual startup/recovery guidance.
-- [ ] Run new Windows mock tests for both links, custom distro names, successful cold startup and failure reporting; preserve ownership/migration/idempotency tests (test cases authored, not yet executed).
-- [ ] Run focused and full release gates where executable; disclose unavailable Windows/WSL validation.
-- [ ] Publish review PR; require actual Windows cold-boot owner acceptance and owner-approved merge.
+- [x] Run new Windows mock tests for both links, custom distro names, successful cold startup and failure reporting; preserve ownership/migration/idempotency tests. GitHub Windows runner passed.
+- [x] Run focused Windows smoke and complete repository release gate in GitHub Actions; disclose unavailable real Windows/WSL cold-start validation. GitHub Validate run [38552549675](https://github.com/SomeSunlight/ai-workstation/actions/runs/38552549675) passed both jobs on code head `66bc5eb6f3ae20886348d0841c6c88f522c28a4a`.
+- [x] Publish [review PR #32](https://github.com/SomeSunlight/ai-workstation/pull/32); keep open without merge.
+- [ ] Owner acceptance: refresh shortcuts from updated Windows checkout; test both shortcuts from a stopped distro after a full Windows reboot; merge only with owner approval.
 
 Known diagnostic uncertainty: `wsl --distribution NAME --cd PATH` already ought to start a stopped distro. The contradictory `WSL_E_DISTRO_NOT_FOUND` alongside an installed distro list could be transient WSL startup/registration or launcher invocation, not a confirmed missing prestart command.
 
