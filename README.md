@@ -19,7 +19,7 @@ You should not have to reconstruct a working Docker/WSL stack with dozens of ad 
 
 ![The Linux AI Workstation and Linux Terminal penguin shortcuts](https://github.com/user-attachments/assets/afb5b9c6-cfff-4bc4-ae28-86a557472a79)
 
-Both penguins are created on the Desktop and in the Start Menu. **Clicking either one automatically starts the existing WSL/Ubuntu distribution if it is stopped**, then opens a Linux shell in the corresponding directory. No preparatory PowerShell command is needed. The shortcuts do **not** install a second distribution or automatically launch an AI application. The launcher also shows the equivalent manual commands at the top of its window.
+Both penguins are created on the Desktop and in the Start Menu. **Clicking either one automatically starts the existing WSL/Ubuntu distribution if it is stopped**, then opens a Linux shell in the corresponding directory. No preparatory PowerShell command is needed. The shortcuts do **not** install a second distribution or automatically launch an AI application. The launcher runs through **PowerShell 7** (the same shell already required for installation), rather than the legacy Windows `cmd.exe` wrapper. This avoids a host-specific failure observed with `cmd.exe` and `call wsl.exe` even when the identical WSL command works in PowerShell. The launcher also shows the equivalent manual commands at the top of its window.
 
 To start Linux manually from **Windows PowerShell**, use:
 
