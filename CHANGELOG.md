@@ -1,4 +1,9 @@
 # Changelog
+
+## Unreleased (Issue #29)
+- Show the two Windows penguin launchers and current main `aiw` menu prominently in README, with manual PowerShell startup commands.
+- Make both shortcuts preflight/start a stopped WSL distribution, retry one initial failure, and distinguish WSL start from working-directory/shell failures.
+- Add mocked Windows cold-start/diagnostic tests and non-destructive WSL recovery guidance.
 ## 0.6.8
 - Remove implicit cleanup of the old Goose Compose project from routine launch and shutdown.
 - Keep the stable home as a normal Compose-managed volume; document an explicit one-time reset for old ownership labels without automatic migration or deletion.
