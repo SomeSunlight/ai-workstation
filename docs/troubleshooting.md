@@ -43,8 +43,12 @@ The project lives inside Linux:
 Both **Linux AI Workstation** and **Linux Terminal** start the existing Ubuntu
 WSL distribution automatically, even when `wsl --list --verbose` reports
 `Stopped`. You do **not** have to open a separate PowerShell session first.
-The generated launcher explicitly initializes WSL, retries once after a
-start failure, and leaves the window open to show the real error.
+The generated shortcut opens **PowerShell 7** directly, executes an actual
+Linux command to check startup, retries once after a failure, and leaves the
+window open to show the error. The older `cmd.exe` launcher could report
+`WSL_E_DISTRO_NOT_FOUND` under `call wsl.exe` even though **the exact same
+System32 `wsl.exe` invocation worked from PowerShell** under the same user.
+This observation does not establish whether `call` or CMD itself was at fault.
 
 Manual equivalents in ordinary **Windows PowerShell**:
 
