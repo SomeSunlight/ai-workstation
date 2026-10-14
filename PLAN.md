@@ -7,9 +7,9 @@ Purpose: ensure both Windows penguin shortcuts start an installed stopped WSL di
 Writable scope: `bootstrap/windows/Create-Shortcuts.ps1`, `tests/windows/shortcuts.ps1`, `README.md`, `docs/troubleshooting.md`, `CHANGELOG.md`, and this PLAN. No WSL distribution re-registration, removal, driver changes, runtime installation, ContextCanon source/package changes or inference changes. Work from accepted `main` on `agent/issue-29-wsl-cold-start`.
 
 - [x] Record and expand Issue #29; read applicable Windows/bootstrap/Development Workflow Context and existing launcher code/tests.
-- [ ] Implement explicit WSL cold-start preflight for both launchers, bounded retry, visible manual commands and distinct failure paths.
-- [ ] Improve the README entrypoint visual and manual startup/recovery guidance.
-- [ ] Cover both links, custom distro names, successful cold startup and failure reporting with Windows mocks; preserve ownership/migration/idempotency tests.
+- [x] Implement explicit WSL cold-start preflight for both launchers, bounded retry, visible manual commands and distinct failure paths.
+- [x] Improve the README entrypoint visual and manual startup/recovery guidance.
+- [ ] Run new Windows mock tests for both links, custom distro names, successful cold startup and failure reporting; preserve ownership/migration/idempotency tests (test cases authored, not yet executed).
 - [ ] Run focused and full release gates where executable; disclose unavailable Windows/WSL validation.
 - [ ] Publish review PR; require actual Windows cold-boot owner acceptance and owner-approved merge.
 
