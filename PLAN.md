@@ -22,7 +22,7 @@ After a real Windows restart and ten minutes idle, the updated launcher printed 
 
 - [x] Reproduce the false-success class in a Windows fake-WSL test, including an error message with process exit code zero.
 - [x] Require exact stdout sentinel from a real `/bin/echo` command inside Ubuntu *and* zero exit code before reporting WSL running; preserve error text and bounded retry.
-- [ ] Verify the additional Windows regression test and full release gate on revised PR head.
+- [x] Verify the additional Windows regression test and full release gate on revised PR code head `164c5a1066ade7ee5e9a556e0a0b334c6e86803b`. Both Windows and Linux validation jobs passed in [run 38561787523](https://github.com/SomeSunlight/ai-workstation/actions/runs/38561787523).
 - [ ] Ask the owner to run plain `wsl -d Ubuntu-24.04 --exec /bin/echo WSL_OK` in an ordinary, non-elevated PowerShell, capturing `$LASTEXITCODE`, `wsl -l -v`, status and version. Do not assume the actual distro-not-found problem is a launcher bug.
 - [ ] Continue diagnosis based on owner results before attempting registry, reinstall, or service changes.
 
