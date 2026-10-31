@@ -1,12 +1,30 @@
 # AI Workstation Plan
 
+## Current implementation block — Issue #33: native Ubuntu host-mode foundations
+
+Purpose: make the existing Linux bootstrap behave correctly on WSL2 **and** native Ubuntu 24.04, without pretending that a full native install has yet been hardware-tested. First slice deliberately avoids cloud accounts, model downloads, GPU drivers, process-manager changes, secrets, and changing the Windows install path.
+
+Branch: `feature/issue-33-native-linux-first-slice` from accepted PR #35 merge `4b4c5f2f03bc092d1fb05c39851b365c5f00a795`.
+
+Writable scope: `PLAN.md`, `bootstrap/linux/install.sh`, `bin/aiw-core`, new `tools/host-platform.sh`, `tests/smoke/repository-layout.sh`, new `tests/smoke/host-platform.sh`, `tools/release-check.sh`, `.github/workflows/validate.yml`, `README.md`, new `docs/native-linux.md`, `docs/troubleshooting.md`. No ContextCanon source/generated changes in this first slice: official supported-platform statements remain accurate until an actual native installation is accepted.
+
+- [x] Inspect accepted Linux bootstrap, Ansible/local host, Docker, browser, inference, source Context and workflow; record audit in Issue #33.
+- [x] Confirm and reconcile the required accepted-baseline gate (PR #35, now merged).
+- [ ] Introduce pure, testable detection of WSL2 vs native Linux and apply it to mount-safety preflight and `aiw status`.
+- [ ] Make Open WebUI browser hints and Docker diagnostics truthful on native desktops and headless remote Linux, without breaking WSL Windows browser launch.
+- [ ] Add automated regression tests and concise native Ubuntu installation and validation guidance.
+- [ ] Run focused checks and exact-head Linux/Windows CI, disclose missing real native-host acceptance, then publish a small owner-review PR. **No merge without explicit owner approval.**
+- [ ] Separate later real-host gate: disposable native Ubuntu 24.04 x86-64 with systemd and Docker, installer rerun, Goose/Open WebUI functionality; only then update supported platform state and relevant ContextCanon packages.
+
+Known intentional limits: Intel SYCL auto-setup remains restricted to WSL2 with /dev/dxg; optional inference can be disabled; native host systemd services are not a substitute for the future external manager (#34). Native Ubuntu may use a legitimate `/mnt` mount, while WSL continues to reject `/mnt/*` checkouts as before.
+
 ## Post-merge accepted baseline checkpoint — [PR #28](https://github.com/SomeSunlight/ai-workstation/pull/28) and [PR #32](https://github.com/SomeSunlight/ai-workstation/pull/32)
 
 **Scope:** correct historical review/status wording after accepted squash merges; only `PLAN.md`, `STATE.md` and `CHANGELOG.md`. No new platform behavior, installer changes, ContextCanon source or generated file edits.
 
 - [x] Verify the two actual accepted squash-merge commits, closed Issues and owner test comments.
 - [x] Reconcile the previously open review/checklist status and accepted-state surfaces without deleting technical review history.
-- [ ] Owner accepts this narrow documentation-only PR and merges it after the required exact-head verification; then start [native Linux #33](https://github.com/SomeSunlight/ai-workstation/issues/33) as the next separate implementation block.
+- [x] Owner accepted PR #35; exact-head CI was green and it was squash-merged on 2026-10-31 as `4b4c5f2f03bc092d1fb05c39851b365c5f00a795`. Native Linux #33 is now the separate implementation block.
 
 **Next implementation after acceptance:** native Ubuntu 24.04 #33, beginning with a small WSL-safe host-mode/preflight review PR. Current `main` does **not** yet claim native Ubuntu is supported. Audit rationale is recorded in the comments on Issue #33.
 
