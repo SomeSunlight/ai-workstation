@@ -1,6 +1,16 @@
 # AI Workstation Plan
 
-## Current review block — Issue #29: reliable WSL launch and visual entrypoints
+## Post-merge accepted baseline checkpoint — [PR #28](https://github.com/SomeSunlight/ai-workstation/pull/28) and [PR #32](https://github.com/SomeSunlight/ai-workstation/pull/32)
+
+**Scope:** correct historical review/status wording after accepted squash merges; only `PLAN.md`, `STATE.md` and `CHANGELOG.md`. No new platform behavior, installer changes, ContextCanon source or generated file edits.
+
+- [x] Verify the two actual accepted squash-merge commits, closed Issues and owner test comments.
+- [x] Reconcile the previously open review/checklist status and accepted-state surfaces without deleting technical review history.
+- [ ] Owner accepts this narrow documentation-only PR and merges it after the required exact-head verification; then start [native Linux #33](https://github.com/SomeSunlight/ai-workstation/issues/33) as the next separate implementation block.
+
+**Next implementation after acceptance:** native Ubuntu 24.04 #33, beginning with a small WSL-safe host-mode/preflight review PR. Current `main` does **not** yet claim native Ubuntu is supported. Audit rationale is recorded in the comments on Issue #33.
+
+## Accepted review block — Issue #29: reliable WSL launch and visual entrypoints
 
 Purpose: ensure both Windows penguin shortcuts start an installed stopped WSL distro automatically, give immediate manual PowerShell commands, and make failures diagnosable. Provide a compact visual README illustration of the two launchers and central `aiw` menu. This takes precedence over Issue #30 (Intel SYCL regression).
 
@@ -11,8 +21,8 @@ Writable scope: `bootstrap/windows/Create-Shortcuts.ps1`, `bootstrap/windows/Lau
 - [x] Improve the README entrypoint visual and manual startup/recovery guidance.
 - [x] Run new Windows mock tests for both links, custom distro names, successful cold startup and failure reporting; preserve ownership/migration/idempotency tests. GitHub Windows runner passed.
 - [x] Run focused Windows smoke and complete repository release gate in GitHub Actions; disclose unavailable real Windows/WSL cold-start validation. GitHub Validate run [38552549675](https://github.com/SomeSunlight/ai-workstation/actions/runs/38552549675) passed both jobs on code head `66bc5eb6f3ae20886348d0841c6c88f522c28a4a`.
-- [x] Publish [review PR #32](https://github.com/SomeSunlight/ai-workstation/pull/32); keep open without merge.
-- [ ] Owner acceptance: refresh shortcuts from updated Windows checkout; test both shortcuts from a stopped distro after a full Windows reboot; merge only with owner approval.
+- [x] Publish [review PR #32](https://github.com/SomeSunlight/ai-workstation/pull/32); subsequently accepted by owner and squash-merged on 2026-10-14 as `b33949ccd72352a26c305d46f60b643d6a60adad`.
+- [x] Owner accepted PR #32 after successful real launcher testing (PR review comment, 2026-10-14) and subsequently merged it. The original review checklist included the preferred full cold-boot replay; do not infer additional observations beyond the reported successful test.
 
 Known diagnostic uncertainty: `wsl --distribution NAME --cd PATH` already ought to start a stopped distro. The contradictory `WSL_E_DISTRO_NOT_FOUND` alongside an installed distro list could be transient WSL startup/registration or launcher invocation, not a confirmed missing prestart command.
 
@@ -28,8 +38,8 @@ After a real Windows restart and ten minutes idle, the updated launcher printed 
 - [x] Replace the Windows shortcut's `cmd.exe /k` + `call wsl.exe` path with PowerShell 7 via a dedicated `bootstrap/windows/Launch-Wsl.ps1`, copied into standalone per-icon scripts under LocalAppData. Preserve manual commands, actual Linux readiness marker, bounded retry and distinct error paths.
 - [x] Adapt Windows smoke tests for PowerShell shortcut targets, per-icon scripts, success/failure modes, custom distros, legacy cleanup and repeated installation. Both jobs succeeded on [run 38564510422](https://github.com/SomeSunlight/ai-workstation/actions/runs/38564510422).
 - [x] Repeat Windows and complete release checks after the final documentation update; both GitHub jobs succeeded on code/documentation head `58f892d1e314bc417aa420bec46ac6276828c164` in [run 38564779999](https://github.com/SomeSunlight/ai-workstation/actions/runs/38564779999). The PLAN-only checkpoint after this validation does not change executable behavior.
-- [ ] Owner must refresh installed launcher scripts and test both penguins from stopped WSL (ideally also after Windows cold boot), then explicitly approve any merge.
-- [ ] Continue diagnosis based on owner results before attempting registry, reinstall, or service changes.
+- [x] Owner later reported successful real Linux startup with the updated launchers in PR #32 review and accepted the squash merge (2026-10-14). The preferred full cold-boot replay was not separately evidenced in that comment.
+- [x] No additional registry/reinstall/service changes were needed for the accepted PR #32 launcher solution.
 
 
 
@@ -37,7 +47,7 @@ After a real Windows restart and ten minutes idle, the updated launcher printed 
 This file is the durable recovery map for active and upcoming development work. Keep completed checkpoints checked as soon as they are genuinely complete. Use `STATE.md` for accepted current facts and this file for work that is still in progress or intentionally deferred.
 
 
-## Current review block — Issues #26 and #27 (post-PR #24 integration): recovery-first README and learnable aiw menu
+## Accepted review block — Issues #26 and #27 (post-PR #24 integration): recovery-first README and learnable aiw menu
 
 Purpose: explain the full Windows-to-WSL-to-AI installation and its two shortcuts up front; make every actionable interactive menu operation teach its equivalent direct CLI invocation before optional execution.
 
@@ -65,9 +75,9 @@ Extension to writable scope: `install.ps1`, `bootstrap/windows/Create-Shortcuts.
 
 Validation checkpoint: Windows GitHub Actions `windows-shortcuts` job passed on code head `b4a001eabb8fcd82256c516ba90b0b0212077337`, covering shortcut targets, legacy ownership checks, reruns and separate distro labels. Full GitHub Actions validation passed on `1622601e80649cf7e7e92312fd32d9dade8b05ed` in [run 37918181020](https://github.com/SomeSunlight/ai-workstation/actions/runs/37918181020): both Ubuntu verify/lint/syntax and Windows shortcut creation/migration tests are green. The final Windows-script smoke test now also covers the public `install.ps1` default. On the latest source head `46a87ea6cf0e7b7318b448baa1e3b802ab7c5030`, the Windows job passed; exact-head Ubuntu checks were running at this checkpoint. As usual, the latest PR head still needs green CI before owner merge. Because of the ContextCanon archive's very long paths, the Windows job uses a deliberately narrow sparse checkout.
 
-Review checkpoint: [PR #28](https://github.com/SomeSunlight/ai-workstation/pull/28) is open against main for owner review; **not merged**; accepted PR #24 was merged into the review branch, preserving native Goose configuration. Branch `agent/issues-26-27-readme-menu-preview` starts from accepted original main `e4f6ee86e746241ea6630bb759b971b7e47012b7`. The code-and-behavior review head `4b7a277017c026c28a951d2203e29daa9eba374e` passed the complete GitHub Validate workflow on Ubuntu 24.04, including the release checks and new menu-preview tests. The latest source/test changes and owner-requested Windows shortcut rename passed both Linux and Windows CI; the latest reviewed PR head must pass CI again after this planning checkpoint before owner merge. Full WSL/Docker hardware testing remains owner acceptance. Direct `aiw` CLI invocations remain unchanged; preview applies only to interactive selections.
+Historical review checkpoint (before owner acceptance): [PR #28](https://github.com/SomeSunlight/ai-workstation/pull/28) was open against main; **later squash-merged on 2026-10-09** as `f0a8b553d22b903c3431fa36aea433e7f5654dbc` after the owner's successful Windows/WSL acceptance comment; accepted PR #24 was merged into the review branch, preserving native Goose configuration. Branch `agent/issues-26-27-readme-menu-preview` starts from accepted original main `e4f6ee86e746241ea6630bb759b971b7e47012b7`. The code-and-behavior review head `4b7a277017c026c28a951d2203e29daa9eba374e` passed the complete GitHub Validate workflow on Ubuntu 24.04, including the release checks and new menu-preview tests. The latest source/test changes and owner-requested Windows shortcut rename passed both Linux and Windows CI; the latest reviewed PR head must pass CI again after this planning checkpoint before owner merge. Full WSL/Docker hardware testing remains owner acceptance. Direct `aiw` CLI invocations remain unchanged; preview applies only to interactive selections.
 
-Integration checkpoint: [GitHub Actions run 37951781424](https://github.com/SomeSunlight/ai-workstation/actions/runs/37951781424) passed on actual merge head `59e6901d096e2abc5a792597fa5ccf80adae4d8a` (Ubuntu full release/Goose tests + Windows shortcuts). PR #28 is mergeable again with no commits behind `main`. Source `bin/aiw-core` retains PR #24 Goose native configuration and includes command previews for `goose configure`, `goose env`, and `goose check`; update-recovery fixture and release-check retain both PRs' tests. The owner has not approved merging PR #28 and will perform the real WSL acceptance test next.
+Integration checkpoint: [GitHub Actions run 37951781424](https://github.com/SomeSunlight/ai-workstation/actions/runs/37951781424) passed on actual merge head `59e6901d096e2abc5a792597fa5ccf80adae4d8a` (Ubuntu full release/Goose tests + Windows shortcuts). At that earlier integration checkpoint, PR #28 was mergeable again with no commits behind `main`. Source `bin/aiw-core` retains PR #24 Goose native configuration and includes command previews for `goose configure`, `goose env`, and `goose check`; update-recovery fixture and release-check retain both PRs' tests. The owner subsequently reported successful Windows/WSL tests and approved/squash-merged PR #28 on 2026-10-09.
 
 ### Reconcile merged PR #24 before owner test
 
@@ -89,7 +99,7 @@ Decisions: the home stays a normal Compose-managed volume. The owner accepts rec
 - [x] Run focused behavior/Compose checks and the complete release gate.
 - [x] Publish the follow-up in PR #24 without merging.
 
-Recovery: continue on `agent/issue-23-goose-provider-freedom` after `da7b372ee3db3bf3ba5f4968da33102bff20939b`. Docker Engine and the owner's WSL are unavailable here; native volume deletion/recreation remains an explicit owner operation. PR #24 remains unmerged and has no merge authorization.
+Recovery: continue on `agent/issue-23-goose-provider-freedom` after `da7b372ee3db3bf3ba5f4968da33102bff20939b`. Docker Engine and the owner's WSL are unavailable here; native volume deletion/recreation remains an explicit owner operation. At that historical review checkpoint, PR #24 was unmerged; it was later owner-accepted and squash-merged on 2026-10-09 as `9bd87860571b972cf33a41a49e213a55ee22dfae`.
 
 Verification: focused lifecycle tests and real Compose 5.3.0 rendering pass. The complete release gate also passes with an unrelated host XDG path; ContextCanon 0.7.3 reports all nine Nodes `ok` with no generated drift. No authored Context or Ansible implementation changed in this follow-up. The recreated Docker volume's labels still require the documented real WSL check.
 
@@ -116,7 +126,7 @@ Recovery: branch `agent/issue-23-goose-provider-freedom`, accepted base `e4f6ee8
 
 Verification checkpoint: complete release gate passes with actual Docker Compose 5.3.0 rendering, including provider-neutral launch/migration/menu behavior, primary/subagent overrides, literal environment values, missing/malformed configuration, empty overrides, failed reads/checks/configuration and one-workspace boundaries. Existing Open WebUI/local-inference service checks, locked `uv sync`/lock check, Ansible lint and both playbook syntax checks pass. ContextCanon 0.7.3 `check --all .` reports all nine Nodes `ok`; only generated Markdown's intentional hard-break whitespace is excluded from authored diff hygiene. Real Docker Engine/native-menu/LLM acceptance remains an owner test.
 
-Review checkpoint: [PR #24](https://github.com/SomeSunlight/ai-workstation/pull/24) is open against `main`. Implementation commit `deb9dbd1edd018057355d0f7a35bc9f5ab6a0602` has the exact locally tested tree `fcb2cec01a54ef5516a4f97e09df90e967717203`, verified when publishing through the GitHub connector. Next external gate: owner tests the native menu, intended main/subagent endpoints and persistent configuration on WSL/Docker, then explicitly approves before any merge. PR #24 has no merge authorization.
+Historical review checkpoint: [PR #24](https://github.com/SomeSunlight/ai-workstation/pull/24) was open against `main` (subsequently merged on 2026-10-09). Implementation commit `deb9dbd1edd018057355d0f7a35bc9f5ab6a0602` has the exact locally tested tree `fcb2cec01a54ef5516a4f97e09df90e967717203`, verified when publishing through the GitHub connector. Next external gate: owner tests the native menu, intended main/subagent endpoints and persistent configuration on WSL/Docker, then explicitly approves before any merge. PR #24 has no merge authorization.
 
 CI recovery: the first review run exposed host `XDG_CONFIG_HOME` leaking into the Docker test double. The mock now clears host routing/path variables like real Compose, and the regression gate passes with an intentionally unrelated host XDG path. Status also skips inspection if the selected image is absent, avoiding unintended Docker resource creation during a fresh-install status check. The follow-up stays in PR #24 and requires a green current-head Validate run.
 

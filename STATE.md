@@ -12,7 +12,13 @@ The earlier accepted PR #20 checkpoint is `f72973e764560a4102b7291495fa0fb93effe
 
 PR #22 remains an accepted baseline, squash-merged as `e4f6ee86e746241ea6630bb759b971b7e47012b7` on 2026-10-07 after the owner reported installation testing complete and approved merging. Exact review head `f4c5ca304a2ccaf98934befa1f8662a7f0c3071a` passed Validate run `37532821370` and the repeated release check. Goose/Open WebUI application updates are menu-accessible and select stable image versions independently from workstation updates. Open WebUI updates include a stopped-volume backup.
 
-PR #24 (merged as `9bd87860571b972cf33a41a49e213a55ee22dfae`) is the current accepted main checkpoint. It replaces forced OpenRouter injection for Goose with native provider/model configuration, adds optional Goose-only environment settings and stops automatic legacy Compose-project cleanup. PR #28 remains an unmerged review candidate.\n\n## Accepted local-inference infrastructure
+PR #24 (merged as `9bd87860571b972cf33a41a49e213a55ee22dfae`) removed forced OpenRouter injection for Goose in favor of native provider/model configuration and protected Goose-only environment settings.
+
+PR #28 was owner-tested successfully on Windows/WSL and squash-merged on 2026-10-09 as `f0a8b553d22b903c3431fa36aea433e7f5654dbc`. It accepts recovery-first onboarding, dual Linux launcher names, and an opt-in YAML-backed menu command preview.
+
+**Current accepted `main` checkpoint:** PR #32, squash-merged on 2026-10-14 as `b33949ccd72352a26c305d46f60b643d6a60adad`, after the owner confirmed the new PowerShell-based penguin launchers solved the observed Linux-start issue. This preserves the actual accepted behavior; no native Ubuntu (non-WSL) installation has been tested or accepted yet.
+
+## Accepted local-inference infrastructure
 
 Local inference is optional. When enabled, `llama.cpp` and Llama Dispatcher run directly on the WSL/Linux host rather than in containers; remote-only AI Workstations remain valid.
 
@@ -47,6 +53,10 @@ The resulting Context was rebuilt, and the project owner verified `contextcanon 
 ## Scope of this State file
 
 This file records accepted checkpoints only. Broader operational state for Goose, Open WebUI, provider recovery and still-unresolved backend/placement decisions remains in `PLAN.md` or the linked Issues until separately reviewed and accepted.
+
+## Native Linux status (not yet accepted)
+
+Issue [#33](https://github.com/SomeSunlight/ai-workstation/issues/33) proposes native Ubuntu 24.04 x86-64 as a first-class future target. Existing `install.sh` and Ansible localhost/systemd paths are reusable, but WSL-specific assumptions in onboarding, mount validation and user-facing integrations still require a separate reviewed implementation and actual disposable native-host validation. No native Linux support claim is accepted on `main` yet.
 
 ## Next planned work
 

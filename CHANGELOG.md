@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (Issue #29)
+## Unreleased (Issue #29; accepted in PR #32 on 2026-10-14)
 - Show the two Windows penguin launchers and current main `aiw` menu prominently in README, with manual PowerShell startup commands.
 - Replace `cmd.exe` / `call wsl.exe` launcher with directly invoked PowerShell 7 after host-specific WSL launch failure; keep the installed scripts standalone and preserve both icons.
 - Make both shortcuts preflight/start a stopped WSL distribution, require actual Linux execution evidence, retry one initial failure, and distinguish WSL start from working-directory/shell failures.
