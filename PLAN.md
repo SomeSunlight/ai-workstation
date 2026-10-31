@@ -6,13 +6,13 @@ Purpose: make the existing Linux bootstrap behave correctly on WSL2 **and** nati
 
 Branch: `feature/issue-33-native-linux-first-slice` from accepted PR #35 merge `4b4c5f2f03bc092d1fb05c39851b365c5f00a795`.
 
-Writable scope: `PLAN.md`, `bootstrap/linux/install.sh`, `bin/aiw-core`, new `tools/host-platform.sh`, `tests/smoke/repository-layout.sh`, new `tests/smoke/host-platform.sh`, `tools/release-check.sh`, `.github/workflows/validate.yml`, `README.md`, new `docs/native-linux.md`, `docs/troubleshooting.md`. No ContextCanon source/generated changes in this first slice: official supported-platform statements remain accurate until an actual native installation is accepted.
+Writable scope: `PLAN.md`, `bootstrap/linux/install.sh`, `bin/aiw-core`, new `tools/host-platform.sh`, `tests/smoke/repository-layout.sh`, `tests/smoke/update-recovery.sh` (fixture now needs the shared host adapter), new `tests/smoke/host-platform.sh`, `tools/release-check.sh`, `.github/workflows/validate.yml`, `README.md`, new `docs/native-linux.md`, `docs/troubleshooting.md`. No ContextCanon source/generated changes in this first slice: official supported-platform statements remain accurate until an actual native installation is accepted.
 
 - [x] Inspect accepted Linux bootstrap, Ansible/local host, Docker, browser, inference, source Context and workflow; record audit in Issue #33.
 - [x] Confirm and reconcile the required accepted-baseline gate (PR #35, now merged).
-- [ ] Introduce pure, testable detection of WSL2 vs native Linux and apply it to mount-safety preflight and `aiw status`.
-- [ ] Make Open WebUI browser hints and Docker diagnostics truthful on native desktops and headless remote Linux, without breaking WSL Windows browser launch.
-- [ ] Add automated regression tests and concise native Ubuntu installation and validation guidance.
+- [x] Introduce pure, testable detection of WSL2 vs native Linux and apply it to mount-safety preflight and `aiw status`.
+- [x] Make Open WebUI browser hints and Docker diagnostics truthful on native desktops and headless remote Linux, without breaking WSL Windows browser launch.
+- [x] Add automated regression tests and concise native Ubuntu installation and validation guidance; initial standalone host-platform smoke passed in CI. The update-recovery fixture must include the shared helper.
 - [ ] Run focused checks and exact-head Linux/Windows CI, disclose missing real native-host acceptance, then publish a small owner-review PR. **No merge without explicit owner approval.**
 - [ ] Separate later real-host gate: disposable native Ubuntu 24.04 x86-64 with systemd and Docker, installer rerun, Goose/Open WebUI functionality; only then update supported platform state and relevant ContextCanon packages.
 
