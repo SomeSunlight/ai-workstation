@@ -21,6 +21,7 @@ readonly GOOSE_ENV_FILE="$(readlink -m -- "${AIW_GOOSE_ENV_FILE:-${CONFIG_DIR}/g
 readonly OPEN_WEBUI_COMPOSE_FILE="${ROOT}/compose/open-webui.yml"
 readonly DEFAULT_OPEN_WEBUI_PORT="3000"
 source "${ROOT}/bin/aiw-menu-config.sh"
+source "${ROOT}/tools/host-platform.sh"
 
 usage() {
     cat <<'EOF_USAGE'
@@ -32,7 +33,7 @@ Usage:
   aiw install                 Run installation and verification
   aiw verify                  Run verification
   aiw update                  Pull the Git repository and rerun installation
-  aiw welcome [--force]       Show the WSL startup hint
+  aiw welcome [--force]       Show the startup hint
   aiw playbook PLAYBOOK [ANSIBLE ARGUMENTS...]
   aiw goose COMMAND [ARGUMENTS...]
   aiw open-webui COMMAND [ARGUMENTS...]
@@ -87,7 +88,7 @@ Usage:
   aiw open-webui recover      Reset persistent provider settings from .env
   aiw open-webui down         Stop the service; keep all data
   aiw open-webui logs         Follow service logs
-  aiw open-webui open         Start if needed and open the Windows browser
+  aiw open-webui open         Start and open the browser (or show URL)
   aiw open-webui help
 EOF_USAGE
 }
@@ -153,7 +154,7 @@ require_runtime() {
 require_docker() {
     command -v docker >/dev/null 2>&1 || fail "Docker is not installed. Run ./install.sh first."
     docker compose version >/dev/null 2>&1 || fail "Docker Compose is unavailable. Run ./install.sh first."
-    docker info >/dev/null 2>&1 || fail "Docker Engine is unavailable. Start WSL/systemd and retry."
+    docker info >/dev/null 2>&1 || fail "Docker Engine is unavailable. Check the systemd Docker service and retry."
 }
 
 run_playbook() {
@@ -798,20 +799,6 @@ wait_for_open_webui() {
     return 1
 }
 
-open_windows_url() {
-    local url="$1"
-    if command -v powershell.exe >/dev/null 2>&1; then
-        powershell.exe -NoLogo -NoProfile -NonInteractive \
-            -Command "Start-Process '$url'" >/dev/null 2>&1
-    elif command -v cmd.exe >/dev/null 2>&1; then
-        cmd.exe /C start "" "$url" >/dev/null 2>&1
-    else
-        printf '[..] Open this URL in the Windows browser: %s\n' "$url"
-        return
-    fi
-    printf '[OK] Opened Windows browser: %s\n' "$url"
-}
-
 open_webui_open() {
     require_docker
     if ! open_webui_is_running; then
@@ -822,7 +809,7 @@ open_webui_open() {
     if ! wait_for_open_webui "$url"; then
         warn "Open WebUI did not become healthy yet. Opening the browser anyway."
     fi
-    open_windows_url "$url"
+    aiw_open_browser_url "$url"
 }
 
 open_webui_command() {
@@ -1027,7 +1014,7 @@ Open WebUI
 ==========
 Browser URL: $(open_webui_url)
 
-1) Start and open in Windows browser
+1) Start and open browser (or show URL)
 2) Start service
 3) Stop service
 4) Restart service
@@ -1112,6 +1099,7 @@ EOF_WELCOME
 }
 
 show_status() {
+    printf 'Host platform        : %s\n' "$(aiw_host_mode)"
     printf 'Repository           : %s\n' "$ROOT"
     printf 'Repository mode      : %s\n' "$(stat -c '%a' "$ROOT" 2>/dev/null || printf 'unknown')"
     printf 'uv                   : %s\n' "$([[ -x "$UV_BIN" ]] && "$UV_BIN" --version || printf 'not installed')"
