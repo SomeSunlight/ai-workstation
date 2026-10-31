@@ -19,6 +19,7 @@ cp "$ROOT/bin/aiw-core" "$work/bin/aiw-core"
 cp "$ROOT/bin/aiw-menu-config.sh" "$work/bin/aiw-menu-config.sh"
 cp "$ROOT/tools/runtime-update.sh" "$work/tools/runtime-update.sh"
 cp "$ROOT/tools/goose-config.sh" "$work/tools/goose-config.sh"
+cp "$ROOT/tools/host-platform.sh" "$work/tools/host-platform.sh"
 chmod +x "$work/bin/aiw-core"
 cat > "$work/install.sh" <<'EOF_INSTALL'
 #!/usr/bin/env bash
@@ -27,7 +28,7 @@ printf '%s\n' "$*" > "${AIW_TEST_INSTALL_MARKER:?}"
 EOF_INSTALL
 chmod +x "$work/install.sh"
 
-git -C "$work" add bin/aiw-core bin/aiw-menu-config.sh tools/runtime-update.sh tools/goose-config.sh install.sh
+git -C "$work" add bin/aiw-core bin/aiw-menu-config.sh tools/runtime-update.sh tools/goose-config.sh tools/host-platform.sh install.sh
 git -C "$work" commit -m "Test installation" >/dev/null
 git -C "$work" remote add origin "$remote"
 git -C "$work" push -u origin main >/dev/null
