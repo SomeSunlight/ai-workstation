@@ -4,6 +4,7 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 readonly ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+source "${ROOT}/tools/host-platform.sh"
 readonly VERSIONS_FILE="${ROOT}/config/versions.json"
 readonly UV_BIN="${HOME}/.local/bin/uv"
 readonly COLLECTIONS_DIR="${ROOT}/.ansible/collections"
@@ -95,7 +96,9 @@ preflight() {
     section 'Bootstrap preflight'
 
     [[ "$(id -u)" -ne 0 ]] || fail "Run this installer as a normal user, not root."
-    [[ "$ROOT" != /mnt/* ]] || fail "The repository must live in the Linux filesystem, not under /mnt."
+    if aiw_checkout_is_blocked "$ROOT"; then
+        fail "Under WSL, the repository must live in the Linux filesystem, not under /mnt."
+    fi
     [[ -f "$VERSIONS_FILE" ]] || fail "Missing $VERSIONS_FILE"
     command -v python3 >/dev/null 2>&1 || fail "python3 is required by the pinned Ubuntu image."
     [[ -r /etc/os-release ]] || fail "/etc/os-release is missing."
@@ -111,6 +114,7 @@ preflight() {
         fail "Repository is world-writable. Fix the checkout ownership/permissions before installing."
     fi
 
+    info "Host mode  : $(aiw_host_mode)"
     info "Repository : $ROOT"
     info "User       : $(id -un)"
     info "Ubuntu     : ${PRETTY_NAME:-unknown}"
