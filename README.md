@@ -10,6 +10,16 @@ The goal is a **fast, reproducible start-to-finish installation**, across suppor
 
 You should not have to reconstruct a working Docker/WSL stack with dozens of ad hoc commands and LLM conversations after a laptop reset. **The installer rebuilds software, not deleted personal data:** restore secrets, user-owned workspaces, models and persistent volumes from their backups. Company security policies, Windows/WSL downloads, reboots and hardware-specific GPU prerequisites can still require attention; installation time varies.
 
+### Native Ubuntu 24.04 (experimental)
+
+The shared Linux bootstrap also has a **native Ubuntu 24.04** candidate path:
+`./install.sh` on a systemd-based x86-64 Ubuntu host. Unlike Windows/WSL,
+it does not require PowerShell, WSL, or penguin shortcuts. AI Workstation still
+supports a **remote-only** configuration with no local GPU or model. A complete
+native installation has **not yet passed real-host owner acceptance**; for
+requirements, safe installation on a disposable Ubuntu machine, SSH browser
+access, and limitations see [Native Linux guide](docs/native-linux.md).
+
 ### Two desktop shortcuts, one Ubuntu environment
 
 | Windows shortcut | Opens the same WSL distribution in | Best for |
