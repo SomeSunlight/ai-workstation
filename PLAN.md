@@ -13,7 +13,8 @@ Writable scope: `PLAN.md`, `bootstrap/linux/install.sh`, `bin/aiw-core`, new `to
 - [x] Introduce pure, testable detection of WSL2 vs native Linux and apply it to mount-safety preflight and `aiw status`.
 - [x] Make Open WebUI browser hints and Docker diagnostics truthful on native desktops and headless remote Linux, without breaking WSL Windows browser launch.
 - [x] Add automated regression tests and concise native Ubuntu installation and validation guidance; initial standalone host-platform smoke passed in CI. The update-recovery fixture must include the shared helper.
-- [ ] Run focused checks and exact-head Linux/Windows CI, disclose missing real native-host acceptance, then publish a small owner-review PR. **No merge without explicit owner approval.**
+- [x] Run focused host adapter checks, fix the isolated update-recovery fixture, and pass full Ubuntu/Windows Validate on code head `6802a1375cd3cf9af014a63ce5fc505ed004722d` ([run 41228326996](https://github.com/SomeSunlight/ai-workstation/actions/runs/41228326996)). Publish [draft review PR #36](https://github.com/SomeSunlight/ai-workstation/pull/36); this does not constitute native-host acceptance.
+- [ ] Owner reviews the first Linux/WSL slice; after approval, require an exact-head green merge gate. **Do not merge without explicit owner approval.**
 - [ ] Separate later real-host gate: disposable native Ubuntu 24.04 x86-64 with systemd and Docker, installer rerun, Goose/Open WebUI functionality; only then update supported platform state and relevant ContextCanon packages.
 
 Known intentional limits: Intel SYCL auto-setup remains restricted to WSL2 with /dev/dxg; optional inference can be disabled; native host systemd services are not a substitute for the future external manager (#34). Native Ubuntu may use a legitimate `/mnt` mount, while WSL continues to reject `/mnt/*` checkouts as before.
