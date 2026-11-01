@@ -14,6 +14,22 @@ Linux logs:
 ~/.local/state/ai-workstation/logs
 ```
 
+## Native Ubuntu (no WSL)
+
+A native Ubuntu installation uses `./install.sh` and `aiw` directly. There
+is no Windows launcher or `wsl.exe`. See [Native Linux guide](native-linux.md)
+for the experimental scope and host requirements.
+
+If Docker works only with `sudo`, first confirm the installation added your
+user to the `docker` group, then log out and back in. A native Linux login
+session must acquire new group membership; **do not** run `wsl --shutdown` on
+a native host.
+
+On a headless remote host, `aiw open-webui open` prints the server-local URL.
+Use SSH port forwarding to access the loopback-only service from your laptop;
+see the guide. A local `localhost` URL shown on the server is not your
+laptop's localhost until a tunnel is active.
+
 ## I cannot find Linux in Windows
 
 The installed Linux distribution is managed by WSL; it is not a separate
@@ -116,7 +132,7 @@ tracked file modes.
 If the checkout has incorrect permissions, fix the checkout ownership or clone a
 fresh copy inside Linux rather than rewriting permissions across the repository.
 
-## Docker works only with sudo
+## Docker works only with sudo (WSL)
 
 Open a new WSL session after the first installation. The `docker` group
 membership is applied to new login sessions.

@@ -12,11 +12,17 @@ required=(
   tests/smoke/goose-runtime.sh tests/smoke/open-webui-runtime.sh tests/smoke/interactive-menu.sh
   tests/smoke/local-inference-runtime.sh tests/smoke/update-recovery.sh
   bin/aiw-menu-config.sh tests/smoke/menu-preview.sh
+  tools/host-platform.sh tests/smoke/host-platform.sh
 )
 for item in "${required[@]}"; do
   [[ -e "$ROOT/$item" ]] || { printf 'Missing: %s\n' "$item" >&2; exit 1; }
 done
-[[ "$ROOT" != /mnt/* ]] || { echo 'Repository must not be operated from /mnt.' >&2; exit 1; }
+# The installer enforces the /mnt restriction only for WSL Windows-drive layouts.
+source "$ROOT/tools/host-platform.sh"
+if aiw_checkout_is_blocked "$ROOT"; then
+  echo 'WSL repository must not be operated from /mnt.' >&2
+  exit 1
+fi
 
 bootstrap_installer="$ROOT/bootstrap/linux/install.sh"
 if grep -Fq 'normalize_permissions' "$bootstrap_installer" ||    grep -Eq -- '-type f .*chmod 0?644' "$bootstrap_installer"; then
@@ -41,6 +47,10 @@ trap 'rm -rf "$temp_home"' EXIT
 mkdir -p "$temp_home/.local/bin"
 ln -s "$ROOT/bin/aiw" "$temp_home/.local/bin/aiw"
 symlink_status="$(HOME="$temp_home" "$temp_home/.local/bin/aiw" status)"
+grep -Fq "Host platform        : $(aiw_host_mode)" <<< "$symlink_status" || {
+  echo 'aiw status did not identify this host mode.' >&2
+  exit 1
+}
 grep -Fq "Repository           : $ROOT" <<< "$symlink_status" || {
   echo 'aiw did not resolve the repository root through its installed symlink.' >&2
   exit 1
