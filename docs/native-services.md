@@ -160,6 +160,23 @@ uv --version
    `process-compose.yaml` and `secrets/`; a second init must refuse overwrite.
 2. Menu **3 Install**. Verify checksum-checked Process Compose v1.124.0 in
    the private bin directory (no PATH/system-service change).
+   **If the download fails on Windows**, the installer now reports the
+   Python HTTPS failure category and tries the **native PowerShell
+   Invoke-WebRequest** downloader automatically. Both routes use normal
+   HTTPS certificate verification and the same pinned SHA-256.
+   If your network blocks both, download the exact official asset from
+   <https://github.com/F1bonacc1/process-compose/releases/download/v1.124.0/process-compose_windows_amd64.zip>
+   using your browser, then run from this PR checkout:
+
+   ~~~powershell
+   .\bootstrap\windows\Services.ps1 install --archive "$HOME\Downloads\process-compose_windows_amd64.zip"
+   ~~~
+
+   The archive is verified against `config/versions.json` before any
+   executable is extracted. Never disable TLS validation or change
+   checksums to work around networking. The ZIP is **not** added to PATH
+   or committed to Git. If the default download works, the offline
+   command is unnecessary. Do **not** run menu option 2 again.
 3. Menu **4 Check**. Expect successful native Process Compose dry-run.
 4. Menu **1 Where** shows the private paths. No running Speedy service was altered.
 
