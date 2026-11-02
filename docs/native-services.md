@@ -90,7 +90,7 @@ the numbered menu, or call:
 native Windows services menu, or explicitly import the existing DPAPI
 credential as home-gateway (use your *actual* protected key file path):
 
-    pwsh -File .\\bootstrap\\windows\\Services.ps1 client import-dpapi home-gateway --from-file C:\\Caddy\\speedy-api-key.dpapi --policy passthrough
+    pwsh -File .\bootstrap\windows\Services.ps1 client import-dpapi home-gateway --from-file C:\Caddy\speedy-api-key.dpapi --policy passthrough
 
 This reads and reuses the original encrypted key under the same Windows
 account, without revealing plaintext, modifying the original DPAPI file
