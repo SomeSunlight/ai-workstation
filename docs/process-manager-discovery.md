@@ -81,13 +81,41 @@ metadata remain **unverified on Speedy**.
 | Windows and Linux portability | Upstream supports both, with different default shells (`cmd` vs `bash`) | Render/test separate host adapters rather than substituting `bash` for a Windows executable or assuming WSL==native Ubuntu. |
 | Managed process identity / operational API | CLI/TUI/REST status and operations | Authenticate/bind any manager API to loopback by default; **do not expose REST/MCP process control to remote LLM agents**. Independently verify PID/path/start identity and race behavior on Windows. |
 | Model-engine config, aliases, client policy, SQLite inference requests | **Not** the supervisor's job | Preserve Dispatcher-owned alias/policy/proxy/audit and S07's future secret-free LaunchPlan v1; do **not** invent a competing AI Workstation plan schema. |
-| Operational boot persistence | Detached/daemon mode exists | Explicit opt-in Windows Task Scheduler and later Linux systemd wrapper, with non-destructive rollback and idempotent updates. Do not switch on by installing. |
+| Operational boot persistence | Native detached mode **on Unix only**; upstream Windows build omits `-D` | AIW boots a separate headless Windows supervisor, recording/verifying PID, executable and creation time before control. Later opt-in Windows Task Scheduler / Linux systemd must remain independently reviewed. No autostart on install. |
 
 **Important:** Process Compose `project update` and live reload may restart
 changed processes. A configuration preview is therefore **not** a reload;
 AI Workstation must show side effects and require an explicit owner action.
 The Process Compose REST/MCP control surface is a privilege boundary, not
 an ordinary inference API. Do not give unrestricted LLMs control of it.
+
+## Windows no-detached finding and real lifecycle proof — 2026-11-03
+
+The owner’s first real Windows menu `Up` returned `unknown flag:
+--detached`. This is **not a parameter position issue**: upstream
+[v1.124.0 root registration](https://github.com/F1bonacc1/process-compose/blob/v1.124.0/src/cmd/root.go)
+and [up registration](https://github.com/F1bonacc1/process-compose/blob/v1.124.0/src/cmd/up.go)
+explicitly restrict that flag to non-Windows, and
+[Windows detached implementation](https://github.com/F1bonacc1/process-compose/blob/v1.124.0/src/cmd/project_runner_windows.go)
+rejects detached launches.
+
+AIW now uses **native Process Compose on both platforms**, with a
+platform-specific lifetime bootstrap only: Unix `up --detached`, Windows
+starts a separate headless `up --tui=false --keep-project` supervisor
+via the operating system. Windows stores supervisor PID, absolute
+executable identity and creation time in private runtime state; a
+nonmatching process cannot be stopped or restarted. Management stays
+loopback-only with its own token. The TUI uses `attach` rather than
+starting a second supervisor, and the CLI `process logs` receives an
+explicit process name (upstream requires one).
+
+The source-defined `PROC_COMP_CONFIG` environment variable points
+upstream at AIW's existing private config directory, avoiding misleading
+global XDG discovery debug messages without filtering operational errors.
+An actual hosted Windows binary demonstrated start, status,
+`aiw-process-compose-smoke` logs and stop; Ubuntu ran the same fixture
+using native detached mode. **This is host-CI evidence, not the owner's
+Speedy acceptance and not production approval.**
 
 ## Actual release security finding — 2026-11-02
 
