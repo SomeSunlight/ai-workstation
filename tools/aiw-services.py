@@ -345,11 +345,46 @@ def native_binary(folder: Path) -> str:
     raise ConfigError("Native Process Compose missing. Run: aiw services install")
 
 
+def check_production_security_gate(project: Path, action: str, process: str | None) -> None:
+    """Known Go 1.27.0 official build: permit only the harmless fixture pilot."""
+    if action not in {"up", "tui", "start", "restart"}:
+        return
+    try:
+        manifest = json.loads(VERSION_FILE.read_text(encoding="utf-8"))["versions"]["process_compose"]
+        blocked = manifest["security"]["production_adoption_blocked"]
+    except (OSError, KeyError, ValueError, TypeError):
+        raise ConfigError("Missing Process Compose production security gate.") from None
+    if not blocked:
+        return
+    try:
+        doc = yaml.safe_load(project.read_text(encoding="utf-8"))
+        services = doc["processes"]
+        smoke = services["aiw-smoke"]
+        fixture_only = (
+            len(services) == 1 and
+            set(doc) == {"version", "processes"} and
+            isinstance(smoke, dict) and
+            set(smoke) <= {"command", "disabled", "namespace"} and
+            smoke.get("command") == "echo aiw-process-compose-smoke" and
+            smoke.get("namespace") == "validation" and
+            smoke.get("disabled", True) in (True, False)
+        )
+    except (OSError, KeyError, TypeError, ValueError, AttributeError, yaml.YAMLError):
+        fixture_only = False
+    if not fixture_only or (action in {"start", "restart"} and process != "aiw-smoke"):
+        raise ConfigError(
+            "Production native service start blocked: pinned Process Compose v1.124.0 "
+            "was built with unpatched Go 1.27.0. Only the isolated aiw-smoke "
+            "fixture may run until a patched release/build passes review."
+        )
+
+
 def native(folder: Path, action: str, process: str | None) -> None:
     doc = read_settings(folder)
     project = project_path(folder, doc)
     if not project.is_file():
         raise ConfigError("Missing native Process Compose YAML.")
+    check_production_security_gate(project, action, process)
     binary = native_binary(folder)
     port = str(doc["process_compose"]["port"])
     api_token = folder / "secrets" / "process-compose.api-token"
