@@ -38,6 +38,7 @@ jobs:
           bash tests/smoke/goose-runtime.sh
           bash tests/smoke/open-webui-runtime.sh
           bash tests/smoke/interactive-menu.sh
+          uv run --frozen python tests/smoke/services-registry.py
 
       - name: Install Ansible collection
         run: |
@@ -74,6 +75,20 @@ jobs:
           sparse-checkout: |
             bootstrap/windows
             tests/windows
+            tools/aiw-secret-windows.ps1
       - name: Verify Windows shortcut creation and safe rename migration
         shell: pwsh
         run: ./tests/windows/shortcuts.ps1
+      - name: Parse native Windows Process Compose and DPAPI helper
+        shell: pwsh
+        run: |
+          foreach ($path in @('bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $path).Path, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$path : $($_.Message)" }
+              exit 1
+            }
+          }
