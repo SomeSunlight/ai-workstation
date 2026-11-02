@@ -159,7 +159,11 @@ class TestNativeServices(unittest.TestCase):
             module.native(self.folder, "status", None)
             self.assertEqual(log.read_text().splitlines()[-2:], ["process", "list"])
             module.native(self.folder, "up", None)
-            self.assertIn("--detached", log.read_text())
+            self.assertIn("--detached", log.read_text())  # Linux only
+            self.assertIn("--keep-project", log.read_text())
+            self.assertIn("--tui=false", log.read_text())
+            module.native(self.folder, "tui", None)
+            self.assertEqual(log.read_text().splitlines()[-1], "attach")
             # Unpatched upstream Go binary is intentionally restricted to
             # our isolated, harmless fixture until a verified rebuilt binary.
             project = module.project_path(self.folder, module.read_settings(self.folder))
