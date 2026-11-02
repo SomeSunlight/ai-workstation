@@ -13,6 +13,9 @@ import io
 import platform
 import tarfile
 import urllib.request
+import urllib.error
+import ssl
+import socket
 import zipfile
 import json
 import os
@@ -31,6 +34,8 @@ CLIENT_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
 POLICIES = {"default", "enforce", "passthrough"}
 DEFAULT_PORT = 19011
 WIN_HELPER = Path(__file__).with_name("aiw-secret-windows.ps1")
+WIN_DOWNLOADER = Path(__file__).with_name("aiw-download-windows.ps1")
+MAX_ARCHIVE_BYTES = 40 * 1024 * 1024
 VERSION_FILE = Path(__file__).resolve().parents[1] / "config" / "versions.json"
 # The repository's central version manifest is authoritative, not this script.
 RELEASE_PLATFORMS = {
@@ -289,46 +294,113 @@ def client_render(folder: Path, output: Path) -> None:
     print("the existing protected /strata/v1 fallback. Do not change Caddy automatically.")
 
 
-def install_process_compose(folder: Path) -> None:
-    """Explicit opt-in native binary install, pinned release + checked artifact."""
+def download_failure_reason(exc: BaseException) -> str:
+    """Actionable network diagnostics; never print credentials, URLs or response body."""
+    if isinstance(exc, urllib.error.HTTPError):
+        return "HTTP " + str(exc.code)
+    reason = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+    if isinstance(reason, (ssl.SSLError, ssl.CertificateError)):
+        return "TLS/certificate verification failed (" + type(reason).__name__ + ")"
+    if isinstance(reason, (TimeoutError, socket.timeout)):
+        return "connection timed out"
+    if isinstance(reason, OSError):
+        return "network/system error " + type(reason).__name__ + (
+            f" (errno={reason.errno})" if reason.errno is not None else ""
+        )
+    return type(reason).__name__
+
+
+def download_release(url: str, folder: Path) -> bytes:
+    """Try standard verified HTTPS, then native Windows proxy/TLS handling."""
+    req = urllib.request.Request(
+        url, headers={"User-Agent": "ai-workstation-native-services/1.0"}
+    )
+    reason = None
+    try:
+        with urllib.request.urlopen(req, timeout=45) as response:
+            return response.read(MAX_ARCHIVE_BYTES + 1)
+    except (OSError, urllib.error.URLError, ssl.SSLError) as exc:
+        reason = download_failure_reason(exc)
+    if os.name == "nt":
+        pwsh = shutil.which("pwsh")
+        if pwsh and WIN_DOWNLOADER.is_file():
+            # An ordinary PowerShell HTTPS download respects the Windows
+            # network/proxy configuration. No TLS bypass or unverified binary.
+            with tempfile.TemporaryDirectory(prefix="aiw-pc-", dir=folder) as tmp:
+                output = Path(tmp) / "release.archive"
+                proc = subprocess.run(
+                    [pwsh, "-NoProfile", "-NonInteractive", "-File",
+                     str(WIN_DOWNLOADER), "-Uri", url, "-Destination", str(output)],
+                    capture_output=True, text=True, check=False,
+                )
+                if proc.returncode == 0 and output.is_file():
+                    if output.stat().st_size > MAX_ARCHIVE_BYTES:
+                        raise ConfigError("Downloaded archive is unexpectedly large; not installed.")
+                    print("[SVC] Downloaded with native Windows PowerShell.")
+                    return output.read_bytes()
+        raise ConfigError(
+            "Cannot download official Process Compose release (Python: " + reason +
+            "; Windows PowerShell also unsuccessful). Check proxy/TLS/network policy, "
+            "or download the official archive with your browser and use "
+            "'install --archive PATH'. No binary was installed."
+        )
+    raise ConfigError(
+        "Cannot download official Process Compose release (" + reason +
+        "). Check network/TLS, or use 'install --archive PATH'."
+    )
+
+
+def install_process_compose(folder: Path, archive_path: Path | None = None) -> None:
+    """Opt-in install from the pinned URL or a local archive, SHA-256 verified."""
     system = "Windows" if os.name == "nt" else "Linux"
     machine = platform.machine().upper().replace("X86_64", "AMD64").replace("AARCH64", "ARM64")
     version, filename, digest = pinned_release(system, machine)
     dest = folder / "bin" / ("process-compose.exe" if os.name == "nt" else "process-compose")
-    if dest.exists():
+    if dest.exists() or dest.is_symlink():
         raise ConfigError("Native binary exists already; no automatic overwrite/upgrade.")
     url = ("https://github.com/F1bonacc1/process-compose/releases/download/" +
            version + "/" + filename)
     private_dir(folder / "bin")
-    try:
-        with urllib.request.urlopen(url, timeout=45) as response:
-            archive = response.read(40 * 1024 * 1024 + 1)
-    except OSError:
-        raise ConfigError("Failed to fetch official Process Compose release.") from None
-    if len(archive) > 40 * 1024 * 1024 or hashlib.sha256(archive).hexdigest() != digest:
-        raise ConfigError("Official Process Compose archive digest mismatch; not installed.")
-    binary = "process-compose.exe" if os.name == "nt" else "process-compose"
-    if filename.endswith(".zip"):
-        with zipfile.ZipFile(io.BytesIO(archive)) as file:
-            names = [n for n in file.namelist() if Path(n).name == binary]
-            if len(names) != 1:
-                raise ConfigError("Missing or ambiguous executable in signed-hash archive.")
-            contents = file.read(names[0])
+    if archive_path is not None:
+        source = archive_path.expanduser().resolve()
+        if not source.is_file() or source.is_symlink():
+            raise ConfigError("Specified offline archive is missing or not a regular file.")
+        if source.stat().st_size > MAX_ARCHIVE_BYTES:
+            raise ConfigError("Specified archive is too large; not installed.")
+        archive = source.read_bytes()
+        print("[SVC] Reading local archive:", source)
     else:
-        with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as file:
-            members = [x for x in file.getmembers() if x.isfile() and Path(x.name).name == binary]
-            if len(members) != 1:
-                raise ConfigError("Missing or ambiguous executable in checked archive.")
-            stream = file.extractfile(members[0])
-            if stream is None:
-                raise ConfigError("Unable to extract executable.")
-            contents = stream.read()
+        print("[SVC] Downloading official release:", url, flush=True)
+        archive = download_release(url, folder)
+    if len(archive) > MAX_ARCHIVE_BYTES or hashlib.sha256(archive).hexdigest() != digest:
+        raise ConfigError(
+            "Process Compose archive SHA-256 mismatch (or oversized archive). "
+            "Refusing installation; check that the correct version and platform was downloaded."
+        )
+    binary = "process-compose.exe" if os.name == "nt" else "process-compose"
+    try:
+        if filename.endswith(".zip"):
+            with zipfile.ZipFile(io.BytesIO(archive)) as file:
+                names = [n for n in file.namelist() if Path(n).name == binary]
+                if len(names) != 1:
+                    raise ConfigError("Missing or ambiguous executable in verified archive.")
+                contents = file.read(names[0])
+        else:
+            with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as file:
+                members = [x for x in file.getmembers() if x.isfile() and Path(x.name).name == binary]
+                if len(members) != 1:
+                    raise ConfigError("Missing or ambiguous executable in verified archive.")
+                stream = file.extractfile(members[0])
+                if stream is None:
+                    raise ConfigError("Unable to extract executable.")
+                contents = stream.read()
+    except (zipfile.BadZipFile, tarfile.TarError, OSError):
+        raise ConfigError("Verified archive could not be extracted; no binary installed.") from None
     private_write(dest, contents, replace=False)
     if os.name != "nt":
         dest.chmod(0o700)
     print("Installed checksum-verified", version, "to", dest)
     print("No host services or startup tasks were changed.")
-
 
 def native_binary(folder: Path) -> str:
     explicit = os.environ.get("AIW_PROCESS_COMPOSE_BIN")
@@ -425,6 +497,8 @@ def run(argv: list[str] | None = None) -> None:
         p = sub.add_parser(k)
         if k == "logs":
             p.add_argument("name", nargs="?")
+        if k == "install":
+            p.add_argument("--archive", type=Path, help="Official local archive; SHA-256 verified")
     for k in ("start", "stop", "restart"):
         sub.add_parser(k).add_argument("name")
     clients = sub.add_parser("client")
@@ -445,7 +519,7 @@ def run(argv: list[str] | None = None) -> None:
     if args.cmd == "init":
         init(folder)
     elif args.cmd == "install":
-        install_process_compose(folder)
+        install_process_compose(folder, args.archive)
     elif args.cmd == "where":
         doc = read_settings(folder)
         print("Configuration:", settings_path(folder))
