@@ -92,7 +92,10 @@ native_services_select_client() {
     printf 'Select client to %s (NUMBER):\n' "$purpose" >&2
     for name in "${rows[@]}"; do
         ((i+=1))
-        local id="${name%%
+        local id="${name%%$'\t'*}"
+        origin="${name#*$'\t'}"
+        printf ' %2d) %s [%s]\n' "$i" "$id" "$origin" >&2
+    done
     printf '  0) Cancel\n' >&2
     read -r -p 'Number: ' selected || return 1
     [[ "$selected" =~ ^[0-9]+$ ]] || return 1
