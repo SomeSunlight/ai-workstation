@@ -6,11 +6,24 @@ Runs under the same Windows account that owns the native Dispatcher.
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Store', 'Read')][string]$Action,
+    [Parameter(Mandatory)][ValidateSet('Store', 'Read', 'Protect')][string]$Action,
     [Parameter(Mandatory)][string]$Path
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+if ($Action -eq 'Protect') {
+    if (-not [IO.File]::Exists($Path)) { throw 'API token file not found.' }
+    # Process Compose needs plaintext for --token-file; keep it strictly user-only.
+    $acl = Get-Acl -LiteralPath $Path
+    $acl.SetAccessRuleProtection($true, $false)
+    $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User
+    $rule = [Security.AccessControl.FileSystemAccessRule]::new(
+        $sid, [Security.AccessControl.FileSystemRights]::FullControl,
+        [Security.AccessControl.AccessControlType]::Allow)
+    $acl.SetAccessRule($rule)
+    Set-Acl -LiteralPath $Path -AclObject $acl
+    return
+}
 if ($Action -eq 'Store') {
     if ([System.IO.File]::Exists($Path)) {
         throw 'Credential exists; refusing overwrite.'
