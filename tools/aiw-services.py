@@ -8,6 +8,8 @@ No service is started during init, validation, or client onboarding.
 from __future__ import annotations
 
 import argparse
+import socket
+import time
 import hashlib
 import io
 import platform
@@ -508,6 +510,155 @@ def check_production_security_gate(project: Path, action: str, process: str | No
         )
 
 
+def windows_process_identity(pid: int) -> dict | None:
+    """Windows kernel PID, executable path and creation FILETIME (PID reuse guard)."""
+    if os.name != "nt":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    class FILETIME(ctypes.Structure):
+        _fields_ = [("low", wintypes.DWORD), ("high", wintypes.DWORD)]
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.QueryFullProcessImageNameW.argtypes = (
+        wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)
+    )
+    kernel.GetProcessTimes.argtypes = (
+        wintypes.HANDLE, ctypes.POINTER(FILETIME), ctypes.POINTER(FILETIME),
+        ctypes.POINTER(FILETIME), ctypes.POINTER(FILETIME)
+    )
+    kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
+    handle = kernel.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
+    if not handle:
+        return None
+    try:
+        size = wintypes.DWORD(32768)
+        name = ctypes.create_unicode_buffer(32768)
+        created, exited, kernel_t, user_t = FILETIME(), FILETIME(), FILETIME(), FILETIME()
+        if not kernel.QueryFullProcessImageNameW(handle, 0, name, ctypes.byref(size)):
+            return None
+        if not kernel.GetProcessTimes(handle, ctypes.byref(created), ctypes.byref(exited),
+                                      ctypes.byref(kernel_t), ctypes.byref(user_t)):
+            return None
+        return {"pid": pid, "exe": os.path.normcase(os.path.realpath(name.value)),
+                "created": f"{created.high:08x}{created.low:08x}"}
+    finally:
+        kernel.CloseHandle(handle)
+
+
+def windows_supervisor_state_path(folder: Path) -> Path:
+    return folder / "runtime" / "process-compose-windows.json"
+
+
+def windows_ensure_owned(folder: Path, binary: str) -> dict:
+    """Refuse to operate on an unknown, replaced or untracked port owner."""
+    state_file = windows_supervisor_state_path(folder)
+    if not state_file.is_file() or state_file.is_symlink():
+        raise ConfigError(
+            "No AI Workstation-owned Windows supervisor recorded. "
+            "Refusing to control a possibly unrelated process."
+        )
+    try:
+        record = json.loads(state_file.read_text(encoding="utf-8"))
+        expected = record["identity"]
+        pid = expected["pid"]
+        if type(pid) is not int or type(expected) is not dict:
+            raise ValueError("bad ownership record")
+    except (OSError, ValueError, KeyError, TypeError):
+        raise ConfigError("Invalid supervisor ownership record; refusing control.") from None
+    current = windows_process_identity(pid)
+    if (current is None or current != expected or
+            current["exe"] != os.path.normcase(os.path.realpath(binary))):
+        raise ConfigError(
+            "Supervisor PID/executable/creation time does not match its ownership record. "
+            "Refusing control; investigate manually."
+        )
+    return expected
+
+
+def port_accepts_connections(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as conn:
+        conn.settimeout(0.25)
+        return conn.connect_ex(("127.0.0.1", port)) == 0
+
+
+def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
+                              status_command: list[str], port: int, env: dict) -> None:
+    """Start Windows Process Compose headless with an independent lifetime.
+
+    Upstream v1.124.0 does NOT support --detached on Windows. Python is
+    only the bootstrapper; the native binary supervises its own children.
+    """
+    state = windows_supervisor_state_path(folder)
+    if state.exists() or state.is_symlink():
+        raise ConfigError(
+            "An ownership record already exists. Do not start a duplicate; "
+            "use Status/Stop, or inspect a stale record manually."
+        )
+    if port_accepts_connections(port):
+        raise ConfigError(
+            "Management port already has a listener. Refusing to take over "
+            "an unknown Process Compose instance or other application."
+        )
+    private_dir(state.parent)
+    log_path = state.parent / "process-compose-stdout.log"
+    if log_path.is_symlink():
+        raise ConfigError("Refusing to write supervisor logs through a symlink.")
+    with open(log_path, "ab") as log:
+        proc = subprocess.Popen(
+            cmd, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+            env=env, close_fds=True,
+            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+        )
+    identity = None
+    for _ in range(8):
+        identity = windows_process_identity(proc.pid)
+        if identity is not None or proc.poll() is not None:
+            break
+        time.sleep(0.15)
+    if identity is None:
+        raise ConfigError(
+            "Windows Process Compose exited before its process identity could be "
+            "captured. See the private runtime/process-compose-stdout.log."
+        )
+    private_write(state, (json.dumps({"identity": identity,
+                                      "project": str(cmd), "port": port}) + "\n").encode("utf-8"),
+                  replace=False)
+    for _ in range(30):
+        if proc.poll() is not None:
+            state.unlink(missing_ok=True)
+            raise ConfigError(
+                "Windows Process Compose terminated during startup. "
+                "See private runtime/process-compose-stdout.log."
+            )
+        if port_accepts_connections(port):
+            result = subprocess.run(status_command, env=env, capture_output=True,
+                                    text=True, check=False, timeout=4)
+            if result.returncode == 0:
+                print("[OK] Native Windows Process Compose supervisor ready.",
+                      "PID:", identity["pid"], "| port:", port)
+                print("Use Status/Logs/Stop. The original host services were not touched.")
+                return
+        time.sleep(0.2)
+    raise ConfigError(
+        "Supervisor launch did not become ready. Ownership record is retained "
+        "for safe manual inspection/Stop; see private runtime log."
+    )
+
+
+def windows_supervisor_stopped(folder: Path, pid: int) -> bool:
+    state = windows_supervisor_state_path(folder)
+    for _ in range(30):
+        if windows_process_identity(pid) is None:
+            state.unlink(missing_ok=True)
+            return True
+        time.sleep(0.2)
+    return False
+
+
 def native(folder: Path, action: str, process: str | None) -> None:
     doc = read_settings(folder)
     project = project_path(folder, doc)
@@ -515,43 +666,65 @@ def native(folder: Path, action: str, process: str | None) -> None:
         raise ConfigError("Missing native Process Compose YAML.")
     check_production_security_gate(project, action, process)
     binary = native_binary(folder)
-    port = str(doc["process_compose"]["port"])
+    port = doc["process_compose"]["port"]
     api_token = folder / "secrets" / "process-compose.api-token"
     if not api_token.is_file() or api_token.is_symlink():
-        raise ConfigError("Missing Process Compose localhost management token; rerun init in clean directory.")
+        raise ConfigError("Missing private Process Compose management token.")
     if os.name != "nt" and (api_token.stat().st_mode & (stat.S_IRWXG | stat.S_IRWXO)):
         raise ConfigError("Process Compose management token permissions are too permissive.")
-    basic = [binary, "--address", "127.0.0.1", "--port", port,
+    basic = [binary, "--address", "127.0.0.1", "--port", str(port),
              "--token-file", str(api_token)]
-    if action in ("check", "up", "tui"):
-        cmd = basic + ["--disable-dotenv", "--config", str(project), "up"]
-        if action == "check":
-            cmd.append("--dry-run")
-        if action == "up":
-            cmd.append("--detached")
-    else:
-        cmd = basic + ({"status": ["process", "list"],
-                        "logs": ["process", "logs", process] if process else ["process", "logs"],
-                        "start": ["process", "start", process],
-                        "stop": ["process", "stop", process],
-                        "restart": ["process", "restart", process],
-                        "down": ["down"]}[action])
-    if action == "up":
-        print("Starting a Process Compose project is an operator action.")
-        print("Project:", project, "| loopback management port:", port)
-        print("This does NOT take over already running Speedy services.")
-    # Suppress benign debug discovery of a missing *global* config:
-    # the real project was already explicitly supplied with --config.
-    env = os.environ.copy()
     if action == "check":
-        env.setdefault("PC_LOG_LEVEL", "warn")
+        cmd = basic + ["--disable-dotenv", "--config", str(project), "up", "--dry-run"]
+    elif action == "up":
+        cmd = basic + ["--disable-dotenv", "--config", str(project), "up",
+                       "--keep-project", "--tui=false"]
+        if os.name != "nt":
+            cmd.append("--detached")  # upstream registers this only outside Windows
+    elif action == "tui":
+        cmd = basic + ["attach"]  # never start a second supervisor
+    else:
+        operations = {
+            "status": ["process", "list"],
+            "logs": ["process", "logs"] + ([process] if process else []),
+            "start": ["process", "start", process],
+            "stop": ["process", "stop", process],
+            "restart": ["process", "restart", process],
+            "down": ["down"],
+        }
+        cmd = basic + operations[action]
+
+    # Upstream may print benign global configuration search debug messages;
+    # suppress only debug-level chatter, not real errors.
+    env = os.environ.copy()
+    env["PC_LOG_LEVEL"] = "warn"
+    if os.name == "nt":
+        if action == "up":
+            print("Starting ONLY configured native processes under Process Compose.")
+            print("Management: 127.0.0.1:", port, "| config:", project)
+            return windows_launch_supervisor(folder, binary, cmd,
+                                             basic + ["process", "list"], port, env)
+        if action in {"tui", "start", "stop", "restart", "down"}:
+            record = windows_ensure_owned(folder, binary)
+        if action in {"status", "logs"} and port_accepts_connections(port):
+            # Read-only operations still must not talk to unknown listeners.
+            windows_ensure_owned(folder, binary)
+    if action == "up":
+        print("Starting ONLY configured native processes under Process Compose.")
+        print("Management: 127.0.0.1:", port, "| config:", project)
     result = subprocess.run(cmd, check=False, env=env)
     if result.returncode:
-        raise ConfigError("Native Process Compose command failed (exit " +
+        raise ConfigError("Native Process Compose " + action + " failed (exit " +
                           str(result.returncode) + ").")
-    if action == "check":
-        print("[OK] Explicit private Process Compose project validation succeeded.")
-        print("No native service was started.")
+    if action == "down" and os.name == "nt":
+        if not windows_supervisor_stopped(folder, record["pid"]):
+            raise ConfigError(
+                "Shutdown was requested but supervisor has not exited. "
+                "Ownership record retained; inspect before trying again."
+            )
+        print("[OK] Native Windows Process Compose stopped; ownership record removed.")
+    elif action == "check":
+        print("[OK] Explicit private Process Compose project validated. Nothing started.")
 
 
 def run(argv: list[str] | None = None) -> None:
