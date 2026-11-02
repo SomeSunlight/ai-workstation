@@ -1,20 +1,78 @@
 # AI Workstation Plan
 
-## Current review block — Issue #34 M00: external supervisor discovery (2026-11-02)
+## Current review block — Issue #34: native Process Compose and named clients (2026-11-02)
 
-**Accepted baseline:** [PR #36](https://github.com/SomeSunlight/ai-workstation/pull/36) was owner-accepted and squash-merged on 2026-11-01 as `13eb053becde1a66de9d275e25cbe1fb716062ab`. Its WSL-safe/native-Linux first slice is merged; **native Ubuntu is still not real-host validated** (deferred #33). In [Llama Dispatcher](https://github.com/SomeSunlight/Llama_Dispatcher), S03 [PR #27](https://github.com/SomeSunlight/Llama_Dispatcher/pull/27) was owner-tested via **both Goose and Open WebUI on Laptop/WSL** through Speedy's Caddy → Dispatcher → already-running native Strata; SQLite audit was verified, and S03 was squash-merged to `main` on 2026-11-02 as `2f076e2f1c6f95b1921cafcb6921cf365b2d1ae4`. No process-manager acceptance is implied.
+**Accepted base:** AI Workstation PR #36 was squash-merged on 2026-11-01
+as 13eb053becde1a66de9d275e25cbe1fb716062ab; real native Ubuntu
+still awaits validation (#33). Llama Dispatcher S03 PR #27 was
+owner-tested with real Laptop/WSL Goose and Open WebUI via Speedy's
+authenticated Caddy → Dispatcher → native Strata, SQLite verified,
+and squash-merged on 2026-11-02 as 2f076e2f1c6f95b1921cafcb6921cf365b2d1ae4.
 
-**Purpose:** map the already working Speedy Windows startup safeguards and existing AI Workstation Linux systemd service to **Process Compose as the favored external supervisor candidate**, before introducing a single harmless supervised service. Reuse its process lifecycle, dependencies, health and logs; AI Workstation owns provisioning, configuration and protective preflight. Keep Dispatcher **attach-only** for Strata; no process manager implemented inside Dispatcher.
+**Owner-approved change of scope:** The original documentation-only
+[draft PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37)
+is expanded at the owner's request, before review/merge, to the first
+usable native Process Compose and named S02 client onboarding slice.
 
-**Writable scope:** `PLAN.md`, `STATE.md`, and a new `docs/process-manager-discovery.md`. This first review is *documentation only*: no changes to service scripts, installer, OS tasks/systemd units, working native Strata/Caddy/Open WebUI, runtime YAML, private keys, managed model instances or ContextCanon packages.
+**Decision:** Process Compose is chosen (no further tool selection).
+AI Workstation provides host-native entrypoints; native Process Compose
+YAML is the **sole process registry**. Windows on Speedy and Linux
+inside Laptop/WSL each run their **own** supervisor; native Linux
+reuses the Linux code path. Docker Compose remains the owner of
+containerized Goose/Open WebUI and future isolated Hermes. No merged
+TUI or MCP process control. A native, operator-accessible CLI/TUI is enough.
 
-- [x] Verify accepted #36 and Dispatcher #27 merge facts; inspect current Linux local-inference systemd path, supplied private Speedy startup design, issue #34, and current official Process Compose features.
-- [x] Publish the supervisor capability/gap matrix and a concrete **no-GPU isolated first-service** owner-test plan in `docs/process-manager-discovery.md`. This records *candidate* upstream functions, not validated Speedy behavior.
-- [x] Record what remains owner-gated: Windows binary/version verification, unknown-port-owner preflight, child process ownership, DPAPI and authenticated readiness, rollback and later WSL/Linux proof.
-- [x] Publish [draft PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37) and verify Ubuntu/Windows validation on review head `c0f651e452904b96820c5398a8dc1fd746a91dd9` ([run #41436231371](https://github.com/SomeSunlight/ai-workstation/actions/runs/41436231371)); both jobs passed. The following PLAN-only checkpoint must still receive final exact-head CI before merge.
-- [ ] Obtain explicit owner review/approval, require exact-head green CI and merge **only with owner approval**; no live services were modified.
+**Writable scope:** PLAN.md, STATE.md, docs/process-manager-discovery.md,
+docs/native-services.md, bin/aiw, bootstrap/windows/Services.ps1,
+tools/aiw-services.py, tools/aiw-secret-windows.ps1,
+config/versions.json, tests/smoke/services-registry.py,
+tests/windows/, .github/workflows/validate.yml, tools/release-check.sh,
+and PR #37 description. No Caddyfile, native Strata/Dispatcher process,
+live DPAPI files, production Windows scheduled tasks, systemd units,
+Goose containers or ContextCanon authored/generated packages are changed
+on the user's hosts. Existing Speedy Start-SpeedyAI.ps1 remains the
+working rollback. Multiple Goose workspace mounts are separate issue #38.
 
-**First executable pilot after this review, separately owner-gated:** AI Workstation installs/pins Process Compose and operates **one harmless disposable local-only process** (no Caddy/Strata/Dispatcher/Open WebUI, no GPU, no public ingress), demonstrating status/readiness/logs/stop/restart and unknown-process refusal on **Speedy Windows**. Its exact installer/CLI shape is a separate implementation decision. The existing `Start-SpeedyAI.ps1` remains the operational fallback throughout. The Linux systemd-local-inference service remains separately owned until an explicit, tested migration; native Ubuntu remains deferred.
+- [x] Verify accepted #36 and Dispatcher #27 and audit the private Speedy
+  startup behavior versus existing Linux systemd local inference.
+- [x] Select Process Compose as native supervisor; verify official v1.124.0
+  (2026-10-27) release and Windows/Linux archive digests; document
+  architecture/security and no-double-owner rule.
+- [x] Design KISS host-local config: services.yaml for named client
+  identities/policies and native Process Compose project reference,
+  process-compose.yaml as the **only native process definitions**,
+  protected local secret files and generated S02 hash-only clients.json.
+- [x] Add opt-in version/checksum-pinned installation, native
+  validation/start/status/logs/TUI entrypoints in AI Workstation under
+  WSL/Linux and a native Windows PowerShell menu on Speedy.
+- [x] Implement strongly named client credential generation, explicit
+  revocation and S02 hash-only output. Windows DPAPI and Linux 0600;
+  never silently replace live Caddy/S02 config.
+- [x] Open separate multi-directory Goose mount issue #38 after confirming
+  the current one-RW-workspace limit.
+- [ ] Verify Linux focused security/CLI tests, Windows PowerShell syntax
+  and the full repo release/CI checks; resolve all failures on the PR head.
+- [ ] Owner reviews the complete first slice and approves only after
+  understood results; **never merge without owner approval**.
+- [ ] Separate **real Speedy pilot**: start an isolated harmless process
+  under verified Process Compose, test child owner/readiness/restart/logs
+  and unknown-port refusal without any GPU or production processes.
+- [ ] Separate **real operational handoff** after pilot: implement
+  DPAPI-aware native start adapters, preserve existing shared key
+  during the one-time multi-client Caddy S02 trust boundary transition,
+  activate separate Goose/WebUI/Hermes client IDs, move ownership
+  per service with rollback. No Process Compose vs existing
+  Windows-script/systemd simultaneous ownership. The owner explicitly
+  controls activation.
+- [ ] Separate Hermes container and Speedy Workbench deployment under
+  Docker Compose (and ordinary Open WebUI user onboarding) with
+  individually reviewed AIW entrypoints.
+
+**Meaning of CI:** green source/command-contract tests and Windows
+script parsing are not proof of working native Windows Process Compose
+process-tree shutdown, secure token ACLs, DPAPI under the owner's
+account, Caddy auth reconfiguration or full Linux host deployment.
+Those remain genuine operator gates and must not be claimed completed.
 
 ---
 
