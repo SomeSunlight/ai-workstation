@@ -92,7 +92,511 @@ native_services_select_client() {
     printf 'Select client to %s (NUMBER):\n' "$purpose" >&2
     for name in "${rows[@]}"; do
         ((i+=1))
-        printf ' %2d) %s\n' "$i" "${name//$'\t'/  [}" >&2
+        local id="${name%%
+    printf '  0) Cancel\n' >&2
+    read -r -p 'Number: ' selected || return 1
+    [[ "$selected" =~ ^[0-9]+$ ]] || return 1
+    (( selected >= 1 && selected <= ${#rows[@]} )) || return 1
+    name="${rows[selected-1]%%$'\t'*}"
+    printf '%s\n' "$name"
+}
+
+native_services_menu() {
+    local choice name old new
+    native_services_menu_help
+    while true; do
+        read -r -p 'Option (?=menu, b=back): ' choice || return
+        case "$choice" in
+            b|B) return ;;
+            '?') native_services_menu_help; continue ;;
+        esac
+        printf '\n--- Action %s ---\n' "$choice"
+        case "$choice" in
+            1) run_menu_action native_services where ;;
+            2) run_menu_action native_services init ;;
+            3) run_menu_action native_services install ;;
+            4) run_menu_action native_services check ;;
+            5) run_menu_action native_services status ;;
+            6) native_services tui ;;
+            7) run_menu_action native_services up ;;
+            8) run_menu_action native_services down ;;
+            9) run_menu_action native_services logs ;;
+            10)
+                printf 'Choose a unique logical client ID (not a machine name).\n'
+                read -r -p 'New client ID (Enter cancels): ' name || return
+                [[ -n "$name" ]] && run_menu_action native_services client add "$name" --policy passthrough
+                ;;
+            11) run_menu_action native_services client list ;;
+            12) run_menu_action native_services client render ;;
+            13)
+                old="$(native_services_select_client rename)" || old=""
+                if [[ -n "$old" ]]; then
+                    read -r -p 'New client ID (Enter cancels): ' new || return
+                    [[ -n "$new" ]] && run_menu_action native_services client rename "$old" "$new"
+                fi
+                ;;
+            14)
+                printf 'Client ID = label for one application/provider, chosen by you.\n'
+                printf 'Original key = secret for client authentication; stored privately.\n'
+                printf 'services.yaml = client names/policies; clients.json = hashes ONLY.\n'
+                printf 'Imported key = existing shared credential, retained for migration.\n'
+                printf 'Full details: docs/native-services.md\n'
+                ;;
+            *) printf 'Unknown option. Press ? to show the menu.\n' ;;
+        esac
+        printf '%s\n' "--- End of action $choice (press ? for menu) ---"
+    done
+}
+
+local_inference_enabled() {
+    [[ -f "$LOCAL_INFERENCE_CONFIG" ]] && grep -Fxq 'AIW_LOCAL_INFERENCE_ENABLED=true' "$LOCAL_INFERENCE_CONFIG"
+}
+
+local_inference() {
+    require_local_inference_manager
+    require_local_inference_service
+    local subcommand="${1:-help}"
+    case "$subcommand" in
+        start|stop|restart|logs|autostart|runtime|service-run|render-service)
+            bash "$LOCAL_INFERENCE_SERVICE" "$@"
+            ;;
+        status)
+            bash "$LOCAL_INFERENCE_MANAGER" status
+            printf '\n'
+            bash "$LOCAL_INFERENCE_SERVICE" status
+            ;;
+        help|-h|--help)
+            bash "$LOCAL_INFERENCE_MANAGER" help
+            printf '\n'
+            bash "$LOCAL_INFERENCE_SERVICE" help
+            ;;
+        *)
+            bash "$LOCAL_INFERENCE_MANAGER" "$@"
+            ;;
+    esac
+}
+
+show_help() {
+    run_core help
+    cat <<'EOF'
+
+Native host processes (Process Compose, optional):
+  aiw services init          Create the PRIVATE per-host YAML (once)
+  aiw services install       Install pinned, checksum-verified native binary
+  aiw services check         Validate YAML; never starts services
+  aiw services up            Explicitly start the configured native project
+  aiw services status        Inspect native processes
+  aiw services client add goose-laptop --policy passthrough
+  aiw services client render # Render hashes for DISPATCHER_CLIENT_CONFIG
+  aiw services where         Show editable config location
+
+Optional local inference:
+  aiw local-inference setup sycl
+  aiw local-inference runtime configure
+  aiw local-inference start
+  aiw local-inference stop
+  aiw local-inference status
+  aiw local-inference autostart enable
+  aiw local-inference logs
+  aiw local-inference help
+
+`setup` prepares llama.cpp and Llama Dispatcher. `runtime configure` records the
+machine-local model root plus the normal Dispatcher instance/ensemble. Afterwards
+`start` needs no llama.cpp path, model path, environment variable or long Dispatcher
+command. Autostart is opt-in and remains disabled until explicitly enabled.
+EOF
+}
+
+show_status() {
+    run_core status
+    printf '\n'
+    local_inference status
+}
+
+install_all() {
+    run_core install
+    if local_inference_enabled; then
+        printf '\n[..] Local inference is enabled; reconciling its host runtime.\n'
+        local_inference install
+    else
+        printf '\n[..] Local inference is not enabled; skipping optional host-local inference.\n'
+    fi
+}
+
+verify_all() {
+    run_core verify
+    if local_inference_enabled; then
+        printf '\n[..] Local inference is enabled; verifying it.\n'
+        local_inference verify
+    else
+        printf '\n[..] Local inference is not enabled; optional verification skipped.\n'
+    fi
+}
+
+local_inference_menu() {
+    local choice name
+    while true; do
+        cat <<'EOF'
+
+Local inference
+===============
+1) Show complete status
+2) Configure normal Dispatcher start (model root / instance / ensemble)
+3) Start Dispatcher
+4) Stop Dispatcher
+5) Restart Dispatcher
+6) Follow Dispatcher logs
+7) Enable autostart and start now
+8) Disable autostart and stop
+9) List llama.cpp builds
+10) Select active llama.cpp build
+11) Verify selected build and Dispatcher core
+12) Setup Intel SYCL runtime (WSL / Ubuntu 24.04)
+13) Setup generic Vulkan runtime
+14) Show command help
+b) Back
+q) Exit
+EOF
+        read -r -p 'Select: ' choice || return
+        case "$choice" in
+            1) run_menu_action local_inference status ;;
+            2) run_menu_action local_inference runtime configure ;;
+            3) run_menu_action local_inference start ;;
+            4) run_menu_action local_inference stop ;;
+            5) run_menu_action local_inference restart ;;
+            6) if aiw_menu_confirm_command aiw local-inference logs; then local_inference logs; fi ;;
+            7) run_menu_action local_inference autostart enable ;;
+            8) run_menu_action local_inference autostart disable ;;
+            9) run_menu_action local_inference llama list ;;
+            10)
+                read -r -p 'Build name: ' name || continue
+                [[ -n "$name" ]] && run_menu_action local_inference llama select "$name"
+                ;;
+            11) run_menu_action local_inference verify ;;
+            12) run_menu_action local_inference setup sycl ;;
+            13) run_menu_action local_inference setup vulkan ;;
+            14) run_menu_action local_inference help ;;
+            b|B) return ;;
+            q|Q) exit 0 ;;
+            *) printf 'Unknown selection.\n' ;;
+        esac
+    done
+}
+
+main_menu() {
+    local choice
+    while true; do
+        cat <<'EOF'
+
+AI Workstation
+==============
+1) Standard tools (Goose / Open WebUI)
+2) Local inference (llama.cpp / Llama Dispatcher)
+3) Complete system status
+4) Update installation
+5) Command help
+6) Configure AI Workstation (edit YAML settings)
+7) Native services (Process Compose)
+q) Exit
+EOF
+        read -r -p 'Select: ' choice || return
+        case "$choice" in
+            1) run_core ;;
+            2) local_inference_menu ;;
+            3) run_menu_action show_status ;;
+            4) run_menu_action run_core update ;;
+            5) run_menu_action show_help ;;
+            6) run_menu_action aiw_menu_edit_config ;;
+            7) native_services_menu ;;
+            q|Q) return ;;
+            *) printf 'Unknown selection.\n' ;;
+        esac
+    done
+}
+
+command_name="${1:-menu}"
+shift || true
+case "$command_name" in
+    menu)
+        main_menu
+        ;;
+    local-inference|local_inference|local)
+        local_inference "$@"
+        ;;
+    services|service)
+        native_services "$@"
+        ;;
+    status)
+        show_status
+        ;;
+    install)
+        install_all
+        ;;
+    verify)
+        verify_all
+        ;;
+    help|-h|--help)
+        show_help
+        ;;
+    *)
+        require_core
+        exec bash "$CORE" "$command_name" "$@"
+        ;;
+esac
+\t'*}"
+        origin="${name#*
+    printf '  0) Cancel\n' >&2
+    read -r -p 'Number: ' selected || return 1
+    [[ "$selected" =~ ^[0-9]+$ ]] || return 1
+    (( selected >= 1 && selected <= ${#rows[@]} )) || return 1
+    name="${rows[selected-1]%%$'\t'*}"
+    printf '%s\n' "$name"
+}
+
+native_services_menu() {
+    local choice name old new
+    native_services_menu_help
+    while true; do
+        read -r -p 'Option (?=menu, b=back): ' choice || return
+        case "$choice" in
+            b|B) return ;;
+            '?') native_services_menu_help; continue ;;
+        esac
+        printf '\n--- Action %s ---\n' "$choice"
+        case "$choice" in
+            1) run_menu_action native_services where ;;
+            2) run_menu_action native_services init ;;
+            3) run_menu_action native_services install ;;
+            4) run_menu_action native_services check ;;
+            5) run_menu_action native_services status ;;
+            6) native_services tui ;;
+            7) run_menu_action native_services up ;;
+            8) run_menu_action native_services down ;;
+            9) run_menu_action native_services logs ;;
+            10)
+                printf 'Choose a unique logical client ID (not a machine name).\n'
+                read -r -p 'New client ID (Enter cancels): ' name || return
+                [[ -n "$name" ]] && run_menu_action native_services client add "$name" --policy passthrough
+                ;;
+            11) run_menu_action native_services client list ;;
+            12) run_menu_action native_services client render ;;
+            13)
+                old="$(native_services_select_client rename)" || old=""
+                if [[ -n "$old" ]]; then
+                    read -r -p 'New client ID (Enter cancels): ' new || return
+                    [[ -n "$new" ]] && run_menu_action native_services client rename "$old" "$new"
+                fi
+                ;;
+            14)
+                printf 'Client ID = label for one application/provider, chosen by you.\n'
+                printf 'Original key = secret for client authentication; stored privately.\n'
+                printf 'services.yaml = client names/policies; clients.json = hashes ONLY.\n'
+                printf 'Imported key = existing shared credential, retained for migration.\n'
+                printf 'Full details: docs/native-services.md\n'
+                ;;
+            *) printf 'Unknown option. Press ? to show the menu.\n' ;;
+        esac
+        printf '%s\n' "--- End of action $choice (press ? for menu) ---"
+    done
+}
+
+local_inference_enabled() {
+    [[ -f "$LOCAL_INFERENCE_CONFIG" ]] && grep -Fxq 'AIW_LOCAL_INFERENCE_ENABLED=true' "$LOCAL_INFERENCE_CONFIG"
+}
+
+local_inference() {
+    require_local_inference_manager
+    require_local_inference_service
+    local subcommand="${1:-help}"
+    case "$subcommand" in
+        start|stop|restart|logs|autostart|runtime|service-run|render-service)
+            bash "$LOCAL_INFERENCE_SERVICE" "$@"
+            ;;
+        status)
+            bash "$LOCAL_INFERENCE_MANAGER" status
+            printf '\n'
+            bash "$LOCAL_INFERENCE_SERVICE" status
+            ;;
+        help|-h|--help)
+            bash "$LOCAL_INFERENCE_MANAGER" help
+            printf '\n'
+            bash "$LOCAL_INFERENCE_SERVICE" help
+            ;;
+        *)
+            bash "$LOCAL_INFERENCE_MANAGER" "$@"
+            ;;
+    esac
+}
+
+show_help() {
+    run_core help
+    cat <<'EOF'
+
+Native host processes (Process Compose, optional):
+  aiw services init          Create the PRIVATE per-host YAML (once)
+  aiw services install       Install pinned, checksum-verified native binary
+  aiw services check         Validate YAML; never starts services
+  aiw services up            Explicitly start the configured native project
+  aiw services status        Inspect native processes
+  aiw services client add goose-laptop --policy passthrough
+  aiw services client render # Render hashes for DISPATCHER_CLIENT_CONFIG
+  aiw services where         Show editable config location
+
+Optional local inference:
+  aiw local-inference setup sycl
+  aiw local-inference runtime configure
+  aiw local-inference start
+  aiw local-inference stop
+  aiw local-inference status
+  aiw local-inference autostart enable
+  aiw local-inference logs
+  aiw local-inference help
+
+`setup` prepares llama.cpp and Llama Dispatcher. `runtime configure` records the
+machine-local model root plus the normal Dispatcher instance/ensemble. Afterwards
+`start` needs no llama.cpp path, model path, environment variable or long Dispatcher
+command. Autostart is opt-in and remains disabled until explicitly enabled.
+EOF
+}
+
+show_status() {
+    run_core status
+    printf '\n'
+    local_inference status
+}
+
+install_all() {
+    run_core install
+    if local_inference_enabled; then
+        printf '\n[..] Local inference is enabled; reconciling its host runtime.\n'
+        local_inference install
+    else
+        printf '\n[..] Local inference is not enabled; skipping optional host-local inference.\n'
+    fi
+}
+
+verify_all() {
+    run_core verify
+    if local_inference_enabled; then
+        printf '\n[..] Local inference is enabled; verifying it.\n'
+        local_inference verify
+    else
+        printf '\n[..] Local inference is not enabled; optional verification skipped.\n'
+    fi
+}
+
+local_inference_menu() {
+    local choice name
+    while true; do
+        cat <<'EOF'
+
+Local inference
+===============
+1) Show complete status
+2) Configure normal Dispatcher start (model root / instance / ensemble)
+3) Start Dispatcher
+4) Stop Dispatcher
+5) Restart Dispatcher
+6) Follow Dispatcher logs
+7) Enable autostart and start now
+8) Disable autostart and stop
+9) List llama.cpp builds
+10) Select active llama.cpp build
+11) Verify selected build and Dispatcher core
+12) Setup Intel SYCL runtime (WSL / Ubuntu 24.04)
+13) Setup generic Vulkan runtime
+14) Show command help
+b) Back
+q) Exit
+EOF
+        read -r -p 'Select: ' choice || return
+        case "$choice" in
+            1) run_menu_action local_inference status ;;
+            2) run_menu_action local_inference runtime configure ;;
+            3) run_menu_action local_inference start ;;
+            4) run_menu_action local_inference stop ;;
+            5) run_menu_action local_inference restart ;;
+            6) if aiw_menu_confirm_command aiw local-inference logs; then local_inference logs; fi ;;
+            7) run_menu_action local_inference autostart enable ;;
+            8) run_menu_action local_inference autostart disable ;;
+            9) run_menu_action local_inference llama list ;;
+            10)
+                read -r -p 'Build name: ' name || continue
+                [[ -n "$name" ]] && run_menu_action local_inference llama select "$name"
+                ;;
+            11) run_menu_action local_inference verify ;;
+            12) run_menu_action local_inference setup sycl ;;
+            13) run_menu_action local_inference setup vulkan ;;
+            14) run_menu_action local_inference help ;;
+            b|B) return ;;
+            q|Q) exit 0 ;;
+            *) printf 'Unknown selection.\n' ;;
+        esac
+    done
+}
+
+main_menu() {
+    local choice
+    while true; do
+        cat <<'EOF'
+
+AI Workstation
+==============
+1) Standard tools (Goose / Open WebUI)
+2) Local inference (llama.cpp / Llama Dispatcher)
+3) Complete system status
+4) Update installation
+5) Command help
+6) Configure AI Workstation (edit YAML settings)
+7) Native services (Process Compose)
+q) Exit
+EOF
+        read -r -p 'Select: ' choice || return
+        case "$choice" in
+            1) run_core ;;
+            2) local_inference_menu ;;
+            3) run_menu_action show_status ;;
+            4) run_menu_action run_core update ;;
+            5) run_menu_action show_help ;;
+            6) run_menu_action aiw_menu_edit_config ;;
+            7) native_services_menu ;;
+            q|Q) return ;;
+            *) printf 'Unknown selection.\n' ;;
+        esac
+    done
+}
+
+command_name="${1:-menu}"
+shift || true
+case "$command_name" in
+    menu)
+        main_menu
+        ;;
+    local-inference|local_inference|local)
+        local_inference "$@"
+        ;;
+    services|service)
+        native_services "$@"
+        ;;
+    status)
+        show_status
+        ;;
+    install)
+        install_all
+        ;;
+    verify)
+        verify_all
+        ;;
+    help|-h|--help)
+        show_help
+        ;;
+    *)
+        require_core
+        exec bash "$CORE" "$command_name" "$@"
+        ;;
+esac
+\t'}"
+        printf ' %2d) %s [%s]\n' "$i" "$id" "$origin" >&2
     done
     printf '  0) Cancel\n' >&2
     read -r -p 'Number: ' selected || return 1
