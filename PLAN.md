@@ -11,7 +11,8 @@
 - [x] Verify accepted #36 and Dispatcher #27 merge facts; inspect current Linux local-inference systemd path, supplied private Speedy startup design, issue #34, and current official Process Compose features.
 - [x] Publish the supervisor capability/gap matrix and a concrete **no-GPU isolated first-service** owner-test plan in `docs/process-manager-discovery.md`. This records *candidate* upstream functions, not validated Speedy behavior.
 - [x] Record what remains owner-gated: Windows binary/version verification, unknown-port-owner preflight, child process ownership, DPAPI and authenticated readiness, rollback and later WSL/Linux proof.
-- [ ] Publish review PR, run applicable CI on exact head, and obtain explicit owner approval before merging or altering live services.
+- [x] Publish [draft PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37) and verify Ubuntu/Windows validation on review head `c0f651e452904b96820c5398a8dc1fd746a91dd9` ([run #41436231371](https://github.com/SomeSunlight/ai-workstation/actions/runs/41436231371)); both jobs passed. The following PLAN-only checkpoint must still receive final exact-head CI before merge.
+- [ ] Obtain explicit owner review/approval, require exact-head green CI and merge **only with owner approval**; no live services were modified.
 
 **First executable pilot after this review, separately owner-gated:** AI Workstation installs/pins Process Compose and operates **one harmless disposable local-only process** (no Caddy/Strata/Dispatcher/Open WebUI, no GPU, no public ingress), demonstrating status/readiness/logs/stop/restart and unknown-process refusal on **Speedy Windows**. Its exact installer/CLI shape is a separate implementation decision. The existing `Start-SpeedyAI.ps1` remains the operational fallback throughout. The Linux systemd-local-inference service remains separately owned until an explicit, tested migration; native Ubuntu remains deferred.
 
