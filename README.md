@@ -53,10 +53,28 @@ AI Workstation
 4) Update installation
 5) Command help
 6) Configure AI Workstation (edit YAML settings)
+7) Native services (Process Compose)
 q) Exit
 ```
 
 The menu evolves as new capabilities are added; the example above is a snapshot and is updated periodically.
+
+### Native services and multiple inference clients (review candidate)
+
+[Issue #34](https://github.com/SomeSunlight/ai-workstation/issues/34)
+adds a native Process Compose CLI/TUI entrypoint and **separately named**
+Dispatcher clients: `aiw services` on WSL/native Linux and
+`bootstrap/windows/Services.ps1` on native Windows. Client secrets are
+host-local (DPAPI on Windows, restricted files under Linux); the generated
+S02 configuration contains only hashes. Native process definitions stay
+in Process Compose YAML, while Docker Compose continues to own Goose,
+Open WebUI containers and future Hermes Agent.
+
+**This is not an automatic replacement of the currently functioning
+Speedy startup script.** The process owner cutover and Caddy single-key
+to multi-client change require separate review and real host tests.
+See the [native-services operator guide](docs/native-services.md)
+for menu choices, private YAML layout, safe onboarding and rollback.
 
 ## Quick start
 
