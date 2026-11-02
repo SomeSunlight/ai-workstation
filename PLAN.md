@@ -9,19 +9,19 @@
 **Writable scope:** `PLAN.md`, `STATE.md`, and a new `docs/process-manager-discovery.md`. This first review is *documentation only*: no changes to service scripts, installer, OS tasks/systemd units, working native Strata/Caddy/Open WebUI, runtime YAML, private keys, managed model instances or ContextCanon packages.
 
 - [x] Verify accepted #36 and Dispatcher #27 merge facts; inspect current Linux local-inference systemd path, supplied private Speedy startup design, issue #34, and current official Process Compose features.
-- [ ] Publish a traceable supervisor capability/gap matrix and concrete **no-GPU isolated first-service** owner-test plan without treating candidate features as already tested on Speedy.
-- [ ] Record what remains owner-gated: Windows binary/version verification, unknown-port-owner preflight, child process ownership, DPAPI and authenticated readiness, rollback and later WSL/Linux proof.
+- [x] Publish the supervisor capability/gap matrix and a concrete **no-GPU isolated first-service** owner-test plan in `docs/process-manager-discovery.md`. This records *candidate* upstream functions, not validated Speedy behavior.
+- [x] Record what remains owner-gated: Windows binary/version verification, unknown-port-owner preflight, child process ownership, DPAPI and authenticated readiness, rollback and later WSL/Linux proof.
 - [ ] Publish review PR, run applicable CI on exact head, and obtain explicit owner approval before merging or altering live services.
 
 **First executable pilot after this review, separately owner-gated:** AI Workstation installs/pins Process Compose and operates **one harmless disposable local-only process** (no Caddy/Strata/Dispatcher/Open WebUI, no GPU, no public ingress), demonstrating status/readiness/logs/stop/restart and unknown-process refusal on **Speedy Windows**. Its exact installer/CLI shape is a separate implementation decision. The existing `Start-SpeedyAI.ps1` remains the operational fallback throughout. The Linux systemd-local-inference service remains separately owned until an explicit, tested migration; native Ubuntu remains deferred.
 
 ---
 
-## Current implementation block — Issue #33: native Ubuntu host-mode foundations
+## Accepted first slice — Issue #33: native Ubuntu host-mode foundations (real native host still deferred)
 
 Purpose: make the existing Linux bootstrap behave correctly on WSL2 **and** native Ubuntu 24.04, without pretending that a full native install has yet been hardware-tested. First slice deliberately avoids cloud accounts, model downloads, GPU drivers, process-manager changes, secrets, and changing the Windows install path.
 
-Branch: `feature/issue-33-native-linux-first-slice` from accepted PR #35 merge `4b4c5f2f03bc092d1fb05c39851b365c5f00a795`.
+Historical implementation branch: `feature/issue-33-native-linux-first-slice`, based on accepted PR #35 merge `4b4c5f2f03bc092d1fb05c39851b365c5f00a795`; its review [PR #36](https://github.com/SomeSunlight/ai-workstation/pull/36) is now **merged**.
 
 Writable scope: `PLAN.md`, `bootstrap/linux/install.sh`, `bin/aiw-core`, new `tools/host-platform.sh`, `tests/smoke/repository-layout.sh`, `tests/smoke/update-recovery.sh` (fixture now needs the shared host adapter), new `tests/smoke/host-platform.sh`, `tools/release-check.sh`, `.github/workflows/validate.yml`, `README.md`, new `docs/native-linux.md`, `docs/troubleshooting.md`. No ContextCanon source/generated changes in this first slice: official supported-platform statements remain accurate until an actual native installation is accepted.
 
@@ -31,7 +31,7 @@ Writable scope: `PLAN.md`, `bootstrap/linux/install.sh`, `bin/aiw-core`, new `to
 - [x] Make Open WebUI browser hints and Docker diagnostics truthful on native desktops and headless remote Linux, without breaking WSL Windows browser launch.
 - [x] Add automated regression tests and concise native Ubuntu installation and validation guidance; initial standalone host-platform smoke passed in CI. The update-recovery fixture must include the shared helper.
 - [x] Run focused host adapter checks, fix the isolated update-recovery fixture, and pass full Ubuntu/Windows Validate on code head `6802a1375cd3cf9af014a63ce5fc505ed004722d` ([run 41228326996](https://github.com/SomeSunlight/ai-workstation/actions/runs/41228326996)). Publish [draft review PR #36](https://github.com/SomeSunlight/ai-workstation/pull/36); this does not constitute native-host acceptance.
-- [ ] Owner reviews the first Linux/WSL slice; after approval, require an exact-head green merge gate. **Do not merge without explicit owner approval.**
+- [x] Owner reviewed and accepted the first Linux/WSL host-mode slice; [PR #36](https://github.com/SomeSunlight/ai-workstation/pull/36) passed its final CI gate and was squash-merged on 2026-11-01 as `13eb053becde1a66de9d275e25cbe1fb716062ab`.
 - [ ] Separate later real-host gate: disposable native Ubuntu 24.04 x86-64 with systemd and Docker, installer rerun, Goose/Open WebUI functionality; only then update supported platform state and relevant ContextCanon packages.
 
 Known intentional limits: Intel SYCL auto-setup remains restricted to WSL2 with /dev/dxg; optional inference can be disabled; native host systemd services are not a substitute for the future external manager (#34). Native Ubuntu may use a legitimate `/mnt` mount, while WSL continues to reject `/mnt/*` checkouts as before.
