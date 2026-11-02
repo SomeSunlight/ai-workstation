@@ -78,15 +78,30 @@ working rollback. Multiple Goose workspace mounts are separate issue #38.
   `526870b9cd79f3b797649843c2e3fbe2b368031d`
   ([run #41540972843](https://github.com/SomeSunlight/ai-workstation/actions/runs/41540972843)).
   This PLAN-only checkpoint requires fresh exact-head CI.
-- [ ] Owner reviews the revised KISS onboarding on the real host,
-  including exact key-origin categorization of older registrations,
-  then decides on the optional isolated `aiw-smoke` process test.
+- [x] Owner tested initialization/install/check/client management on real
+  native Windows and reported the first real `aiw-smoke` Start attempt
+  failed: `unknown flag: --detached`. Verified **upstream v1.124.0
+  source**: Windows deliberately excludes `-D/--detached` while Unix
+  supports it; the published cross-platform CLI documentation obscures
+  the distinction. Replaced the Windows start path with an independent
+  headless OS process (`--keep-project --tui=false`), bounded readiness,
+  private log, and a PID/path/creation-time owner record for safe Stop.
+  Linux/WSL keeps upstream detached mode; TUI now **attaches** instead
+  of creating another supervisor. Native Process Compose logs now use
+  an explicit project name (required by the upstream CLI).
+  The upstream `PROC_COMP_CONFIG` setting binds its general config home
+  to the existing private folder without spurious XDG debug messages.
+  Native Windows and Ubuntu test-host **full up/status/logs/down**
+  verified in [CI run #41546447273](https://github.com/SomeSunlight/ai-workstation/actions/runs/41546447273).
+- [ ] Owner repeats the isolated `aiw-smoke` smoke test on actual Windows
+  and reviews the platform-specific lifecycle changes.
   **Never merge without owner approval.**
-- [ ] Separate **real Speedy pilot**: start an isolated harmless process
-  under verified Process Compose, test child owner/readiness/restart/logs
-  and unknown-port refusal without any GPU or production processes.
-  Even after the pilot, **no native production service starts** until a
-  reviewed, patched Process Compose binary and adequate security checks.
+- [ ] Separate **real host pilot**: recheck isolated harmless process
+  on the owner's own Windows host (CI now proves actual Windows/Ubuntu
+  binary up/status/logs/down), especially unknown-port-owner refusal,
+  runtime identity, recovery after crash and graceful stop, with NO GPU
+  or live production processes. Production services remain blocked until
+  a reviewed patched Process Compose binary is adopted.
 - [ ] Separate **real operational handoff** after pilot: implement
   DPAPI-aware native start adapters, preserve existing shared key
   during the one-time multi-client Caddy S02 trust boundary transition,
