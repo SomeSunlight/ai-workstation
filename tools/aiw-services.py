@@ -576,7 +576,7 @@ def run(argv: list[str] | None = None) -> None:
     importing.add_argument("--from-file", type=Path, required=True)
     importing.add_argument("--policy", choices=sorted(POLICIES), required=True)
     client_list = group.add_parser("list")
-    client_list.add_argument("--format", choices=("text", "json"), default="text")
+    client_list.add_argument("--format", choices=("text", "json", "tsv"), default="text")
     group.add_parser("render")
     group.add_parser("reveal").add_argument("name")
     group.add_parser("copy").add_argument("name")
@@ -607,6 +607,9 @@ def run(argv: list[str] | None = None) -> None:
                     for name, cfg in doc["clients"].items()]
             if args.format == "json":
                 print(json.dumps({"clients": rows}, ensure_ascii=False))
+            elif args.format == "tsv":
+                for row in rows:
+                    print(row["id"] + "\t" + row["origin"])
             else:
                 print("Registered client identities:")
                 for row in rows:
