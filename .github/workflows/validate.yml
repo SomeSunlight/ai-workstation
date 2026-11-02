@@ -85,6 +85,7 @@ jobs:
             bootstrap/windows
             tests/windows
             tools/aiw-secret-windows.ps1
+            tools/aiw-download-windows.ps1
             tools/aiw-services.py
             config/versions.json
       - name: Verify Windows shortcut creation and safe rename migration
@@ -93,7 +94,7 @@ jobs:
       - name: Parse native Windows Process Compose and DPAPI helper
         shell: pwsh
         run: |
-          foreach ($path in @('bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1')) {
+          foreach ($path in @('bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1')) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
@@ -146,3 +147,12 @@ jobs:
           # Real checked native Windows executable + config validation, no services started.
           & ./bootstrap/windows/Services.ps1 install
           & ./bootstrap/windows/Services.ps1 check
+          # Exercise real native Windows HTTPS fallback and verified offline
+          # archive import in a distinct temporary workspace.
+          $offline = Join-Path $env:RUNNER_TEMP "process-compose_windows_amd64.zip"
+          & ./tools/aiw-download-windows.ps1 -Uri "https://github.com/F1bonacc1/process-compose/releases/download/v1.124.0/process-compose_windows_amd64.zip" -Destination $offline
+          $env:AIW_SERVICES_DIR = Join-Path $env:RUNNER_TEMP "aiw-offline-import-test"
+          & ./bootstrap/windows/Services.ps1 init
+          & ./bootstrap/windows/Services.ps1 install --archive $offline
+          & ./bootstrap/windows/Services.ps1 check
+          Remove-Item -LiteralPath $offline -Force
