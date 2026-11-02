@@ -104,7 +104,7 @@ class TestNativeServices(unittest.TestCase):
             # Unpatched upstream Go binary is intentionally restricted to
             # our isolated, harmless fixture until a verified rebuilt binary.
             project = module.project_path(self.folder, module.read_settings(self.folder))
-            project.write_text("version: '0.5'\\nprocesses:\\n  strata:\\n    command: 'strata'\\n")
+            project.write_text("version: '0.5'\nprocesses:\n  strata:\n    command: 'strata'\n")
             with self.assertRaises(module.ConfigError):
                 module.native(self.folder, "up", None)
             # Non-mutating dry-run remains available for reviewing a candidate.
