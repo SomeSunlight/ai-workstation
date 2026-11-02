@@ -90,7 +90,7 @@ class TestNativeServices(unittest.TestCase):
         with mock.patch("sys.stdout", new_callable=io.StringIO) as log:
             module.run(["--directory", str(self.folder), "client", "list",
                         "--format", "tsv"])
-        self.assertIn("goose-research\\tunknown", log.getvalue())
+        self.assertIn("goose-research\tunknown", log.getvalue())
         module.client_render(self.folder, self.folder / "clients.json")
         rendered = json.loads((self.folder / "clients.json").read_text())
         self.assertEqual(rendered["clients"][0]["id"], "goose-research")
