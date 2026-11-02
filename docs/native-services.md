@@ -141,6 +141,68 @@ This is a **separately owner-reviewed, once-only gateway trust-boundary
 change**, not a side effect of running client add/render or services init.
 The generated private S02 file and DPAPI secrets are never committed.
 
+## Owner acceptance: PR #37 on Speedy (no production cutover)
+
+Open PowerShell 7 in a NEW Windows test directory, not the Dispatcher S03 checkout.
+Make a sparse PR checkout to avoid historical long ContextCanon paths:
+
+~~~powershell
+git clone --sparse --filter=blob:none --branch docs/issue-34-process-compose-evaluation https://github.com/SomeSunlight/ai-workstation.git ai-workstation-pr37
+cd ai-workstation-pr37
+git sparse-checkout set bootstrap/windows tools config
+uv --version
+.\bootstrap\windows\Services.ps1
+~~~
+
+### A. Preparation (nothing started)
+
+1. Menu **2 Initialize** once. Verify local `%LOCALAPPDATA%\AIWorkstation\services\services.yaml`,
+   `process-compose.yaml` and `secrets/`; a second init must refuse overwrite.
+2. Menu **3 Install**. Verify checksum-checked Process Compose v1.124.0 in
+   the private bin directory (no PATH/system-service change).
+3. Menu **4 Check**. Expect successful native Process Compose dry-run.
+4. Menu **1 Where** shows the private paths. No running Speedy service was altered.
+
+### B. Named S02 client identities (without live Caddy/Dispatcher edits)
+
+5. Menu **10 Add**: create `goose-laptop`, then `webui-laptop`.
+6. Menu **11 List**: check the two exact IDs and passthrough policies.
+7. Menu **12 Render**: check private `clients.json`: each entry has
+   its name in `id`, a 64-character lowercase hex `token_sha256`, and
+   NO plaintext key. Do not share raw keys/screenshots.
+8. Menu **13 Import existing DPAPI** (optional): use the existing
+   `C:\Caddy\speedy-api-key.dpapi` under the same Windows account.
+   Menu 11 and 12 should now include `home-gateway` as a third identity.
+   The original DPAPI file is unchanged. Re-adding any existing name
+   must be refused instead of overwriting its key.
+
+### C. Harmless process pilot (optional)
+
+9. In the PRIVATE `process-compose.yaml` change ONLY `aiw-smoke`
+   `disabled: true` to `disabled: false`. Do not edit production services.
+10. Menu **4 Check**, then **7 Up**. A harmless, short-lived echo job
+    may already show as finished. Check **5 Status**, **9 Logs** and
+    **6 TUI**. Management uses only 127.0.0.1:19011.
+11. Menu **8 Down**, then restore `disabled: true`.
+12. Negative gate: adding an unrelated second process definition must
+    make **Up refuse** the production start while unpatched Go 1.27.0
+    remains blocked. Remove the temporary process after that check.
+
+**Unchanged regression reference:** Start-SpeedyAI.ps1, active Caddy,
+Strata, S03 Dispatcher and Laptop/WSL Goose/Open WebUI keep operating.
+New client IDs will appear in Dispatcher SQLite ONLY after the separately
+approved S02/Caddy migration, not after client render in this review PR.
+
+Send sanitized command outputs and any failures, but NEVER the contents
+of private DPAPI files, API tokens or the private secrets directory.
+
+### WSL / native Linux
+
+Use the corresponding PR branch on the Linux side and run
+`aiw services init`, `aiw services install`, `aiw services check`.
+Linux/WSL keeps its OWN native Process Compose and private config;
+it does not control the Windows processes running on Speedy.
+
 ## Choice and security of Process Compose
 
 **Decision:** Process Compose is the native-host supervisor (not an
