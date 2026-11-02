@@ -230,8 +230,54 @@ def client_add(folder: Path, name: str, policy: str) -> None:
     doc["clients"][name] = {"policy": policy}
     save_settings(folder, doc)
     print("Created identity:", name, "policy:", policy)
-    print("Credential stored privately. Use 'client reveal' only for secure transfer.")
-    print("Run 'client render' to regenerate the private S02 hash-only JSON.")
+    print("A unique original API key was generated automatically; it was NOT displayed.")
+    print("Stored under Windows DPAPI/Linux private files:", secret_file(folder, name))
+    print("For KeePass, on Windows use 'client copy " + name + "' to copy the original key.")
+    print("clients.json contains ONLY hashes and cannot restore or transfer a key.")
+    print("Run 'client render' to regenerate Dispatcher S02 hashes.")
+
+
+def client_copy(folder: Path, name: str) -> None:
+    """Explicit Windows-only DPAPI-to-clipboard transfer without stdout secrets."""
+    if os.name != "nt":
+        raise ConfigError("client copy is Windows-only; on Linux use client reveal carefully.")
+    doc = read_settings(folder)
+    if name not in doc["clients"]:
+        raise ConfigError("Unknown registered client ID.")
+    credential = secret_file(folder, name)
+    if not credential.is_file() or credential.is_symlink():
+        raise ConfigError("Missing protected client credential.")
+    windows_secret("Copy", credential)
+    print("Original API key copied to Windows clipboard for client:", name)
+    print("Paste into the Password field of its KeePass entry.")
+    print("Then clear the clipboard (and clipboard history if enabled).")
+    print("No secret was printed or saved to clients.json.")
+
+
+def client_rename(folder: Path, old: str, new: str) -> None:
+    """Rename logical identity without rotating or revealing the DPAPI secret."""
+    if not CLIENT_ID.fullmatch(old) or not CLIENT_ID.fullmatch(new):
+        raise ConfigError("Invalid client ID.")
+    doc = read_settings(folder)
+    if old not in doc["clients"]:
+        raise ConfigError("Original client ID is not registered.")
+    if old == new or new in doc["clients"]:
+        raise ConfigError("New client ID must differ and be unused.")
+    origin = secret_file(folder, old)
+    target = secret_file(folder, new)
+    if not origin.is_file() or origin.is_symlink() or target.exists() or target.is_symlink():
+        raise ConfigError("Missing original or existing target credential.")
+    doc["clients"] = {new if key == old else key: value
+                      for key, value in doc["clients"].items()}
+    origin.rename(target)
+    try:
+        save_settings(folder, doc)
+    except Exception:
+        target.rename(origin)
+        raise
+    print("Renamed client:", old, "->", new)
+    print("Original protected credential preserved. Run client render.")
+    print("Live S02 identity changes require explicit Dispatcher restart.")
 
 
 def client_import_dpapi(folder: Path, name: str, policy: str, original: Path) -> None:
@@ -289,6 +335,8 @@ def client_render(folder: Path, output: Path) -> None:
                                       indent=2) + "\n").encode("utf-8"))
     print("Rendered S02 client identities:", ", ".join(doc["clients"]))
     print("Private digest-only JSON:", output)
+    print("IMPORTANT: clients.json holds ONE-WAY hashes, NOT usable API keys!")
+    print("It is NOT a KeePass backup; use 'client copy NAME' for each original key on Windows.")
     print("Set DISPATCHER_CLIENT_CONFIG to this file; restart Dispatcher explicitly.")
     print("Caddy /v1 must forward Authorization without a single-token gate; retain")
     print("the existing protected /strata/v1 fallback. Do not change Caddy automatically.")
@@ -483,10 +531,18 @@ def native(folder: Path, action: str, process: str | None) -> None:
         print("Starting a Process Compose project is an operator action.")
         print("Project:", project, "| loopback management port:", port)
         print("This does NOT take over already running Speedy services.")
-    result = subprocess.run(cmd, check=False)
+    # Suppress benign debug discovery of a missing *global* config:
+    # the real project was already explicitly supplied with --config.
+    env = os.environ.copy()
+    if action == "check":
+        env.setdefault("PC_LOG_LEVEL", "warn")
+    result = subprocess.run(cmd, check=False, env=env)
     if result.returncode:
         raise ConfigError("Native Process Compose command failed (exit " +
                           str(result.returncode) + ").")
+    if action == "check":
+        print("[OK] Explicit private Process Compose project validation succeeded.")
+        print("No native service was started.")
 
 
 def run(argv: list[str] | None = None) -> None:
@@ -513,6 +569,10 @@ def run(argv: list[str] | None = None) -> None:
     group.add_parser("list")
     group.add_parser("render")
     group.add_parser("reveal").add_argument("name")
+    group.add_parser("copy").add_argument("name")
+    rename = group.add_parser("rename")
+    rename.add_argument("old")
+    rename.add_argument("new")
     group.add_parser("remove").add_argument("name")
     args = parser.parse_args(argv)
     folder = args.directory.expanduser().resolve()
@@ -532,8 +592,18 @@ def run(argv: list[str] | None = None) -> None:
             client_import_dpapi(folder, args.name, args.policy, args.from_file)
         elif args.client_cmd == "list":
             doc = read_settings(folder)
+            print("Client IDs (freely chosen labels; no computer names required):")
             for name, cfg in doc["clients"].items():
-                print(name, cfg["policy"])
+                print(" -", name, "| policy:", cfg["policy"], "| original key: protected locally")
+            print("The original keys are NOT in clients.json.")
+            if os.name == "nt":
+                print("For KeePass: client copy NAME, then paste into KeePass.")
+            else:
+                print("For a client app: client reveal NAME (sensitive terminal output).")
+        elif args.client_cmd == "copy":
+            client_copy(folder, args.name)
+        elif args.client_cmd == "rename":
+            client_rename(folder, args.old, args.new)
         elif args.client_cmd == "render":
             client_render(folder, folder / "clients.json")
         elif args.client_cmd == "reveal":
