@@ -1,5 +1,22 @@
 # AI Workstation Plan
 
+## Current review block — Issue #34 M00: external supervisor discovery (2026-11-02)
+
+**Accepted baseline:** [PR #36](https://github.com/SomeSunlight/ai-workstation/pull/36) was owner-accepted and squash-merged on 2026-11-01 as `13eb053becde1a66de9d275e25cbe1fb716062ab`. Its WSL-safe/native-Linux first slice is merged; **native Ubuntu is still not real-host validated** (deferred #33). In [Llama Dispatcher](https://github.com/SomeSunlight/Llama_Dispatcher), S03 [PR #27](https://github.com/SomeSunlight/Llama_Dispatcher/pull/27) was owner-tested via **both Goose and Open WebUI on Laptop/WSL** through Speedy's Caddy → Dispatcher → already-running native Strata; SQLite audit was verified, and S03 was squash-merged to `main` on 2026-11-02 as `2f076e2f1c6f95b1921cafcb6921cf365b2d1ae4`. No process-manager acceptance is implied.
+
+**Purpose:** map the already working Speedy Windows startup safeguards and existing AI Workstation Linux systemd service to **Process Compose as the favored external supervisor candidate**, before introducing a single harmless supervised service. Reuse its process lifecycle, dependencies, health and logs; AI Workstation owns provisioning, configuration and protective preflight. Keep Dispatcher **attach-only** for Strata; no process manager implemented inside Dispatcher.
+
+**Writable scope:** `PLAN.md`, `STATE.md`, and a new `docs/process-manager-discovery.md`. This first review is *documentation only*: no changes to service scripts, installer, OS tasks/systemd units, working native Strata/Caddy/Open WebUI, runtime YAML, private keys, managed model instances or ContextCanon packages.
+
+- [x] Verify accepted #36 and Dispatcher #27 merge facts; inspect current Linux local-inference systemd path, supplied private Speedy startup design, issue #34, and current official Process Compose features.
+- [ ] Publish a traceable supervisor capability/gap matrix and concrete **no-GPU isolated first-service** owner-test plan without treating candidate features as already tested on Speedy.
+- [ ] Record what remains owner-gated: Windows binary/version verification, unknown-port-owner preflight, child process ownership, DPAPI and authenticated readiness, rollback and later WSL/Linux proof.
+- [ ] Publish review PR, run applicable CI on exact head, and obtain explicit owner approval before merging or altering live services.
+
+**First executable pilot after this review, separately owner-gated:** AI Workstation installs/pins Process Compose and operates **one harmless disposable local-only process** (no Caddy/Strata/Dispatcher/Open WebUI, no GPU, no public ingress), demonstrating status/readiness/logs/stop/restart and unknown-process refusal on **Speedy Windows**. Its exact installer/CLI shape is a separate implementation decision. The existing `Start-SpeedyAI.ps1` remains the operational fallback throughout. The Linux systemd-local-inference service remains separately owned until an explicit, tested migration; native Ubuntu remains deferred.
+
+---
+
 ## Current implementation block — Issue #33: native Ubuntu host-mode foundations
 
 Purpose: make the existing Linux bootstrap behave correctly on WSL2 **and** native Ubuntu 24.04, without pretending that a full native install has yet been hardware-tested. First slice deliberately avoids cloud accounts, model downloads, GPU drivers, process-manager changes, secrets, and changing the Windows install path.
