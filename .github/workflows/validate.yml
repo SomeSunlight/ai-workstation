@@ -76,6 +76,8 @@ jobs:
             bootstrap/windows
             tests/windows
             tools/aiw-secret-windows.ps1
+            tools/aiw-services.py
+            config/versions.json
       - name: Verify Windows shortcut creation and safe rename migration
         shell: pwsh
         run: ./tests/windows/shortcuts.ps1
@@ -91,4 +93,39 @@ jobs:
               $errors | ForEach-Object { Write-Error "$path : $($_.Message)" }
               exit 1
             }
+          }
+      - name: Install pinned uv for Windows native client test
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.26"
+      - name: Real Windows DPAPI and named-client registration (temporary only)
+        shell: pwsh
+        run: |
+          $env:AIW_SERVICES_DIR = Join-Path $env:RUNNER_TEMP "aiw-test-services"
+          & ./bootstrap/windows/Services.ps1 init
+          & ./bootstrap/windows/Services.ps1 client add goose-laptop --policy passthrough
+          & ./bootstrap/windows/Services.ps1 client add webui-laptop --policy default
+          & ./bootstrap/windows/Services.ps1 client render
+          $clients = Get-Content "$env:AIW_SERVICES_DIR/clients.json" -Raw | ConvertFrom-Json
+          if ($clients.clients.Count -ne 2) { throw 'Expected 2 identities.' }
+          if ($clients.clients[0].id -ne 'goose-laptop' -or $clients.clients[1].id -ne 'webui-laptop') {
+            throw 'Wrong S02 identity name/order.'
+          }
+          $dpapi = "$env:AIW_SERVICES_DIR/secrets/goose-laptop.dpapi"
+          $encrypted = Get-Content $dpapi -Raw
+          $token = & ./tools/aiw-secret-windows.ps1 -Action Read -Path $dpapi
+          if ($encrypted.Contains($token) -or $token.Length -lt 40) {
+            throw 'DPAPI failed to protect generated secret.'
+          }
+          $digest = [Convert]::ToHexString(
+            [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($token))
+          ).ToLowerInvariant()
+          if ($clients.clients[0].token_sha256 -ne $digest) {
+            throw 'S02 digest mismatch.'
+          }
+          & ./bootstrap/windows/Services.ps1 client remove goose-laptop
+          & ./bootstrap/windows/Services.ps1 client render
+          $remaining = Get-Content "$env:AIW_SERVICES_DIR/clients.json" -Raw | ConvertFrom-Json
+          if ($remaining.clients.Count -ne 1 -or $remaining.clients[0].id -ne 'webui-laptop') {
+            throw 'Revoked client was still configured.'
           }
