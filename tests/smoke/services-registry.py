@@ -101,6 +101,14 @@ class TestNativeServices(unittest.TestCase):
             self.assertEqual(log.read_text().splitlines()[-2:], ["process", "list"])
             module.native(self.folder, "up", None)
             self.assertIn("--detached", log.read_text())
+            # Unpatched upstream Go binary is intentionally restricted to
+            # our isolated, harmless fixture until a verified rebuilt binary.
+            project = module.project_path(self.folder, module.read_settings(self.folder))
+            project.write_text("version: '0.5'\\nprocesses:\\n  strata:\\n    command: 'strata'\\n")
+            with self.assertRaises(module.ConfigError):
+                module.native(self.folder, "up", None)
+            # Non-mutating dry-run remains available for reviewing a candidate.
+            module.native(self.folder, "check", None)
 
     def test_symlink_disallowed(self):
         target = Path(self.tmp.name) / "bad-secret"
