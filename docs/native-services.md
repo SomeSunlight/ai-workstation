@@ -60,9 +60,12 @@ Or use the same verbs as on Linux/WSL via its arguments. On Laptop/WSL:
     aiw services restart NAME
     aiw services down
 
-The first project contains ONLY a disabled fixture. Before enabling a real
-service on Speedy we must separately test Process Compose child ownership,
-unknown port owners, graceful stop, health probes and safe restart.
+The first project contains ONLY a disabled fixture. Because the current
+release was built with a vulnerable Go toolchain (see below),
+AIW **refuses to start production service definitions**; only the harmless
+aiw-smoke pilot may be started. A later patched binary and real host gate
+must verify Process Compose child ownership, unknown port owners,
+graceful stop, health probes and safe restart before any cutover.
 
 Process Compose CLI works with loopback management on **127.0.0.1:19011**,
 not Strata port 8080. The management API uses a local protected token file.
@@ -144,10 +147,20 @@ The generated private S02 file and DPAPI secrets are never committed.
 AI Workstation homegrown manager). Version pinned **v1.124.0, published
 2026-10-27**, installed only on demand with official release archive SHA-256
 verification. No PATH-wide replacement. AIW reuses its native CLI/TUI.
-The installed binary Go patch level and reachable vulnerabilities are a
-separate on-host verification step (for example Go build metadata and
-govulncheck); the fact that Go had html/template advisories alone does
-not prove Process Compose exploitable.
+**Security hold (confirmed in CI on 2026-11-02):** The official
+Linux AMD64 v1.124.0 binary reports **go1.27.0** in its Go build metadata.
+Two October 2026 html/template advisories (CVE-2026-94448,
+CVE-2026-97030) affect this Go version and were patched in **Go 1.27.2**.
+This is a **toolchain exposure**, not proof that Process Compose has a
+reachable exploit. The Windows binary's Go build was not independently
+inspected. Until a patched release/rebuild and reachability review are
+accepted, the AIW CLI **fails closed on production native process starts**
+and permits only its disabled/harmless aiw-smoke fixture for runtime
+experiments. Non-mutating config validation and S02 client onboarding
+remain available. Update the centrally pinned manifest **only after**
+actual binary Go build/version proof; keep the production hold until then.
+Go build metadata can be inspected with 'go version -m PATH_TO_BINARY'
+when Go is installed.
 
 ## Scope boundaries and new applications
 
