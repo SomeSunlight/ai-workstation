@@ -124,8 +124,10 @@ def read_settings(folder: Path) -> dict:
     for name, cfg in doc["clients"].items():
         if not isinstance(name, str) or not CLIENT_ID.fullmatch(name):
             raise ConfigError("Invalid client identity.")
-        if not isinstance(cfg, dict) or set(cfg) != {"policy"} or cfg["policy"] not in POLICIES:
-            raise ConfigError("Each client must have an explicit valid policy.")
+        if (not isinstance(cfg, dict) or not {"policy"} <= set(cfg) or
+            not set(cfg) <= {"policy", "origin"} or cfg["policy"] not in POLICIES or
+            cfg.get("origin", "generated") not in {"generated", "imported"}):
+            raise ConfigError("Each client requires a valid policy and optional credential origin.")
     return doc
 
 
@@ -227,13 +229,13 @@ def client_add(folder: Path, name: str, policy: str) -> None:
     if name in doc["clients"]:
         raise ConfigError("Client exists already; no credential changed.")
     write_secret(folder, name)
-    doc["clients"][name] = {"policy": policy}
+    doc["clients"][name] = {"policy": policy, "origin": "generated"}
     save_settings(folder, doc)
-    print("Created identity:", name, "policy:", policy)
+    print("Created client:", name, "| policy:", policy)
     print("A unique original API key was generated automatically; it was NOT displayed.")
     print("Stored under Windows DPAPI/Linux private files:", secret_file(folder, name))
-    print("For KeePass, on Windows use 'client copy " + name + "' to copy the original key.")
-    print("clients.json contains ONLY hashes and cannot restore or transfer a key.")
+    print("On Windows, use the client-copy menu to transfer the key to a password manager.")
+    print("clients.json holds one-way hashes; it is NOT a portable credential backup.")
     print("Run 'client render' to regenerate Dispatcher S02 hashes.")
 
 
@@ -247,9 +249,14 @@ def client_copy(folder: Path, name: str) -> None:
     credential = secret_file(folder, name)
     if not credential.is_file() or credential.is_symlink():
         raise ConfigError("Missing protected client credential.")
+    if doc["clients"][name].get("origin") == "imported":
+        raise ConfigError(
+            "Imported shared credential is retained for migration, not distributed "
+            "as a new client key. Create a fresh client identity instead."
+        )
     windows_secret("Copy", credential)
-    print("Original API key copied to Windows clipboard for client:", name)
-    print("Paste into the Password field of its KeePass entry.")
+    print("Original API key copied to clipboard for client:", name)
+    print("Paste it into your password manager's secret/password field.")
     print("Then clear the clipboard (and clipboard history if enabled).")
     print("No secret was printed or saved to clients.json.")
 
@@ -298,9 +305,11 @@ def client_import_dpapi(folder: Path, name: str, policy: str, original: Path) ->
     # Before copying, verify the encrypted value decrypts under this account.
     windows_secret("Read", original)
     private_write(target, original.read_bytes(), replace=False)
-    doc["clients"][name] = {"policy": policy}
+    doc["clients"][name] = {"policy": policy, "origin": "imported"}
     save_settings(folder, doc)
-    print("Imported existing Windows DPAPI identity:", name)
+    print("Imported existing shared identity:", name)
+    print("This is a transitional credential preserved for existing clients.")
+    print("Do not copy it to new applications; provision fresh client keys instead.")
     print("Original protected file unchanged; no plaintext key was displayed.")
     print("Render S02 JSON before changing the active Dispatcher.")
 
@@ -335,8 +344,8 @@ def client_render(folder: Path, output: Path) -> None:
                                       indent=2) + "\n").encode("utf-8"))
     print("Rendered S02 client identities:", ", ".join(doc["clients"]))
     print("Private digest-only JSON:", output)
-    print("IMPORTANT: clients.json holds ONE-WAY hashes, NOT usable API keys!")
-    print("It is NOT a KeePass backup; use 'client copy NAME' for each original key on Windows.")
+    print("clients.json stores one-way digests, not usable API keys.")
+    print("Back up generated keys individually in your preferred password manager.")
     print("Set DISPATCHER_CLIENT_CONFIG to this file; restart Dispatcher explicitly.")
     print("Caddy /v1 must forward Authorization without a single-token gate; retain")
     print("the existing protected /strata/v1 fallback. Do not change Caddy automatically.")
@@ -566,7 +575,8 @@ def run(argv: list[str] | None = None) -> None:
     importing.add_argument("name")
     importing.add_argument("--from-file", type=Path, required=True)
     importing.add_argument("--policy", choices=sorted(POLICIES), required=True)
-    group.add_parser("list")
+    client_list = group.add_parser("list")
+    client_list.add_argument("--format", choices=("text", "json"), default="text")
     group.add_parser("render")
     group.add_parser("reveal").add_argument("name")
     group.add_parser("copy").add_argument("name")
@@ -592,14 +602,18 @@ def run(argv: list[str] | None = None) -> None:
             client_import_dpapi(folder, args.name, args.policy, args.from_file)
         elif args.client_cmd == "list":
             doc = read_settings(folder)
-            print("Client IDs (freely chosen labels; no computer names required):")
-            for name, cfg in doc["clients"].items():
-                print(" -", name, "| policy:", cfg["policy"], "| original key: protected locally")
-            print("The original keys are NOT in clients.json.")
-            if os.name == "nt":
-                print("For KeePass: client copy NAME, then paste into KeePass.")
+            rows = [{"id": name, "policy": cfg["policy"],
+                     "origin": cfg.get("origin", "generated")}
+                    for name, cfg in doc["clients"].items()]
+            if args.format == "json":
+                print(json.dumps({"clients": rows}, ensure_ascii=False))
             else:
-                print("For a client app: client reveal NAME (sensitive terminal output).")
+                print("Registered client identities:")
+                for row in rows:
+                    role = ("existing shared credential (migration only)"
+                            if row["origin"] == "imported" else "individual client key")
+                    print(" -", row["id"], "|", role)
+                print("Only generated keys should be transferred to client applications.")
         elif args.client_cmd == "copy":
             client_copy(folder, args.name)
         elif args.client_cmd == "rename":
