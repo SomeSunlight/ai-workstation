@@ -1,10 +1,10 @@
 # M00 — External process supervisor discovery (Issue #34)
 
-> **Status:** review candidate, **not an installed manager or production migration**.
+> **Status:** review candidate, **now includes opt-in native installer and client/CLI scaffolding; still not a production migration**.
 > Date: 2026-11-02. Owner-approved architectural direction: AI Workstation
 > provisions/operates a single host-native supervisor; Dispatcher attaches to
-> independently owned Strata. The Process Compose choice remains a candidate
-> until an actual Windows smoke, a later Linux smoke and explicit owner approval.
+> independently owned Strata. Process Compose is **selected by the owner**; its safe process-tree behavior
+> still requires real Windows and Linux acceptance.
 
 ## Observed starting point
 
@@ -63,8 +63,10 @@ Source for candidate features:
 [CLI](https://f1bonacc1.github.io/process-compose/cli/process-compose/)
 and [releases](https://github.com/F1bonacc1/process-compose/releases).
 These are *documented upstream functions*, **not yet measured on Speedy**.
-The publicly listed v1.122.0 release is dated 2026-08-18; pin/checksum
-selection and native Windows binary proof belong to the pilot.
+The official **v1.124.0 release (2026-10-27)** is now centrally pinned in
+config/versions.json with per-platform SHA-256 checksums. Native Windows
+binary execution, full Windows process-tree ownership and Go build security
+metadata remain **unverified on Speedy**.
 
 | Requirement | Process Compose candidate | AI Workstation responsibility / open proof |
 | --- | --- | --- |
@@ -128,8 +130,9 @@ support from WSL or CI results alone.
 
 ## Decisions and unresolved questions
 
-- **Selected direction, not yet selected production binary:** Process Compose
-  is the favored off-the-shelf host-process supervisor. Build *adapters
+- **Owner-selected supervisor:** Process Compose v1.124.0 is the chosen
+  off-the-shelf native process manager. The opt-in binary downloader checks
+  official SHA-256; adoption of actual Speedy processes remains gated. Build *adapters
   around it*, not a second supervisor in Python/Dispatcher.
 - **Do not cut over now:** the proven Speedy PowerShell startup remains the
   working fallback; preserve the independent Caddy direct-Strata route.
@@ -142,7 +145,8 @@ support from WSL or CI results alone.
   `home-gateway` S02 identity does not distinguish Goose from WebUI.
   Distinct revocable client credentials remain future security hardening,
   not a retroactive claim about accepted S03.
-- **Next artifact:** a minimal **AI Workstation-managed** Process Compose
-  Windows installation + disposable service trial (not a new custom manager).
-  No promises about OS process trees, API auth, restart safety, or native
-  Linux until evidenced on actual hosts.
+- **Current PR #37:** delivers the first explicit native CLI/menu and
+  private named-client onboarding, without modifying live services. See
+  [operator guide](native-services.md). The next gate is the real Speedy
+  disposable-process test, then per-service activation of multi-client
+  S02, Caddy and Docker/Hermes without double ownership.
