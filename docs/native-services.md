@@ -97,6 +97,38 @@ Importing or creating a key, renaming an ID, and generating hashes
 **does not change the running Dispatcher or reverse proxy**.
 Activation and restart are separate, explicitly reviewed operations.
 
+## Platform-specific supervisor lifetime (not two supervisors)
+
+The Process Compose v1.124.0 source **intentionally omits** the
+`--detached` / `-D` flags on Windows, although the generic upstream CLI
+documentation displays them. [Upstream Windows source](https://github.com/F1bonacc1/process-compose/blob/v1.124.0/src/cmd/project_runner_windows.go)
+explicitly rejects detached operation; its
+[CLI initialization](https://github.com/F1bonacc1/process-compose/blob/v1.124.0/src/cmd/up.go)
+only registers the flag on non-Windows systems.
+
+AI Workstation therefore starts **native Windows Process Compose in its
+own headless OS process** with `up --keep-project --tui=false`. The
+supervisor, **not AI Workstation**, manages the configured native child
+processes. The host-private runtime directory contains a PID, executable
+path and Windows process creation-time ownership record, plus a startup
+diagnostic log. Restart/start/stop/down and interactive attach refuse
+to control unknown/replaced Windows processes. A occupied management port
+without a matching owned instance is **not adopted**.
+
+Under WSL/native Linux, Process Compose's own `up --detached` mode is
+used. Both platforms keep the same YAML, port and commands. Menu **6
+(TUI)** connects to the *existing* supervisor with `attach`; it never
+starts a second supervisor. Menu **8 (Stop)** shuts down only the
+AI Workstation-owned test project on Windows.
+
+The isolated `aiw-smoke` fixture ends quickly, so `--keep-project`
+keeps the management API running until you explicitly choose Stop.
+Status/logs will still be accessible after the harmless `echo` exits.
+
+The upstream `PROC_COMP_CONFIG` variable points at the existing private
+AI Workstation configuration directory, suppressing its otherwise
+misleading debug messages about missing global config directories.
+
 ## Quick operator test (no production takeover)
 
 In your Windows **review-branch checkout**, run the native menu; an
@@ -116,9 +148,11 @@ operates the native CLI.
 `process-compose.yaml` has a harmless `aiw-smoke` command initially
 set to `disabled: true`. Change **only that setting** to `false`,
 then choose **4 (validate) → 7 (start) → 5 (status) → 9 (logs) →
-8 (stop)**. The command is a short `echo`; a completed status is
-expected. Restore `disabled: true` afterwards. The existing processes
-on the host are **never** adopted or stopped by this test.
+8 (stop)**. The command is a short `echo`; a completed process is expected
+but the **supervisor remains available** for status and logs until Stop.
+Look for `aiw-process-compose-smoke` in the logs. Restore
+`disabled: true` afterwards. The existing processes on the host
+are **never** adopted or stopped by this test.
 
 The published v1.124.0 Linux binary reports a Go 1.27.0 build, below
 the Go 1.27.2 patch level for October 2026 `html/template` issues.
