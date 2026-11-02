@@ -44,10 +44,13 @@ while ($true) {
     Write-Host '7  Start project (explicit)'
     Write-Host '8  Stop project'
     Write-Host '9  Logs'
-    Write-Host '10 Create named Dispatcher client'
-    Write-Host '11 List clients'
-    Write-Host '12 Render Dispatcher S02 client JSON'
+    Write-Host '10 Create client identity (you choose the name; generates protected key)'
+    Write-Host '11 List client identities and policies (NO secrets)'
+    Write-Host '12 Generate Dispatcher client JSON (HASHES only; NOT a key backup)'
     Write-Host '13 Import existing gateway DPAPI key (keep current clients working)'
+    Write-Host '14 Copy one ORIGINAL client key to clipboard for KeePass'
+    Write-Host '15 Explain identities, secrets, hashes, KeePass'
+    Write-Host '16 Rename a client ID without changing its key'
     Write-Host 'q  Exit'
     $choice = Read-Host 'Select'
     if ($choice -in @('q', 'Q')) { break }
@@ -65,7 +68,13 @@ while ($true) {
         '8'  { @('down') }
         '9'  { @('logs') }
         '10' {
-            $name = Read-Host 'Client ID (goose-laptop, webui-speedy, hermes-speedy)'
+            Write-Host ''
+            Write-Host 'Choose ANY unique client ID for one application/provider connection.'
+            Write-Host 'For example: goose-research, webui-private, hermes-automation.'
+            Write-Host 'These are EXAMPLES, not preconfigured names. Do not use a device name unless you want to.'
+            Write-Host 'A new API key is generated and stored under your Windows account (DPAPI).'
+            Write-Host 'Copy the key to KeePass later using menu 14.'
+            $name = Read-Host 'Your new client ID'
             if ($name -notmatch '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$') {
                 Write-Warning 'Invalid client ID.'
                 @()
@@ -80,6 +89,38 @@ while ($true) {
             $path = Read-Host 'Existing gateway DPAPI file (e.g. C:\Caddy\speedy-api-key.dpapi)'
             if (-not $path) { @() }
             else { @('client', 'import-dpapi', 'home-gateway', '--policy', 'passthrough', '--from-file', $path) }
+        }
+        '14' {
+            Write-Host 'Copy an ORIGINAL API key into the clipboard for KeePass.'
+            Write-Host 'WARNING: Clipboard history/sync can retain this sensitive key.'
+            Write-Host 'Paste into a KeePass Password field and clear clipboard/history afterward.'
+            $id = Read-Host 'Existing client ID'
+            if (-not $id) { @() }
+            else {
+                $confirm = Read-Host 'Copy sensitive original key to clipboard? [y/N]'
+                if ($confirm -in @('y','Y')) { @('client', 'copy', $id) }
+                else { @() }
+            }
+        }
+        '15' {
+            Write-Host ''
+            Write-Host 'A CLIENT is one application/provider connection, not a computer or person.'
+            Write-Host 'Client IDs are labels YOU choose. Examples are suggestions only.'
+            Write-Host 'services.yaml = names and policies; process-compose.yaml = native processes.'
+            Write-Host 'secrets/*.dpapi = actual API keys encrypted for this Windows user.'
+            Write-Host 'clients.json = ONE-WAY HASHES, read by Dispatcher to authenticate requests.'
+            Write-Host 'IMPORTANT: clients.json is NOT a backup of your usable API keys.'
+            Write-Host 'KeePass: choose menu 14 for EACH key and paste it into an entry Password field.'
+            Write-Host 'Never copy your entire secrets folder as a portable credential backup.'
+            Write-Host 'Client changes DO NOT alter the running Dispatcher/Caddy automatically.'
+            @()
+        }
+        '16' {
+            Write-Host 'Rename client identity. Its protected API key remains unchanged.'
+            $oldId = Read-Host 'Existing client ID'
+            $newId = Read-Host 'New unique client ID'
+            if (-not $oldId -or -not $newId) { @() }
+            else { @('client', 'rename', $oldId, $newId) }
         }
         default { Write-Warning 'Unknown choice.'; @() }
     })
