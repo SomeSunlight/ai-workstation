@@ -63,6 +63,32 @@ class TestNativeServices(unittest.TestCase):
                          "webui-speedy")
         self.assertEqual(module.read_secret(self.folder, "goose-laptop"), token)
 
+    def test_rename_preserves_secret_and_rejects_collisions(self):
+        module.client_add(self.folder, "goose-laptop", "passthrough")
+        module.client_add(self.folder, "webui-private", "default")
+        old_secret = module.read_secret(self.folder, "goose-laptop")
+        module.client_rename(self.folder, "goose-laptop", "goose-research")
+        cfg = module.read_settings(self.folder)
+        self.assertEqual(list(cfg["clients"]), ["goose-research", "webui-private"])
+        self.assertEqual(cfg["clients"]["goose-research"]["policy"], "passthrough")
+        self.assertEqual(module.read_secret(self.folder, "goose-research"), old_secret)
+        self.assertFalse(module.secret_file(self.folder, "goose-laptop").exists())
+        with self.assertRaises(module.ConfigError):
+            module.client_rename(self.folder, "goose-research", "webui-private")
+        with self.assertRaises(module.ConfigError):
+            module.client_rename(self.folder, "goose-research", "../unsafe")
+        module.client_render(self.folder, self.folder / "clients.json")
+        rendered = json.loads((self.folder / "clients.json").read_text())
+        self.assertEqual(rendered["clients"][0]["id"], "goose-research")
+        self.assertEqual(rendered["clients"][0]["token_sha256"],
+                         hashlib.sha256(old_secret.encode()).hexdigest())
+
+    def test_clipboard_transfer_unavailable_on_linux(self):
+        module.client_add(self.folder, "goose-research", "passthrough")
+        with mock.patch.object(module.os, "name", "posix"):
+            with self.assertRaisesRegex(module.ConfigError, "Windows-only"):
+                module.client_copy(self.folder, "goose-research")
+
     def test_fail_closed_and_private_paths(self):
         with self.assertRaises(module.ConfigError):
             module.client_render(self.folder, self.folder / "clients.json")
@@ -97,6 +123,9 @@ class TestNativeServices(unittest.TestCase):
             args = log.read_text().splitlines()
             self.assertIn("--dry-run", args)
             self.assertIn("--disable-dotenv", args)
+            # The check uses PC_LOG_LEVEL=warn to hide benign global-config
+            # discovery debug messages; the real explicit project stays intact.
+            self.assertIn("127.0.0.1", args)
             self.assertIn("127.0.0.1", args)
             self.assertIn("19011", args)
             self.assertIn("--token-file", args)
