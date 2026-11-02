@@ -67,28 +67,51 @@ native_services() {
     "$py" "$NATIVE_SERVICES" "$@"
 }
 
-native_services_menu() {
-    local choice name
-    while true; do
-        cat <<'EOF_SERVICES'
+native_services_menu_help() {
+    cat <<'EOF_SERVICES'
 
 Native services (Process Compose)
 =================================
-1) Show configuration paths
-2) Initialize PRIVATE configuration (once per host)
-3) Install verified Process Compose binary
-4) Validate YAML without starting anything
-5) Show process status
-6) Open native Process Compose TUI
-7) Start detached project (explicit)
-8) Stop project
-9) Show process logs
-10) Add named client identity
-11) List client identities
-12) Render Dispatcher S02 hash-only configuration
-b) Back
+ 1 Paths      2 Initialize    3 Install     4 Validate
+ 5 Status     6 TUI           7 Start       8 Stop       9 Logs
+10 Add client 11 Clients     12 Render S02  13 Rename client
+14 Concepts   ? Show menu again             b Back
+The menu prints once; actions remain in scrollback.
+Guide: docs/native-services.md
 EOF_SERVICES
-        read -r -p 'Select: ' choice || return
+}
+
+native_services_select_client() {
+    local purpose="$1" selected name origin i=0
+    local -a rows=()
+    mapfile -t rows < <(native_services client list --format tsv) || return 1
+    if (( ${#rows[@]} == 0 )); then
+        printf 'No registered clients. Create one with option 10.\n'
+        return 1
+    fi
+    printf 'Select client to %s (NUMBER):\n' "$purpose" >&2
+    for name in "${rows[@]}"; do
+        ((i+=1))
+        printf ' %2d) %s\n' "$i" "${name//$'\t'/  [}" >&2
+    done
+    printf '  0) Cancel\n' >&2
+    read -r -p 'Number: ' selected || return 1
+    [[ "$selected" =~ ^[0-9]+$ ]] || return 1
+    (( selected >= 1 && selected <= ${#rows[@]} )) || return 1
+    name="${rows[selected-1]%%$'\t'*}"
+    printf '%s\n' "$name"
+}
+
+native_services_menu() {
+    local choice name old new
+    native_services_menu_help
+    while true; do
+        read -r -p 'Option (?=menu, b=back): ' choice || return
+        case "$choice" in
+            b|B) return ;;
+            '?') native_services_menu_help; continue ;;
+        esac
+        printf '\n--- Action %s ---\n' "$choice"
         case "$choice" in
             1) run_menu_action native_services where ;;
             2) run_menu_action native_services init ;;
@@ -100,14 +123,29 @@ EOF_SERVICES
             8) run_menu_action native_services down ;;
             9) run_menu_action native_services logs ;;
             10)
-                read -r -p 'Client name (e.g. goose-laptop): ' name || continue
+                printf 'Choose a unique logical client ID (not a machine name).\n'
+                read -r -p 'New client ID (Enter cancels): ' name || return
                 [[ -n "$name" ]] && run_menu_action native_services client add "$name" --policy passthrough
                 ;;
             11) run_menu_action native_services client list ;;
             12) run_menu_action native_services client render ;;
-            b|B) return ;;
-            *) printf 'Unknown selection.\n' ;;
+            13)
+                old="$(native_services_select_client rename)" || old=""
+                if [[ -n "$old" ]]; then
+                    read -r -p 'New client ID (Enter cancels): ' new || return
+                    [[ -n "$new" ]] && run_menu_action native_services client rename "$old" "$new"
+                fi
+                ;;
+            14)
+                printf 'Client ID = label for one application/provider, chosen by you.\n'
+                printf 'Original key = secret for client authentication; stored privately.\n'
+                printf 'services.yaml = client names/policies; clients.json = hashes ONLY.\n'
+                printf 'Imported key = existing shared credential, retained for migration.\n'
+                printf 'Full details: docs/native-services.md\n'
+                ;;
+            *) printf 'Unknown option. Press ? to show the menu.\n' ;;
         esac
+        printf '%s\n' "--- End of action $choice (press ? for menu) ---"
     done
 }
 
