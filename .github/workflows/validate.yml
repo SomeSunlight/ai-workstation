@@ -107,6 +107,9 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           version: "0.11.26"
+      - name: Exercise the real native Windows menu under StrictMode
+        shell: pwsh
+        run: ./tests/windows/services-menu.ps1
       - name: Real Windows DPAPI and named-client registration (temporary only)
         shell: pwsh
         run: |
