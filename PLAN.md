@@ -49,18 +49,31 @@ working rollback. Multiple Goose workspace mounts are separate issue #38.
   revocation and S02 hash-only output. Windows DPAPI and Linux 0600;
   never silently replace live Caddy/S02 config.
 - [x] Open separate multi-directory Goose mount issue #38 after confirming
-  the current one-RW-workspace limit.
+  the current one-RW-workspace limit; capture the separately scoped
+  usable containerized Speedy Goose/Hermes Workbench as issue #39.
+- [x] Run the **actual official v1.124.0 Linux binary** with Go build
+  metadata: the binary is Go **1.27.0**, below the 1.27.2 patch for
+  two October html/template CVEs. This is a toolchain finding,
+  **not proven exploitability**. Mark the production cutover blocked
+  in config/versions.json and enforce an **actual code guard** that
+  allows only the harmless aiw-smoke fixture for Process Compose
+  native starts until a patched release/build is reviewed. Caddy,
+  Strata, Dispatcher and containers remain outside this pilot.
 - [x] Verify Linux focused security/CLI tests, Windows PowerShell
-  syntax, actual Windows DPAPI onboarding/import/revocation and full
-  repository CI on head 23ffaeeea8855d8c87d735f7857b85856751bf1d.
-  Ubuntu validate and Windows jobs both passed
-  [run #41479217299](https://github.com/SomeSunlight/ai-workstation/actions/runs/41479217299).
-  This final PLAN-only checkpoint must also pass exact-head CI before merge.
+  syntax, real Windows DPAPI onboarding/import/revocation, checksum-pinned
+  **actual** Process Compose binary/dry-run on Windows and Linux, and
+  Go 1.27.0 production-block regression tests. Initial complete
+  windows/ubuntu success at [run #41479217299](https://github.com/SomeSunlight/ai-workstation/actions/runs/41479217299);
+  the security-guard exact-head Windows/Ubuntu run is
+  [#41480747041](https://github.com/SomeSunlight/ai-workstation/actions/runs/41480747041).
+  Final PLAN-only checkpoint requires fresh exact-head CI before merge.
 - [ ] Owner reviews the complete first slice and approves only after
   understood results; **never merge without owner approval**.
 - [ ] Separate **real Speedy pilot**: start an isolated harmless process
   under verified Process Compose, test child owner/readiness/restart/logs
   and unknown-port refusal without any GPU or production processes.
+  Even after the pilot, **no native production service starts** until a
+  reviewed, patched Process Compose binary and adequate security checks.
 - [ ] Separate **real operational handoff** after pilot: implement
   DPAPI-aware native start adapters, preserve existing shared key
   during the one-time multi-client Caddy S02 trust boundary transition,
