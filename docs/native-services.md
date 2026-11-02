@@ -73,6 +73,52 @@ MCP process control is not enabled; no public management endpoint or
 unrestricted LLM tool access. Up disables automatic .env loading. Installing
 Process Compose does not configure host autostart, Caddy or Windows services.
 
+## Understand client names and where the keys are (KeePass)
+
+A **client ID** identifies one application/provider configuration that talks
+to the Dispatcher. It is **not automatically created from the PC name** and
+need not mention Speedy, Laptop, Windows or Linux. The operator chooses an
+arbitrary unique ID; for example `goose-research`, `webui-private`,
+and `hermes-automation`. These are EXAMPLES, never predefined clients.
+The same AI Workstation software works on any host and has no baked-in
+personal machine name. The exact ID appears later as
+`metrics_proxy_requests.client_id` when S02 is activated.
+
+Four different things have different purposes:
+
+| Item | Contains | What to do with it |
+| --- | --- | --- |
+| `services.yaml` | Operator-chosen IDs and policies | Edit as intended; no secrets |
+| `secrets/NAME.dpapi` | Actual original key, **encrypted for this Windows account** | Keep private; not usable as a portable secret on another computer |
+| `clients.json` | One-way SHA-256 digests + IDs/policies | Dispatcher uses it; **NOT a key backup** |
+| KeePass | Original usable API keys, one KeePass entry per client | Preferred long-term portable, encrypted credential store |
+
+**Transfer to KeePass, without printing the key:** on Speedy open
+`bootstrap/windows/Services.ps1`, choose **14 Copy original key for KeePass**,
+enter the client ID, confirm the sensitive clipboard operation, and paste
+into the **Password** field of a separate KeePass entry. Use the ID
+(for example `goose-research`) as the KeePass title. Add a note such as
+`Llama Dispatcher S02; policy=passthrough` if useful. Repeat for each
+new client. **Clear the clipboard and its history** afterwards; Windows
+clipboard sync/history may copy or retain secrets. Never store a CSV
+containing plaintext keys in the Git checkout or upload it to a chat.
+
+Only the ORIGINAL key from KeePass is copied later into Goose/Open WebUI/
+Hermes native provider settings. The Dispatcher only needs the **hash**.
+An imported existing `home-gateway` key may already be present in KeePass;
+avoid creating a misleading duplicate entry. Creating client IDs/keys
+and generating `clients.json` does **not** change running Caddy, Dispatcher
+or client applications.
+
+If you dislike a machine-dependent name already entered, choose **16 Rename
+client ID** before activating multi-client S02. The encrypted original key
+is preserved (not rotated); run menu **12 Render** afterwards. A client ID
+cannot be renamed to an existing one. A later live S02 rename requires
+explicit configuration deployment and Dispatcher restart.
+
+To inspect the distinction without touching anything, choose menu
+**15 Explain identities, secrets, hashes, KeePass**.
+
 ## Named inference clients
 
 On the host where the Dispatcher operates (Speedy Windows) add clients via
@@ -182,11 +228,13 @@ uv --version
 
 ### B. Named S02 client identities (without live Caddy/Dispatcher edits)
 
-5. Menu **10 Add**: create `goose-laptop`, then `webui-laptop`.
-6. Menu **11 List**: check the two exact IDs and passthrough policies.
+5. Menu **10 Add**: choose your own logical names, e.g. `goose-research` and `webui-private` (these are examples, not a fixed hardware list).
+6. Menu **11 List**: check the chosen IDs and passthrough policies; menu **15** explains what is stored.
 7. Menu **12 Render**: check private `clients.json`: each entry has
    its name in `id`, a 64-character lowercase hex `token_sha256`, and
-   NO plaintext key. Do not share raw keys/screenshots.
+   NO plaintext key. This file is NOT a KeePass backup.
+   For **each original** key, use menu **14** to copy it securely into
+   a separate KeePass Password entry; clear clipboard/history afterwards.
 8. Menu **13 Import existing DPAPI** (optional): use the existing
    `C:\Caddy\speedy-api-key.dpapi` under the same Windows account.
    Menu 11 and 12 should now include `home-gateway` as a third identity.
