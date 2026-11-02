@@ -603,17 +603,18 @@ def run(argv: list[str] | None = None) -> None:
         elif args.client_cmd == "list":
             doc = read_settings(folder)
             rows = [{"id": name, "policy": cfg["policy"],
-                     "origin": cfg.get("origin", "generated")}
+                     "origin": cfg.get("origin", "unknown")}
                     for name, cfg in doc["clients"].items()]
             if args.format == "json":
                 print(json.dumps({"clients": rows}, ensure_ascii=False))
             else:
                 print("Registered client identities:")
                 for row in rows:
-                    role = ("existing shared credential (migration only)"
-                            if row["origin"] == "imported" else "individual client key")
+                    role = {"imported": "existing shared key (migration, do not distribute)",
+                            "generated": "individual client key",
+                            "unknown": "older registration (key type not recorded)"}[row["origin"]]
                     print(" -", row["id"], "|", role)
-                print("Only generated keys should be transferred to client applications.")
+                print("Shared or older keys should NOT be distributed as new client keys.")
         elif args.client_cmd == "copy":
             client_copy(folder, args.name)
         elif args.client_cmd == "rename":
