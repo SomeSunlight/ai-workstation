@@ -40,6 +40,15 @@ jobs:
           bash tests/smoke/interactive-menu.sh
           uv run --frozen python tests/smoke/services-registry.py
 
+      - name: Verify actual pinned native Process Compose (disposable Ubuntu project)
+        run: |
+          export AIW_SERVICES_DIR="$(mktemp -d)"
+          uv run --frozen python tools/aiw-services.py init
+          uv run --frozen python tools/aiw-services.py install
+          uv run --frozen python tools/aiw-services.py check
+          if command -v go >/dev/null 2>&1; then
+            go version -m "$AIW_SERVICES_DIR/bin/process-compose"
+          fi
       - name: Install Ansible collection
         run: |
           mkdir -p .ansible/collections
@@ -131,3 +140,6 @@ jobs:
               $remaining.clients[1].id -ne 'home-gateway') {
             throw 'Revocation or DPAPI transitional identity import failed.'
           }
+          # Real checked native Windows executable + config validation, no services started.
+          & ./bootstrap/windows/Services.ps1 install
+          & ./bootstrap/windows/Services.ps1 check
