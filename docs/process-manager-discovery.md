@@ -89,6 +89,32 @@ AI Workstation must show side effects and require an explicit owner action.
 The Process Compose REST/MCP control surface is a privilege boundary, not
 an ordinary inference API. Do not give unrestricted LLMs control of it.
 
+## Actual release security finding — 2026-11-02
+
+CI installed and executed the **real** checksum-pinned Linux AMD64
+Process Compose v1.124.0 archive and verified the disabled fixture with
+native `--dry-run`. Its `go version -m` output reports **go1.27.0**,
+even though Go 1.27.2 fixed the October 2026 `html/template`
+CVE-2026-94448 and CVE-2026-97030. This is **a known affected
+toolchain version**, not evidence that those exact template functions
+are reachable through Process Compose. Windows binary Go build metadata
+remains unverified.
+
+**Owner safety decision for this PR:** retain Process Compose as the
+chosen product and the reproducible binary pin for **non-production
+validation**, but refuse any real native service starts other than the
+isolated `aiw-smoke` fixture until upstream publishes a patched build
+or a reproducibly rebuilt, reviewed Go 1.27.2+ binary is available.
+The central `config/versions.json` marks this production gate
+explicitly and code enforces it, not merely documentation. The process
+management REST/MCP surface is never made public.
+
+See [Go vulnerability reports](https://pkg.go.dev/vuln/GO-2026-6599)
+and [GO-2026-6600](https://pkg.go.dev/vuln/GO-2026-6600), and the
+[operator guide](native-services.md). A later exact-binary `govulncheck`
+reachability analysis may refine risk; do not equate compiler version
+alone with confirmed exploitability.
+
 ## Smallest acceptable pilot — after this discovery review
 
 Scope: **one isolated disposable process on Speedy/Windows**, no GPU,
