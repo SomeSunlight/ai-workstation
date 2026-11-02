@@ -31,16 +31,31 @@ CLIENT_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
 POLICIES = {"default", "enforce", "passthrough"}
 DEFAULT_PORT = 19011
 WIN_HELPER = Path(__file__).with_name("aiw-secret-windows.ps1")
-PROCESS_COMPOSE_VERSION = "v1.124.0"
-# Official release archive SHA-256 digests (not version string checks).
-ARCHIVES = {
-    ("Windows", "AMD64"): ("process-compose_windows_amd64.zip",
-                           "a77d51dcb34e3e8d2b88af372ada7ca8a62cb87f0c6af0f78834c0fd6c95e2a7"),
-    ("Linux", "AMD64"): ("process-compose_linux_amd64.tar.gz",
-                         "487ce011d5324b4578d3ec1860aaa1dd3a95bd4b2b433e03791f73a23d215fd3"),
-    ("Linux", "ARM64"): ("process-compose_linux_arm64.tar.gz",
-                         "98e02400a05d1da74a6506a4ffb2682b1205f18f02ecfbfdea1005f9389fc52d"),
+VERSION_FILE = Path(__file__).resolve().parents[1] / "config" / "versions.json"
+# The repository's central version manifest is authoritative, not this script.
+RELEASE_PLATFORMS = {
+    ("Windows", "AMD64"): "windows_amd64",
+    ("Linux", "AMD64"): "linux_amd64",
+    ("Linux", "ARM64"): "linux_arm64",
 }
+
+
+def pinned_release(system: str, machine: str) -> tuple[str, str, str]:
+    ident = RELEASE_PLATFORMS.get((system, machine))
+    if ident is None:
+        raise ConfigError("Unsupported Process Compose OS/architecture.")
+    try:
+        cfg = json.loads(VERSION_FILE.read_text(encoding="utf-8"))["versions"]["process_compose"]
+        version = cfg["version"]
+        release = cfg["releases"][ident]
+        filename, digest = release["filename"], release["sha256"]
+    except (KeyError, ValueError, OSError, TypeError):
+        raise ConfigError("Invalid central Process Compose version manifest.") from None
+    if (not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", version)
+        or not re.fullmatch(r"[0-9a-f]{64}", digest)
+        or Path(filename).name != filename or not filename.startswith("process-compose_")):
+        raise ConfigError("Invalid Process Compose release pin or digest.")
+    return version, filename, digest
 
 
 class ConfigError(Exception):
@@ -253,15 +268,12 @@ def install_process_compose(folder: Path) -> None:
     """Explicit opt-in native binary install, pinned release + checked artifact."""
     system = "Windows" if os.name == "nt" else "Linux"
     machine = platform.machine().upper().replace("X86_64", "AMD64").replace("AARCH64", "ARM64")
-    selection = ARCHIVES.get((system, machine))
-    if not selection:
-        raise ConfigError("This OS/architecture has no pinned Process Compose artifact.")
-    filename, digest = selection
+    version, filename, digest = pinned_release(system, machine)
     dest = folder / "bin" / ("process-compose.exe" if os.name == "nt" else "process-compose")
     if dest.exists():
         raise ConfigError("Native binary exists already; no automatic overwrite/upgrade.")
     url = ("https://github.com/F1bonacc1/process-compose/releases/download/" +
-           PROCESS_COMPOSE_VERSION + "/" + filename)
+           version + "/" + filename)
     private_dir(folder / "bin")
     try:
         with urllib.request.urlopen(url, timeout=45) as response:
@@ -289,7 +301,7 @@ def install_process_compose(folder: Path) -> None:
     private_write(dest, contents, replace=False)
     if os.name != "nt":
         dest.chmod(0o700)
-    print("Installed checksum-verified", PROCESS_COMPOSE_VERSION, "to", dest)
+    print("Installed checksum-verified", version, "to", dest)
     print("No host services or startup tasks were changed.")
 
 
