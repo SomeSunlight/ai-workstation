@@ -50,7 +50,11 @@ while ($true) {
     Write-Host '13 Import existing gateway DPAPI key (keep current clients working)'
     Write-Host 'q  Exit'
     $choice = Read-Host 'Select'
-    $command = switch ($choice) {
+    if ($choice -in @('q', 'Q')) { break }
+    # A PowerShell switch unrolls its output: a single command becomes a
+    # scalar string. Force a real argv array so .Count and argument passing
+    # remain stable under Set-StrictMode.
+    $command = @(switch ($choice) {
         '1'  { @('where') }
         '2'  { @('init') }
         '3'  { @('install') }
@@ -77,11 +81,9 @@ while ($true) {
             if (-not $path) { @() }
             else { @('client', 'import-dpapi', 'home-gateway', '--policy', 'passthrough', '--from-file', $path) }
         }
-        'q' { return }
-        'Q' { return }
         default { Write-Warning 'Unknown choice.'; @() }
-    }
-    if (-not $command -or $command.Count -eq 0) { continue }
+    })
+    if ($command.Count -eq 0) { continue }
     if ($choice -in @('7','8')) {
         $answer = Read-Host "Execute '$($command -join ' ')' now? [y/N]"
         if ($answer -ne 'y' -and $answer -ne 'Y') { continue }
