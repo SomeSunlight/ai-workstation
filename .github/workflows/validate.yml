@@ -120,18 +120,14 @@ jobs:
           if ($clients.clients[0].token_sha256 -cnotmatch '^[0-9a-f]{64}$') {
             throw 'Invalid S02 token digest.'
           }
-          # Preserve the previous gateway credential in the named S02 manifest.
-          & ./bootstrap/windows/Services.ps1 client import-dpapi home-gateway --from-file $dpapi --policy passthrough
-          & ./bootstrap/windows/Services.ps1 client render
-          $migrated = Get-Content "$env:AIW_SERVICES_DIR/clients.json" -Raw | ConvertFrom-Json
-          if ($migrated.clients.Count -ne 3 -or $migrated.clients[2].id -ne 'home-gateway') {
-            throw 'DPAPI transitional identity import failed.'
-          }
+          # Revoke the temporary original ID first: S02 MUST reject
+          # duplicate credential digests under different client names.
           & ./bootstrap/windows/Services.ps1 client remove goose-laptop
+          & ./bootstrap/windows/Services.ps1 client import-dpapi home-gateway --from-file $dpapi --policy passthrough
           & ./bootstrap/windows/Services.ps1 client render
           $remaining = Get-Content "$env:AIW_SERVICES_DIR/clients.json" -Raw | ConvertFrom-Json
           if ($remaining.clients.Count -ne 2 -or
               $remaining.clients[0].id -ne 'webui-laptop' -or
               $remaining.clients[1].id -ne 'home-gateway') {
-            throw 'Revoked client was still configured.'
+            throw 'Revocation or DPAPI transitional identity import failed.'
           }
