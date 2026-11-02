@@ -229,6 +229,31 @@ def client_add(folder: Path, name: str, policy: str) -> None:
     print("Run 'client render' to regenerate the private S02 hash-only JSON.")
 
 
+def client_import_dpapi(folder: Path, name: str, policy: str, original: Path) -> None:
+    """Retain an existing Windows DPAPI credential, e.g. legacy home-gateway."""
+    if os.name != "nt":
+        raise ConfigError("DPAPI credential import is Windows-only.")
+    if not CLIENT_ID.fullmatch(name) or policy not in POLICIES:
+        raise ConfigError("Invalid imported client name/policy.")
+    doc = read_settings(folder)
+    if name in doc["clients"]:
+        raise ConfigError("Existing client identity cannot be overwritten.")
+    original = original.expanduser().resolve()
+    if not original.is_file() or original.is_symlink():
+        raise ConfigError("Source must be an existing regular DPAPI file.")
+    target = secret_file(folder, name)
+    if target.exists() or target.is_symlink():
+        raise ConfigError("Target credential already exists.")
+    # Before copying, verify the encrypted value decrypts under this account.
+    windows_secret("Read", original)
+    private_write(target, original.read_bytes(), replace=False)
+    doc["clients"][name] = {"policy": policy}
+    save_settings(folder, doc)
+    print("Imported existing Windows DPAPI identity:", name)
+    print("Original protected file unchanged; no plaintext key was displayed.")
+    print("Render S02 JSON before changing the active Dispatcher.")
+
+
 def client_remove(folder: Path, name: str) -> None:
     doc = read_settings(folder)
     if name not in doc["clients"]:
@@ -372,6 +397,10 @@ def run(argv: list[str] | None = None) -> None:
     add = group.add_parser("add")
     add.add_argument("name")
     add.add_argument("--policy", required=True, choices=sorted(POLICIES))
+    importing = group.add_parser("import-dpapi")
+    importing.add_argument("name")
+    importing.add_argument("--from-file", type=Path, required=True)
+    importing.add_argument("--policy", choices=sorted(POLICIES), required=True)
     group.add_parser("list")
     group.add_parser("render")
     group.add_parser("reveal").add_argument("name")
@@ -390,6 +419,8 @@ def run(argv: list[str] | None = None) -> None:
     elif args.cmd == "client":
         if args.client_cmd == "add":
             client_add(folder, args.name, args.policy)
+        elif args.client_cmd == "import-dpapi":
+            client_import_dpapi(folder, args.name, args.policy, args.from_file)
         elif args.client_cmd == "list":
             doc = read_settings(folder)
             for name, cfg in doc["clients"].items():
