@@ -121,14 +121,17 @@ To inspect the distinction without touching anything, choose menu
 
 ## Named inference clients
 
-On the host where the Dispatcher operates (Speedy Windows) add clients via
+On the Windows host where the Dispatcher operates, add clients via
 the numbered menu, or call:
 
-    pwsh -File .\bootstrap\windows\Services.ps1 client add goose-laptop --policy passthrough
-    pwsh -File .\bootstrap\windows\Services.ps1 client add webui-laptop --policy passthrough
-    pwsh -File .\bootstrap\windows\Services.ps1 client add goose-speedy --policy passthrough
-    pwsh -File .\bootstrap\windows\Services.ps1 client add webui-speedy --policy passthrough
-    pwsh -File .\bootstrap\windows\Services.ps1 client add hermes-speedy --policy passthrough
+The following commands are examples. They must not be run again for
+IDs already registered; use menu 11 to inspect existing IDs and menu 16
+for deliberate renaming. No name has any special built-in meaning.
+
+    # EXAMPLES ONLY, for fresh installations; pick your own names:
+    pwsh -File .\bootstrap\windows\Services.ps1 client add goose-research --policy passthrough
+    pwsh -File .\bootstrap\windows\Services.ps1 client add webui-private --policy passthrough
+    pwsh -File .\bootstrap\windows\Services.ps1 client add hermes-automation --policy passthrough
     pwsh -File .\bootstrap\windows\Services.ps1 client list
     pwsh -File .\bootstrap\windows\Services.ps1 client render
 
