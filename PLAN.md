@@ -67,8 +67,21 @@ working rollback. Multiple Goose workspace mounts are separate issue #38.
   the security-guard exact-head Windows/Ubuntu run is
   [#41480747041](https://github.com/SomeSunlight/ai-workstation/actions/runs/41480747041).
   Final PLAN-only checkpoint requires fresh exact-head CI before merge.
-- [ ] Owner reviews the complete first slice and approves only after
-  understood results; **never merge without owner approval**.
+- [x] Rework the operator UX after real owner feedback: the Windows and
+  Linux native-services menus are **displayed once** (`?` redisplays),
+  with clear result separators; existing clients can be selected by
+  **number**, not by retyping an exact ID. Distinguish generated,
+  imported shared and legacy unknown-origin keys. Avoid hardware names
+  and password-manager brands in the general UI/guide. Preserve
+  existing `services.yaml`/S02 compatibility and native Docker Compose
+  ownership. Windows/Ubuntu CI green on review head
+  `526870b9cd79f3b797649843c2e3fbe2b368031d`
+  ([run #41540972843](https://github.com/SomeSunlight/ai-workstation/actions/runs/41540972843)).
+  This PLAN-only checkpoint requires fresh exact-head CI.
+- [ ] Owner reviews the revised KISS onboarding on the real host,
+  including exact key-origin categorization of older registrations,
+  then decides on the optional isolated `aiw-smoke` process test.
+  **Never merge without owner approval.**
 - [ ] Separate **real Speedy pilot**: start an isolated harmless process
   under verified Process Compose, test child owner/readiness/restart/logs
   and unknown-port refusal without any GPU or production processes.
