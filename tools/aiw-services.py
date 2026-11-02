@@ -705,6 +705,10 @@ def native(folder: Path, action: str, process: str | None) -> None:
     # Upstream may print benign global configuration search debug messages;
     # suppress only debug-level chatter, not real errors.
     env = os.environ.copy()
+    # Official v1.124.0 searches XDG locations even with --config set;
+    # its supported PROC_COMP_CONFIG avoids spurious "config home not found"
+    # JSON diagnostics and keeps any optional native UI settings private.
+    env["PROC_COMP_CONFIG"] = str(folder)
     env["PC_LOG_LEVEL"] = "warn"
     if os.name == "nt":
         if action == "up":
