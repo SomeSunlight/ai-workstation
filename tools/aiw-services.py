@@ -625,7 +625,7 @@ def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
             "captured. See the private runtime/process-compose-stdout.log."
         )
     private_write(state, (json.dumps({"identity": identity,
-                                      "project": str(cmd), "port": port}) + "\n").encode("utf-8"),
+                                      "port": port}) + "\n").encode("utf-8"),
                   replace=False)
     for _ in range(30):
         if proc.poll() is not None:
@@ -684,9 +684,17 @@ def native(folder: Path, action: str, process: str | None) -> None:
     elif action == "tui":
         cmd = basic + ["attach"]  # never start a second supervisor
     else:
+        if action == "logs" and process is None:
+            # Upstream process logs requires an explicit name; unlike the TUI
+            # there is no valid "logs all" without a namespace selector.
+            project_doc = yaml.safe_load(project.read_text(encoding="utf-8"))
+            configured = project_doc.get("processes", {})
+            if not isinstance(configured, dict) or not configured:
+                raise ConfigError("No processes configured for logs.")
+            process = ",".join(configured)
         operations = {
             "status": ["process", "list"],
-            "logs": ["process", "logs"] + ([process] if process else []),
+            "logs": ["process", "logs", process],
             "start": ["process", "start", process],
             "stop": ["process", "stop", process],
             "restart": ["process", "restart", process],
