@@ -46,6 +46,14 @@ jobs:
           uv run --frozen python tools/aiw-services.py init
           uv run --frozen python tools/aiw-services.py install
           uv run --frozen python tools/aiw-services.py check
+          # Prove native UNIX detached lifecycle, rather than just mocked args.
+          sed -i 's/disabled: true/disabled: false/' "$AIW_SERVICES_DIR/process-compose.yaml"
+          trap 'uv run --frozen python tools/aiw-services.py down || true' EXIT
+          uv run --frozen python tools/aiw-services.py up
+          uv run --frozen python tools/aiw-services.py status
+          uv run --frozen python tools/aiw-services.py logs
+          uv run --frozen python tools/aiw-services.py down
+          trap - EXIT
           if command -v go >/dev/null 2>&1; then
             go version -m "$AIW_SERVICES_DIR/bin/process-compose"
           fi
@@ -147,6 +155,26 @@ jobs:
           # Real checked native Windows executable + config validation, no services started.
           & ./bootstrap/windows/Services.ps1 install
           & ./bootstrap/windows/Services.ps1 check
+          # Real native Windows lifecycle: Windows upstream deliberately has
+          # NO --detached; AIW bootstraps its own headless supervisor process.
+          $fixture = "$env:AIW_SERVICES_DIR/process-compose.yaml"
+          (Get-Content $fixture -Raw).Replace('disabled: true', 'disabled: false') |
+            Set-Content -LiteralPath $fixture
+          try {
+            & ./bootstrap/windows/Services.ps1 up
+            $ownerRecord = "$env:AIW_SERVICES_DIR/runtime/process-compose-windows.json"
+            if (-not (Test-Path $ownerRecord)) {
+              throw 'Windows supervisor identity/PID marker missing.'
+            }
+            & ./bootstrap/windows/Services.ps1 status
+            & ./bootstrap/windows/Services.ps1 logs
+          }
+          finally {
+            & ./bootstrap/windows/Services.ps1 down
+          }
+          if (Test-Path "$env:AIW_SERVICES_DIR/runtime/process-compose-windows.json") {
+            throw 'Supervisor ownership record not removed on down.'
+          }
           # Exercise real native Windows HTTPS fallback and verified offline
           # archive import in a distinct temporary workspace.
           $offline = Join-Path $env:RUNNER_TEMP "process-compose_windows_amd64.zip"
