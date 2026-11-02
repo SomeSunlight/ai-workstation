@@ -7,25 +7,25 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $testFolder = Join-Path $env:RUNNER_TEMP ('aiw-menu-' + [guid]::NewGuid().ToString('N'))
 $env:AIW_SERVICES_DIR = $testFolder
-$script:menuAnswers = @('2', '10', 'goose-laptop', '11', '12', '1', 'q')
-$script:answerIndex = 0
+$global:aiwMenuAnswers = @('2', '10', 'goose-laptop', '11', '12', '1', 'q')
+$global:aiwMenuIndex = 0
 
 # Using a real child script here (instead of a parser-only check) reproduces
 # exactly the original failure at menu selection 2.
 function Read-Host {
     param([string]$Prompt)
-    if ($script:answerIndex -ge $script:menuAnswers.Length) {
+    if ($global:aiwMenuIndex -ge $global:aiwMenuAnswers.Length) {
         throw 'Menu did not exit after q; unexpected extra prompt.'
     }
-    $answer = $script:menuAnswers[$script:answerIndex]
-    $script:answerIndex++
+    $answer = $global:aiwMenuAnswers[$global:aiwMenuIndex]
+    $global:aiwMenuIndex++
     return $answer
 }
 
 try {
     & (Join-Path $root 'bootstrap/windows/Services.ps1')
-    if ($script:answerIndex -ne $script:menuAnswers.Length) {
-        throw "Menu skipped an action or did not read q: $script:answerIndex"
+    if ($global:aiwMenuIndex -ne $global:aiwMenuAnswers.Length) {
+        throw "Menu skipped an action or did not read q: $global:aiwMenuIndex"
     }
     $config = Join-Path $testFolder 'services.yaml'
     $clientsFile = Join-Path $testFolder 'clients.json'
@@ -41,6 +41,8 @@ try {
     Write-Host '[PASS] Menu selection 2, 10, 11, 12, 1 and q under StrictMode.'
 }
 finally {
+    Remove-Variable aiwMenuAnswers -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable aiwMenuIndex -Scope Global -ErrorAction SilentlyContinue
     Remove-Item Env:AIW_SERVICES_DIR -ErrorAction SilentlyContinue
     Remove-Item -Path $testFolder -Recurse -Force -ErrorAction SilentlyContinue
 }
