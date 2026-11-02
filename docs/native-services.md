@@ -1,310 +1,168 @@
-# Native services and named Dispatcher clients — operator guide
+# Native services and client identities
 
-> Review PR #37: opt-in preparation and authenticated client onboarding, **not**
-> a cutover of the currently running Speedy services. Host acceptance follows.
+**Audience:** operators of AI Workstation on native Windows, WSL or Linux.
+**Status:** PR #37 review; this does **not** migrate running services.
+**Key principle:** use the menu for everyday operation, native CLI for automation.
 
-## One architecture on all hosts
+## Start
 
-| Host | Supervisor for native processes | Operator entry |
+| Host | Entry point | Native supervisor |
 | --- | --- | --- |
-| Speedy Windows | Native Process Compose Windows executable | PowerShell 7: bootstrap/windows/Services.ps1 (numbered menu) |
-| Laptop WSL | Native Linux Process Compose inside WSL | aiw → Native services; or aiw services COMMAND |
-| Future native Linux | Same Linux binary and AIW command | aiw → Native services; or aiw services COMMAND |
+| Windows | `pwsh -File .\bootstrap\windows\Services.ps1` | Process Compose for Windows |
+| WSL | `aiw` → Native services, or `aiw services ...` | Process Compose for Linux *inside WSL* |
+| Linux | `aiw` → Native services, or `aiw services ...` | Process Compose for Linux |
 
-There is no Windows/WSL process bridging. Windows manages native Windows
-programs, WSL manages its own Linux processes, and native Linux runs the
-same Linux code. The actual native Ubuntu installer remains unproven (#33).
+The Windows menu is printed **once**. Subsequent actions have clear
+`--- Action N ---` and `--- End of action N ---` boundaries, so the
+console keeps a readable history without continually repeating the menu.
+Enter **`?`** whenever you want to see it again; **`q`** exits.
 
-Docker Compose stays the sole owner of Goose, containerized Open WebUI
-and a future separately containerized Hermes Agent. Their existing
-AI Workstation entrypoints remain native. No combined TUI, no double owner.
+Process Compose owns only **native host processes**. Docker Compose remains
+the independent manager for containerized applications, including agents.
+AI Workstation offers entry points; it does not invent another dashboard,
+second process registry, or MCP process-control dependency.
 
-## One private host configuration directory
+## Concepts (four different things)
 
-* Speedy Windows: %LOCALAPPDATA%\AIWorkstation\services\
-* WSL / native Linux: ~/.config/ai-workstation/services/
+| Term | Meaning |
+| --- | --- |
+| **Client ID** | Operator-chosen, unique **label for one application/provider connection**. Not a computer, OS, or human user |
+| **Original API key** | The secret that an application sends to the Dispatcher to authenticate |
+| **Protected secret** | Original key stored locally (Windows DPAPI, Linux permissions 0600) |
+| **S02 digest** | SHA-256 hash of the key, used by the Dispatcher to verify incoming requests |
 
-Only two human-editable files, **without duplicated process definitions**:
+**Names are not preconfigured.** Examples such as `agent-project` and
+`chat-client` are only suggestions. The same installation can run on
+any combination of machines; choose identifiers that make sense to you.
+The exact labels appear in the Dispatcher's
+`metrics_proxy_requests.client_id` column after S02 is activated.
 
-* services.yaml: AI Workstation's named inference client identities, S02 policies
-  and the Process Compose project filename/management port.
-* process-compose.yaml: the **native, sole** process definitions including commands,
-  readiness, dependencies and shutdown. Add a new native service **only here**.
+## Where does each thing live?
 
-Other files are generated/private, not edited independently:
+The first initialization creates a **private, host-local directory**:
 
-* secrets/: Windows client keys protected with per-user DPAPI; Linux keys
-  mode 0600. A local-only Process Compose management token is also here.
-* clients.json: generated **hash-only** Dispatcher S02 schema. Point
-  DISPATCHER_CLIENT_CONFIG here during an explicitly approved host migration.
+| Host | Default path |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%\AIWorkstation\services\` |
+| Linux / WSL | `~/.config/ai-workstation/services/` |
 
-Initialization creates a **disabled harmless smoke process** and never starts
-Strata, Caddy, Dispatcher, Open WebUI or any background service.
+| File | Purpose |
+| --- | --- |
+| `services.yaml` | Editable client IDs and policies; points to the native project |
+| `process-compose.yaml` | **Sole definition** of native processes, commands and dependencies |
+| `secrets/ID.dpapi` or `secrets/ID.token` | Encrypted/protected **original** client credentials |
+| `clients.json` | Generated S02 client list containing **hashes only** |
+| `secrets/process-compose.api-token` | Private local supervisor management credential |
 
-## Operator commands
+**`clients.json` is NOT a backup of usable API keys.** Copying it into
+a password manager does not let you recover client secrets.
 
-On Windows run the numbered menu with:
+### Register a client and save the original key
 
-    pwsh -File .\bootstrap\windows\Services.ps1
+1. Use **menu 10**, enter a name of your choice. A new independent key
+   is generated automatically and protected locally; it is **not printed**.
+2. Use **menu 11** to see the registered names and their purposes.
+3. Use **menu 14** to select the correct client **by number**, not by
+   remembering or retyping a byte-exact name. Confirm clipboard access.
+4. Paste the key into the **password/secret field of your preferred
+   password manager** as a separate credential entry with the client ID
+   as its title. Repeat once for each independent client. Afterwards,
+   clear the clipboard and its history if enabled; Windows clipboard
+   history and synchronization are potential secret exposure paths.
+5. Use **menu 12** to generate `clients.json`. This is the file the
+   Dispatcher will later load on explicit activation; it is not deployed
+   automatically. Configure each application with **its own original
+   key** retrieved from your password manager.
 
-Or use the same verbs as on Linux/WSL via its arguments. On Laptop/WSL:
+For Windows, menu **16** renames an identity after **numbered selection**
+and preserves the encrypted original key; regenerate `clients.json` with
+12 afterwards. For Linux/WSL, the corresponding CLI is
+`aiw services client rename OLD NEW`.
 
-    aiw services init             # once per host
-    aiw services install          # opt-in native download, pinned SHA-256
-    aiw services where            # locate editable private files
-    aiw services check            # Process Compose dry-run, NO start
-    aiw services up               # explicit detached native start
-    aiw services status           # direct CLI, local API
-    aiw services tui              # native Process Compose UI
-    aiw services logs
-    aiw services restart NAME
-    aiw services down
+### Existing/shared credentials: why are they listed?
 
-The first project contains ONLY a disabled fixture. Because the current
-release was built with a vulnerable Go toolchain (see below),
-AIW **refuses to start production service definitions**; only the harmless
-aiw-smoke pilot may be started. A later patched binary and real host gate
-must verify Process Compose child ownership, unknown port owners,
-graceful stop, health probes and safe restart before any cutover.
+**Menu 13** imports an existing DPAPI credential under an operator-chosen
+ID. It is retained **only to keep existing application access working
+during an authentication migration**. It is **not** a newly generated
+individual key, and it should **not** be distributed to additional apps.
+Menu 11 distinguishes imported shared keys from fresh client keys.
 
-Process Compose CLI works with loopback management on **127.0.0.1:19011**,
-not Strata port 8080. The management API uses a local protected token file.
-MCP process control is not enabled; no public management endpoint or
-unrestricted LLM tool access. Up disables automatic .env loading. Installing
-Process Compose does not configure host autostart, Caddy or Windows services.
+Earlier registrations made before this distinction was introduced
+show **`older key / origin unknown`** rather than being guessed.
+Menu 14 warns before copying such a key: confirm it is truly an
+individual client credential. Newly imported keys are not offered for
+transfer; create new independent clients via menu 10 instead.
 
-## Understand client names and where the keys are (KeePass)
+Importing or creating a key, renaming an ID, and generating hashes
+**does not change the running Dispatcher or reverse proxy**.
+Activation and restart are separate, explicitly reviewed operations.
 
-A **client ID** identifies one application/provider configuration that talks
-to the Dispatcher. It is **not automatically created from the PC name** and
-need not mention Speedy, Laptop, Windows or Linux. The operator chooses an
-arbitrary unique ID; for example `goose-research`, `webui-private`,
-and `hermes-automation`. These are EXAMPLES, never predefined clients.
-The same AI Workstation software works on any host and has no baked-in
-personal machine name. The exact ID appears later as
-`metrics_proxy_requests.client_id` when S02 is activated.
+## Quick operator test (no production takeover)
 
-Four different things have different purposes:
+In your Windows **review-branch checkout**, run the native menu; an
+existing checkout can be refreshed with `git pull --ff-only`.
+The menu is not itself the Process Compose project; selecting numbers
+operates the native CLI.
 
-| Item | Contains | What to do with it |
+| Step | Menu | Expected result |
 | --- | --- | --- |
-| `services.yaml` | Operator-chosen IDs and policies | Edit as intended; no secrets |
-| `secrets/NAME.dpapi` | Actual original key, **encrypted for this Windows account** | Keep private; not usable as a portable secret on another computer |
-| `clients.json` | One-way SHA-256 digests + IDs/policies | Dispatcher uses it; **NOT a key backup** |
-| KeePass | Original usable API keys, one KeePass entry per client | Preferred long-term portable, encrypted credential store |
+| Prepare | 2 | Initializes only if not already initialized; refuses overwrites |
+| Install | 3 | Installs pinned, SHA-256-verified native Process Compose |
+| Verify | 4 | Prints `Validated 1 configured processes from 2 files` and clear success confirmation |
+| Inspect | 1 | Reports the actual private host-local paths |
+| Register | 10, 11, 14, 12 | Add one test identity, select by **number**, save original key, render hash list |
 
-**Transfer to KeePass, without printing the key:** on Speedy open
-`bootstrap/windows/Services.ps1`, choose **14 Copy original key for KeePass**,
-enter the client ID, confirm the sensitive clipboard operation, and paste
-into the **Password** field of a separate KeePass entry. Use the ID
-(for example `goose-research`) as the KeePass title. Add a note such as
-`Llama Dispatcher S02; policy=passthrough` if useful. Repeat for each
-new client. **Clear the clipboard and its history** afterwards; Windows
-clipboard sync/history may copy or retain secrets. Never store a CSV
-containing plaintext keys in the Git checkout or upload it to a chat.
+**Optional isolated process smoke:** The initial
+`process-compose.yaml` has a harmless `aiw-smoke` command initially
+set to `disabled: true`. Change **only that setting** to `false`,
+then choose **4 (validate) → 7 (start) → 5 (status) → 9 (logs) →
+8 (stop)**. The command is a short `echo`; a completed status is
+expected. Restore `disabled: true` afterwards. The existing processes
+on the host are **never** adopted or stopped by this test.
 
-Only the ORIGINAL key from KeePass is copied later into Goose/Open WebUI/
-Hermes native provider settings. The Dispatcher only needs the **hash**.
-An imported existing `home-gateway` key may already be present in KeePass;
-avoid creating a misleading duplicate entry. Creating client IDs/keys
-and generating `clients.json` does **not** change running Caddy, Dispatcher
-or client applications.
+The published v1.124.0 Linux binary reports a Go 1.27.0 build, below
+the Go 1.27.2 patch level for October 2026 `html/template` issues.
+**This is not proof of an exploitable Process Compose code path.**
+AI Workstation therefore prevents production native-service starts
+until a reviewed patched binary is adopted. The isolated test fixture
+and non-mutating validation remain available. Keep the management API
+on loopback and do not enable its MCP control endpoint for agents.
 
-If you dislike a machine-dependent name already entered, choose **16 Rename
-client ID** before activating multi-client S02. The encrypted original key
-is preserved (not rotated); run menu **12 Render** afterwards. A client ID
-cannot be renamed to an existing one. A later live S02 rename requires
-explicit configuration deployment and Dispatcher restart.
+## Reference CLI (optional)
 
-To inspect the distinction without touching anything, choose menu
-**15 Explain identities, secrets, hashes, KeePass**.
+Windows native CLI:
 
-## Named inference clients
+```powershell
+.\bootstrap\windows\Services.ps1 client list
+.\bootstrap\windows\Services.ps1 client add agent-project --policy passthrough
+.\bootstrap\windows\Services.ps1 client rename agent-project agent-development
+.\bootstrap\windows\Services.ps1 client render
+.\bootstrap\windows\Services.ps1 check
+```
 
-On the Windows host where the Dispatcher operates, add clients via
-the numbered menu, or call:
+WSL or native Linux:
 
-The following commands are examples. They must not be run again for
-IDs already registered; use menu 11 to inspect existing IDs and menu 16
-for deliberate renaming. No name has any special built-in meaning.
+```bash
+aiw services client list
+aiw services client add agent-project --policy passthrough
+aiw services check
+```
 
-    # EXAMPLES ONLY, for fresh installations; pick your own names:
-    pwsh -File .\bootstrap\windows\Services.ps1 client add goose-research --policy passthrough
-    pwsh -File .\bootstrap\windows\Services.ps1 client add webui-private --policy passthrough
-    pwsh -File .\bootstrap\windows\Services.ps1 client add hermes-automation --policy passthrough
-    pwsh -File .\bootstrap\windows\Services.ps1 client list
-    pwsh -File .\bootstrap\windows\Services.ps1 client render
+Windows menu 14 is preferred for transferring individual keys; the
+direct `client reveal ID` CLI displays a raw secret in the terminal,
+so use it only with deliberate safeguards.
 
-**Before migrating the currently working clients**, choose option 13 in the
-native Windows services menu, or explicitly import the existing DPAPI
-credential as home-gateway (use your *actual* protected key file path):
+The current reverse proxy may still check one existing gateway key.
+Before **new client credentials** are activated, configure the proxy
+to preserve the Authorization header exclusively to the S02-authenticated
+Dispatcher; maintain authorization on any separate direct inference
+fallback. Keep an existing shared key **only for migration**, and verify
+per-client 200/401, actual agent tool calls, and
+`metrics_proxy_requests.client_id` before removing the shared key.
+Do not let Process Compose and an existing script or systemd unit
+manage the same service at once.
 
-    pwsh -File .\bootstrap\windows\Services.ps1 client import-dpapi home-gateway --from-file C:\Caddy\speedy-api-key.dpapi --policy passthrough
-
-This reads and reuses the original encrypted key under the same Windows
-account, without revealing plaintext, modifying the original DPAPI file
-or restarting any service. Its SHA-256 digest is included in clients.json
-alongside the new independent client credentials. **Do not map the same
-secret under two different client IDs**; S02 deliberately rejects
-duplicate digests, because that would make attribution ambiguous.
-
-Each name is the actual S02 ID, later visible in the Dispatcher
-metrics_proxy_requests.client_id column. These are **technical applications**,
-not human users. Your friend needs only an ordinary Open WebUI user account,
-not another server or a personal Dispatcher identity.
-
-The private credential never appears in YAML or clients.json; Windows
-stores a DPAPI-encrypted value, and Linux uses strict filesystem permissions.
-For a one-time secure transfer to a specific client, explicitly use
-the **client reveal NAME** operation, which DOES display the token on the
-terminal. Store it directly in that client app's protected provider settings
-through a trusted credential manager; never paste it in Git, screenshots,
-logs or this chat. S02 loads all identities at startup: after onboarding,
-render the JSON and **explicitly restart Dispatcher** at the accepted
-operational handoff. Merely adding a manifest entry does not modify a live
-server.
-
-Revocation is similarly explicit: client remove NAME, render, and restart.
-An old encrypted secret is retained locally until reviewed deletion, so
-no accidental irreversible credential deletion is performed.
-
-## One-time Caddy / multi-client migration (not executed by this PR)
-
-The existing Caddy matcher expects the **one** legacy SPEEDY_API_KEY for
-both /v1 and /strata/v1. Before independent client tokens can work:
-
-1. Keep that exact gateway-key check on the **direct /strata/v1** fallback.
-2. For **/v1**, forward the Authorization header exclusively to the S02
-   Dispatcher on loopback 8001, and let S02 authenticate **all** clients.
-   Do **not** route an anonymous /v1 request to legacy Dispatcher or Strata.
-3. Preserve the current home-gateway entry and key during the migration,
-   until Goose/Open WebUI have moved to their new identities. The new
-   hash generator does not import the existing key automatically.
-4. Verify unauthorized 401, separately authenticated client 200, wrong
-   key 401, direct fallback, SSE, Goose tools, UI functionality and the
-   new exact SQLite client names before accepting a cutover.
-5. Keep the owner's already working Start-SpeedyAI.ps1 as fallback and
-   do not make Process Compose compete for any of its running services.
-
-This is a **separately owner-reviewed, once-only gateway trust-boundary
-change**, not a side effect of running client add/render or services init.
-The generated private S02 file and DPAPI secrets are never committed.
-
-## Owner acceptance: PR #37 on Speedy (no production cutover)
-
-Open PowerShell 7 in a NEW Windows test directory, not the Dispatcher S03 checkout.
-Make a sparse PR checkout to avoid historical long ContextCanon paths:
-
-~~~powershell
-git clone --sparse --filter=blob:none --branch docs/issue-34-process-compose-evaluation https://github.com/SomeSunlight/ai-workstation.git ai-workstation-pr37
-cd ai-workstation-pr37
-git sparse-checkout set bootstrap/windows tools config
-uv --version
-.\bootstrap\windows\Services.ps1
-~~~
-
-### A. Preparation (nothing started)
-
-1. Menu **2 Initialize** once. Verify local `%LOCALAPPDATA%\AIWorkstation\services\services.yaml`,
-   `process-compose.yaml` and `secrets/`; a second init must refuse overwrite.
-2. Menu **3 Install**. Verify checksum-checked Process Compose v1.124.0 in
-   the private bin directory (no PATH/system-service change).
-   **If the download fails on Windows**, the installer now reports the
-   Python HTTPS failure category and tries the **native PowerShell
-   Invoke-WebRequest** downloader automatically. Both routes use normal
-   HTTPS certificate verification and the same pinned SHA-256.
-   If your network blocks both, download the exact official asset from
-   <https://github.com/F1bonacc1/process-compose/releases/download/v1.124.0/process-compose_windows_amd64.zip>
-   using your browser, then run from this PR checkout:
-
-   ~~~powershell
-   .\bootstrap\windows\Services.ps1 install --archive "$HOME\Downloads\process-compose_windows_amd64.zip"
-   ~~~
-
-   The archive is verified against `config/versions.json` before any
-   executable is extracted. Never disable TLS validation or change
-   checksums to work around networking. The ZIP is **not** added to PATH
-   or committed to Git. If the default download works, the offline
-   command is unnecessary. Do **not** run menu option 2 again.
-3. Menu **4 Check**. Expect successful native Process Compose dry-run.
-4. Menu **1 Where** shows the private paths. No running Speedy service was altered.
-
-### B. Named S02 client identities (without live Caddy/Dispatcher edits)
-
-5. Menu **10 Add**: choose your own logical names, e.g. `goose-research` and `webui-private` (these are examples, not a fixed hardware list).
-6. Menu **11 List**: check the chosen IDs and passthrough policies; menu **15** explains what is stored.
-7. Menu **12 Render**: check private `clients.json`: each entry has
-   its name in `id`, a 64-character lowercase hex `token_sha256`, and
-   NO plaintext key. This file is NOT a KeePass backup.
-   For **each original** key, use menu **14** to copy it securely into
-   a separate KeePass Password entry; clear clipboard/history afterwards.
-8. Menu **13 Import existing DPAPI** (optional): use the existing
-   `C:\Caddy\speedy-api-key.dpapi` under the same Windows account.
-   Menu 11 and 12 should now include `home-gateway` as a third identity.
-   The original DPAPI file is unchanged. Re-adding any existing name
-   must be refused instead of overwriting its key.
-
-### C. Harmless process pilot (optional)
-
-9. In the PRIVATE `process-compose.yaml` change ONLY `aiw-smoke`
-   `disabled: true` to `disabled: false`. Do not edit production services.
-10. Menu **4 Check**, then **7 Up**. A harmless, short-lived echo job
-    may already show as finished. Check **5 Status**, **9 Logs** and
-    **6 TUI**. Management uses only 127.0.0.1:19011.
-11. Menu **8 Down**, then restore `disabled: true`.
-12. Negative gate: adding an unrelated second process definition must
-    make **Up refuse** the production start while unpatched Go 1.27.0
-    remains blocked. Remove the temporary process after that check.
-
-**Unchanged regression reference:** Start-SpeedyAI.ps1, active Caddy,
-Strata, S03 Dispatcher and Laptop/WSL Goose/Open WebUI keep operating.
-New client IDs will appear in Dispatcher SQLite ONLY after the separately
-approved S02/Caddy migration, not after client render in this review PR.
-
-Send sanitized command outputs and any failures, but NEVER the contents
-of private DPAPI files, API tokens or the private secrets directory.
-
-### WSL / native Linux
-
-Use the corresponding PR branch on the Linux side and run
-`aiw services init`, `aiw services install`, `aiw services check`.
-Linux/WSL keeps its OWN native Process Compose and private config;
-it does not control the Windows processes running on Speedy.
-
-## Choice and security of Process Compose
-
-**Decision:** Process Compose is the native-host supervisor (not an
-AI Workstation homegrown manager). Version pinned **v1.124.0, published
-2026-10-27**, installed only on demand with official release archive SHA-256
-verification. No PATH-wide replacement. AIW reuses its native CLI/TUI.
-**Security hold (confirmed in CI on 2026-11-02):** The official
-Linux AMD64 v1.124.0 binary reports **go1.27.0** in its Go build metadata.
-Two October 2026 html/template advisories (CVE-2026-94448,
-CVE-2026-97030) affect this Go version and were patched in **Go 1.27.2**.
-This is a **toolchain exposure**, not proof that Process Compose has a
-reachable exploit. The Windows binary's Go build was not independently
-inspected. Until a patched release/rebuild and reachability review are
-accepted, the AIW CLI **fails closed on production native process starts**
-and permits only its disabled/harmless aiw-smoke fixture for runtime
-experiments. Non-mutating config validation and S02 client onboarding
-remain available. Update the centrally pinned manifest **only after**
-actual binary Go build/version proof; keep the production hold until then.
-Go build metadata can be inspected with 'go version -m PATH_TO_BINARY'
-when Go is installed.
-
-## Scope boundaries and new applications
-
-* New native service: edit the single **process-compose.yaml** and validate.
-* New containerized app: native Docker Compose and its AIW entrypoint.
-  Hermes runs in its **own Docker container** with dedicated permissions.
-* New Open WebUI human account: use Open WebUI user/role management,
-  no additional backend container or personal model server required.
-* Multiple directories for one Goose session: not yet supported.
-  [Issue #38](https://github.com/SomeSunlight/ai-workstation/issues/38)
-  tracks explicit extra directory mounts (read-only by default).
-
-For corporate-managed laptops, personal VPN or altered routing requires
-authorization from the employer's IT/security policy; a phone hotspot is
-not a workaround for that policy, nor does tethering automatically forward
-the phone's VPN. Running lengthy agent work on Speedy itself and accessing
-its UI remotely avoids dependence on a travelling laptop staying awake.
+**Other tasks:** multi-directory agent workspace mounts are tracked
+in [Issue #38](https://github.com/SomeSunlight/ai-workstation/issues/38);
+a separately reviewed host-local container workbench is tracked in
+[Issue #39](https://github.com/SomeSunlight/ai-workstation/issues/39).
