@@ -83,6 +83,19 @@ the numbered menu, or call:
     pwsh -File .\bootstrap\windows\Services.ps1 client list
     pwsh -File .\bootstrap\windows\Services.ps1 client render
 
+**Before migrating the currently working clients**, choose option 13 in the
+native Windows services menu, or explicitly import the existing DPAPI
+credential as home-gateway (use your *actual* protected key file path):
+
+    pwsh -File .\\bootstrap\\windows\\Services.ps1 client import-dpapi home-gateway --from-file C:\\Caddy\\speedy-api-key.dpapi --policy passthrough
+
+This reads and reuses the original encrypted key under the same Windows
+account, without revealing plaintext, modifying the original DPAPI file
+or restarting any service. Its SHA-256 digest is included in clients.json
+alongside the new independent client credentials. **Do not map the same
+secret under two different client IDs**; S02 deliberately rejects
+duplicate digests, because that would make attribution ambiguous.
+
 Each name is the actual S02 ID, later visible in the Dispatcher
 metrics_proxy_requests.client_id column. These are **technical applications**,
 not human users. Your friend needs only an ordinary Open WebUI user account,
