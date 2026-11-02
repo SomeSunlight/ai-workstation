@@ -29,7 +29,7 @@ grep -Fq 'Use the repository default version' <<< "$webui_menu_output"
 
 # Native Process Compose submenu is a one-time menu, with explicit '?' redisplay.
 services_output="$(printf '7\n14\n?\nb\nq\n' | HOME="$temp_home" "$cli")"
-headers="$(grep -c 'Native services (Process Compose)' <<< "$services_output")"
+headers="$(grep -cx 'Native services (Process Compose)' <<< "$services_output")"
 [[ "$headers" == "2" ]] || { echo "Native services menu repeated unexpectedly: $headers" >&2; exit 1; }
 grep -Fq -- '--- End of action 14' <<< "$services_output" || {
     echo 'Native services menu lost action-boundary output.' >&2
