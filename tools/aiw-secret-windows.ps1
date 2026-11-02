@@ -6,7 +6,7 @@ Runs under the same Windows account that owns the native Dispatcher.
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet('Store', 'Read', 'Protect')][string]$Action,
+    [Parameter(Mandatory)][ValidateSet('Store', 'Read', 'Protect', 'Copy')][string]$Action,
     [Parameter(Mandatory)][string]$Path
 )
 Set-StrictMode -Version Latest
@@ -52,5 +52,11 @@ else {
     $encrypted = [System.IO.File]::ReadAllText($Path).Trim()
     $secure = ConvertTo-SecureString -String $encrypted
     $plain = [System.Net.NetworkCredential]::new('unused', $secure).Password
+    if ($Action -eq 'Copy') {
+        # Explicit operator request: Keepass transfer without printing the token.
+        # Windows clipboard history/sync is an OS setting, not controlled here.
+        Set-Clipboard -Value $plain -ErrorAction Stop
+        return
+    }
     [Console]::Out.Write($plain)
 }
