@@ -9,6 +9,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
+import platform
+import tarfile
+import urllib.request
+import zipfile
 import json
 import os
 from pathlib import Path
@@ -26,6 +31,16 @@ CLIENT_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
 POLICIES = {"default", "enforce", "passthrough"}
 DEFAULT_PORT = 19011
 WIN_HELPER = Path(__file__).with_name("aiw-secret-windows.ps1")
+PROCESS_COMPOSE_VERSION = "v1.124.0"
+# Official release archive SHA-256 digests (not version string checks).
+ARCHIVES = {
+    ("Windows", "AMD64"): ("process-compose_windows_amd64.zip",
+                           "a77d51dcb34e3e8d2b88af372ada7ca8a62cb87f0c6af0f78834c0fd6c95e2a7"),
+    ("Linux", "AMD64"): ("process-compose_linux_amd64.tar.gz",
+                         "487ce011d5324b4578d3ec1860aaa1dd3a95bd4b2b433e03791f73a23d215fd3"),
+    ("Linux", "ARM64"): ("process-compose_linux_arm64.tar.gz",
+                         "98e02400a05d1da74a6506a4ffb2682b1205f18f02ecfbfdea1005f9389fc52d"),
+}
 
 
 class ConfigError(Exception):
@@ -83,7 +98,8 @@ def read_settings(folder: Path) -> dict:
         raise ConfigError("process_compose requires only file and port.")
     if not isinstance(pc["file"], str) or not pc["file"] or Path(pc["file"]).is_absolute():
         raise ConfigError("process_compose.file must be a relative local filename.")
-    if ".." in Path(pc["file"]).parts or not 1 <= pc["port"] <= 65535 or pc["port"] == 8080:
+    if (".." in Path(pc["file"]).parts or type(pc["port"]) is not int or
+        not 1 <= pc["port"] <= 65535 or pc["port"] == 8080):
         raise ConfigError("Invalid Process Compose file/port; never use Strata's port 8080.")
     for name, cfg in doc["clients"].items():
         if not isinstance(name, str) or not CLIENT_ID.fullmatch(name):
@@ -174,6 +190,10 @@ def init(folder: Path) -> None:
     if project.exists():
         raise ConfigError("Existing Process Compose project; refusing to replace it.")
     private_write(project, fixture.encode("utf-8"), replace=False)
+    api_token = folder / "secrets" / "process-compose.api-token"
+    private_write(api_token, (secrets.token_urlsafe(48) + "\n").encode("ascii"), replace=False)
+    if os.name == "nt":
+        windows_secret("Protect", api_token)
     save_settings(folder, doc)
     print("Initialized:", folder)
     print("Edit:", project, "(native Process Compose YAML)")
@@ -229,16 +249,79 @@ def client_render(folder: Path, output: Path) -> None:
     print("the existing protected /strata/v1 fallback. Do not change Caddy automatically.")
 
 
+def install_process_compose(folder: Path) -> None:
+    """Explicit opt-in native binary install, pinned release + checked artifact."""
+    system = "Windows" if os.name == "nt" else "Linux"
+    machine = platform.machine().upper().replace("X86_64", "AMD64").replace("AARCH64", "ARM64")
+    selection = ARCHIVES.get((system, machine))
+    if not selection:
+        raise ConfigError("This OS/architecture has no pinned Process Compose artifact.")
+    filename, digest = selection
+    dest = folder / "bin" / ("process-compose.exe" if os.name == "nt" else "process-compose")
+    if dest.exists():
+        raise ConfigError("Native binary exists already; no automatic overwrite/upgrade.")
+    url = ("https://github.com/F1bonacc1/process-compose/releases/download/" +
+           PROCESS_COMPOSE_VERSION + "/" + filename)
+    private_dir(folder / "bin")
+    try:
+        with urllib.request.urlopen(url, timeout=45) as response:
+            archive = response.read(40 * 1024 * 1024 + 1)
+    except OSError:
+        raise ConfigError("Failed to fetch official Process Compose release.") from None
+    if len(archive) > 40 * 1024 * 1024 or hashlib.sha256(archive).hexdigest() != digest:
+        raise ConfigError("Official Process Compose archive digest mismatch; not installed.")
+    binary = "process-compose.exe" if os.name == "nt" else "process-compose"
+    if filename.endswith(".zip"):
+        with zipfile.ZipFile(io.BytesIO(archive)) as file:
+            names = [n for n in file.namelist() if Path(n).name == binary]
+            if len(names) != 1:
+                raise ConfigError("Missing or ambiguous executable in signed-hash archive.")
+            contents = file.read(names[0])
+    else:
+        with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as file:
+            members = [x for x in file.getmembers() if x.isfile() and Path(x.name).name == binary]
+            if len(members) != 1:
+                raise ConfigError("Missing or ambiguous executable in checked archive.")
+            stream = file.extractfile(members[0])
+            if stream is None:
+                raise ConfigError("Unable to extract executable.")
+            contents = stream.read()
+    private_write(dest, contents, replace=False)
+    if os.name != "nt":
+        dest.chmod(0o700)
+    print("Installed checksum-verified", PROCESS_COMPOSE_VERSION, "to", dest)
+    print("No host services or startup tasks were changed.")
+
+
+def native_binary(folder: Path) -> str:
+    explicit = os.environ.get("AIW_PROCESS_COMPOSE_BIN")
+    if explicit:
+        if not Path(explicit).is_file():
+            raise ConfigError("Explicit native Process Compose binary does not exist.")
+        return explicit
+    local = folder / "bin" / ("process-compose.exe" if os.name == "nt" else "process-compose")
+    if local.is_file():
+        return str(local)
+    fallback = shutil.which("process-compose")
+    if fallback:
+        return fallback
+    raise ConfigError("Native Process Compose missing. Run: aiw services install")
+
+
 def native(folder: Path, action: str, process: str | None) -> None:
     doc = read_settings(folder)
     project = project_path(folder, doc)
     if not project.is_file():
         raise ConfigError("Missing native Process Compose YAML.")
-    binary = os.environ.get("AIW_PROCESS_COMPOSE_BIN", "process-compose")
-    if not (shutil.which(binary) or Path(binary).is_file()):
-        raise ConfigError("Install the verified Process Compose native binary first.")
+    binary = native_binary(folder)
     port = str(doc["process_compose"]["port"])
-    basic = [binary, "--address", "127.0.0.1", "--port", port]
+    api_token = folder / "secrets" / "process-compose.api-token"
+    if not api_token.is_file() or api_token.is_symlink():
+        raise ConfigError("Missing Process Compose localhost management token; rerun init in clean directory.")
+    if os.name != "nt" and (api_token.stat().st_mode & (stat.S_IRWXG | stat.S_IRWXO)):
+        raise ConfigError("Process Compose management token permissions are too permissive.")
+    basic = [binary, "--address", "127.0.0.1", "--port", port,
+             "--token-file", str(api_token)]
     if action in ("check", "up", "tui"):
         cmd = basic + ["--disable-dotenv", "--config", str(project), "up"]
         if action == "check":
@@ -247,7 +330,7 @@ def native(folder: Path, action: str, process: str | None) -> None:
             cmd.append("--detached")
     else:
         cmd = basic + ({"status": ["process", "list"],
-                        "logs": ["process", "logs", process] if process else ["process", "logs", "-N", "validation"],
+                        "logs": ["process", "logs", process] if process else ["process", "logs"],
                         "start": ["process", "start", process],
                         "stop": ["process", "stop", process],
                         "restart": ["process", "restart", process],
@@ -266,7 +349,7 @@ def run(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Native host services and S02 client identities")
     parser.add_argument("--directory", type=Path, default=default_dir())
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for k in ("init", "where", "check", "up", "tui", "status", "down", "logs"):
+    for k in ("init", "where", "install", "check", "up", "tui", "status", "down", "logs"):
         p = sub.add_parser(k)
         if k == "logs":
             p.add_argument("name", nargs="?")
@@ -285,6 +368,8 @@ def run(argv: list[str] | None = None) -> None:
     folder = args.directory.expanduser().resolve()
     if args.cmd == "init":
         init(folder)
+    elif args.cmd == "install":
+        install_process_compose(folder)
     elif args.cmd == "where":
         doc = read_settings(folder)
         print("Configuration:", settings_path(folder))
