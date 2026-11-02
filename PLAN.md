@@ -23,7 +23,7 @@ containerized Goose/Open WebUI and future isolated Hermes. No merged
 TUI or MCP process control. A native, operator-accessible CLI/TUI is enough.
 
 **Writable scope:** PLAN.md, STATE.md, docs/process-manager-discovery.md,
-docs/native-services.md, bin/aiw, bootstrap/windows/Services.ps1,
+docs/native-services.md, README.md, bin/aiw, bootstrap/windows/Services.ps1,
 tools/aiw-services.py, tools/aiw-secret-windows.ps1,
 config/versions.json, tests/smoke/services-registry.py,
 tests/windows/, .github/workflows/validate.yml, tools/release-check.sh,
@@ -50,8 +50,12 @@ working rollback. Multiple Goose workspace mounts are separate issue #38.
   never silently replace live Caddy/S02 config.
 - [x] Open separate multi-directory Goose mount issue #38 after confirming
   the current one-RW-workspace limit.
-- [ ] Verify Linux focused security/CLI tests, Windows PowerShell syntax
-  and the full repo release/CI checks; resolve all failures on the PR head.
+- [x] Verify Linux focused security/CLI tests, Windows PowerShell
+  syntax, actual Windows DPAPI onboarding/import/revocation and full
+  repository CI on head 23ffaeeea8855d8c87d735f7857b85856751bf1d.
+  Ubuntu validate and Windows jobs both passed
+  [run #41479217299](https://github.com/SomeSunlight/ai-workstation/actions/runs/41479217299).
+  This final PLAN-only checkpoint must also pass exact-head CI before merge.
 - [ ] Owner reviews the complete first slice and approves only after
   understood results; **never merge without owner approval**.
 - [ ] Separate **real Speedy pilot**: start an isolated harmless process
