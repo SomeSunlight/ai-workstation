@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import io
+import tarfile
+import urllib.error
 import importlib.util
 import json
 import os
@@ -109,6 +112,41 @@ class TestNativeServices(unittest.TestCase):
                 module.native(self.folder, "up", None)
             # Non-mutating dry-run remains available for reviewing a candidate.
             module.native(self.folder, "check", None)
+
+    def test_release_download_diagnostics_and_offline_archive_verification(self):
+        http_error = urllib.error.HTTPError("https://github.com/release", 403,
+                                            "Forbidden", {}, None)
+        self.assertEqual(module.download_failure_reason(http_error), "HTTP 403")
+        with mock.patch.object(module.urllib.request, "urlopen", side_effect=http_error):
+            with self.assertRaisesRegex(module.ConfigError, "HTTP 403"):
+                module.download_release("https://github.com/release", self.folder)
+
+        archive_path = Path(self.tmp.name) / "official-process-compose.tar.gz"
+        with tarfile.open(archive_path, "w:gz") as tar:
+            content = b"#!/bin/sh\\necho fixture\\n"
+            info = tarfile.TarInfo("process-compose")
+            info.mode = 0o755
+            info.size = len(content)
+            tar.addfile(info, io.BytesIO(content))
+        digest = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+        with mock.patch.object(module, "pinned_release",
+                               return_value=("v1.124.0", "process-compose_linux_amd64.tar.gz", digest)):
+            module.install_process_compose(self.folder, archive_path)
+        exe = self.folder / "bin" / "process-compose"
+        self.assertTrue(exe.is_file())
+        self.assertEqual(exe.read_bytes(), content)
+        with self.assertRaisesRegex(module.ConfigError, "already"):
+            module.install_process_compose(self.folder, archive_path)
+
+        other = Path(self.tmp.name) / "other-services"
+        other.mkdir()
+        bad_path = Path(self.tmp.name) / "wrong.tar.gz"
+        bad_path.write_bytes(b"unverified")
+        with mock.patch.object(module, "pinned_release",
+                               return_value=("v1.124.0", "process-compose_linux_amd64.tar.gz", digest)):
+            with self.assertRaisesRegex(module.ConfigError, "SHA-256 mismatch"):
+                module.install_process_compose(other, bad_path)
+        self.assertFalse((other / "bin" / "process-compose").exists())
 
     def test_symlink_disallowed(self):
         target = Path(self.tmp.name) / "bad-secret"
