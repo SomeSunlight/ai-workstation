@@ -47,6 +47,7 @@ while ($true) {
     Write-Host '10 Create named Dispatcher client'
     Write-Host '11 List clients'
     Write-Host '12 Render Dispatcher S02 client JSON'
+    Write-Host '13 Import existing gateway DPAPI key (keep current clients working)'
     Write-Host 'q  Exit'
     $choice = Read-Host 'Select'
     $command = switch ($choice) {
@@ -71,6 +72,11 @@ while ($true) {
         }
         '11' { @('client', 'list') }
         '12' { @('client', 'render') }
+        '13' {
+            $path = Read-Host 'Existing gateway DPAPI file (e.g. C:\Caddy\speedy-api-key.dpapi)'
+            if (-not $path) { @() }
+            else { @('client', 'import-dpapi', 'home-gateway', '--policy', 'passthrough', '--from-file', $path) }
+        }
         'q' { return }
         'Q' { return }
         default { Write-Warning 'Unknown choice.'; @() }
