@@ -26,7 +26,7 @@ try {
     $menuOutput = (& (Join-Path $root 'bootstrap/windows/Services.ps1') 6>&1) -join "`n"
     # One initial menu and one explicit '?' redisplay, NOT a full menu
     # after each action; action delimiters preserve scrollback orientation.
-    $headers = ([regex]::Matches($menuOutput, '=== AI Workstation \\| Native services ===')).Count
+    $headers = ([regex]::Matches($menuOutput, '=== AI Workstation \| Native services ===')).Count
     if ($headers -ne 2) {
         throw "Menu showed $headers times; expected once + explicit ?."
     }
