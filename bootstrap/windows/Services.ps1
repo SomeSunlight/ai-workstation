@@ -1,11 +1,8 @@
 #Requires -Version 7.4
 <#
-.SYNOPSIS
-Native Windows entrypoint to the SAME Process Compose project and S02 identity
-management as "aiw services" on WSL/Linux. No WSL requirement on Speedy.
-.EXAMPLE
-  ./bootstrap/windows/Services.ps1
-  ./bootstrap/windows/Services.ps1 client add goose-laptop --policy passthrough
+Native Windows entry point for Process Compose and named Dispatcher clients.
+Menu remains visible in scrollback; ? redisplays it on demand.
+Details: docs/native-services.md in this repository.
 #>
 [CmdletBinding()]
 param(
@@ -17,14 +14,83 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $tool = Join-Path $root 'tools/aiw-services.py'
 $uvCmd = Get-Command uv -ErrorAction SilentlyContinue
-if (-not $uvCmd) { throw 'uv not on PATH; use the Python/uv installation already used for Dispatcher.' }
+if (-not $uvCmd) { throw 'uv is required for native services (see setup guide).' }
 
 function Invoke-NativeServices([string[]]$Commands) {
-    # Native Windows dependency isolation; never installs Linux Ansible packages.
     & $uvCmd.Source run --no-project --with 'PyYAML==6.0.3' python $tool @Commands
     if ($LASTEXITCODE -ne 0) {
-        throw "AI Workstation native services failed with exit code $LASTEXITCODE."
+        throw "Native services command failed (exit $LASTEXITCODE)."
     }
+}
+
+function Get-ClientRegistry {
+    # Read-only structured output; no secrets and no need to retype client IDs.
+    $json = (& $uvCmd.Source run --no-project --with 'PyYAML==6.0.3' python $tool client list --format json) -join [Environment]::NewLine
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to read client registry.' }
+    return ConvertFrom-Json -InputObject $json -Depth 5
+}
+
+function Select-RegisteredClient {
+    param([string]$Purpose, [bool]$ForCopy = $false)
+    $registry = Get-ClientRegistry
+    $clients = @($registry.clients)
+    if ($clients.Count -eq 0) {
+        Write-Host 'No client identities registered. Choose option 10 to create one.'
+        return $null
+    }
+    Write-Host ''
+    Write-Host "Select client to $Purpose (choose NUMBER; no exact spelling required):"
+    for ($i = 0; $i -lt $clients.Count; $i++) {
+        $origin = $clients[$i].origin
+        $tag = switch ($origin) {
+            'generated' { 'individual key' }
+            'imported' { 'imported shared key / migration' }
+            default { 'older key / origin unknown' }
+        }
+        Write-Host (" {0,2}) {1}   [{2}]" -f ($i + 1), $clients[$i].id, $tag)
+    }
+    Write-Host '  0) Cancel'
+    $value = Read-Host 'Number'
+    $index = 0
+    if (-not [int]::TryParse($value, [ref]$index) -or $index -lt 1 -or $index -gt $clients.Count) {
+        Write-Host 'Selection cancelled (or invalid).'
+        return $null
+    }
+    $entry = $clients[$index - 1]
+    if ($ForCopy -and $entry.origin -eq 'imported') {
+        Write-Warning 'Imported shared keys are retained for migration, NOT for provisioning additional clients.'
+        Write-Host 'Create a new client identity (10) to give an application its own key.'
+        return $null
+    }
+    if ($ForCopy -and $entry.origin -ne 'generated') {
+        Write-Warning 'Older registration: this key may be shared with existing services.'
+        $approved = Read-Host 'Confirm this is an individual key, NOT a shared gateway credential? [y/N]'
+        if ($approved -notin @('y', 'Y')) { return $null }
+    }
+    return [string]$entry.id
+}
+
+function Show-ServicesMenu {
+    Write-Host ''
+    Write-Host '=== AI Workstation | Native services ==='
+    Write-Host '  1  Paths       2  Initialize     3  Install      4  Validate'
+    Write-Host '  5  Status      6  TUI            7  Start        8  Stop       9  Logs'
+    Write-Host ' 10  Add client 11  Clients       12  Render S02   13  Import key'
+    Write-Host ' 14  Copy key   15  Concepts      16  Rename client'
+    Write-Host '  ?   Show menu again           q   Exit'
+    Write-Host 'Guide: docs/native-services.md (in this checkout)'
+    Write-Host 'Actions remain visible above; the menu is not repeated automatically.'
+}
+
+function Show-KeyConcepts {
+    Write-Host ''
+    Write-Host 'Client ID       Unique label for one application/provider; chosen by you.'
+    Write-Host 'Original key    Secret needed by a client; encrypted locally on Windows.'
+    Write-Host 'services.yaml   Human-editable IDs and policies (no secrets).'
+    Write-Host 'clients.json    One-way key hashes for Dispatcher; NOT a key backup.'
+    Write-Host 'Imported key    Existing shared credential retained for migration only.'
+    Write-Host 'Password store  Save individual ORIGINAL keys in any trusted password manager.'
+    Write-Host 'Full explanation: docs/native-services.md in your repository checkout.'
 }
 
 if ($Arguments -and $Arguments.Count -gt 0) {
@@ -32,103 +98,73 @@ if ($Arguments -and $Arguments.Count -gt 0) {
     return
 }
 
+Show-ServicesMenu
 while ($true) {
+    $choice = (Read-Host 'Option (?=menu, q=exit)').Trim()
+    if ($choice -eq 'q') { break }
+    if ($choice -eq '?') { Show-ServicesMenu; continue }
     Write-Host ''
-    Write-Host 'AI Workstation - native Windows services (Process Compose)'
-    Write-Host '1  Configuration paths'
-    Write-Host '2  Initialize PRIVATE YAML and disabled smoke service'
-    Write-Host '3  Install checksum-verified Process Compose'
-    Write-Host '4  Validate Process Compose YAML (no start)'
-    Write-Host '5  Process status'
-    Write-Host '6  Native Process Compose TUI'
-    Write-Host '7  Start project (explicit)'
-    Write-Host '8  Stop project'
-    Write-Host '9  Logs'
-    Write-Host '10 Create client identity (you choose the name; generates protected key)'
-    Write-Host '11 List client identities and policies (NO secrets)'
-    Write-Host '12 Generate Dispatcher client JSON (HASHES only; NOT a key backup)'
-    Write-Host '13 Import existing gateway DPAPI key (keep current clients working)'
-    Write-Host '14 Copy one ORIGINAL client key to clipboard for KeePass'
-    Write-Host '15 Explain identities, secrets, hashes, KeePass'
-    Write-Host '16 Rename a client ID without changing its key'
-    Write-Host 'q  Exit'
-    $choice = Read-Host 'Select'
-    if ($choice -in @('q', 'Q')) { break }
-    # A PowerShell switch unrolls its output: a single command becomes a
-    # scalar string. Force a real argv array so .Count and argument passing
-    # remain stable under Set-StrictMode.
-    $command = @(switch ($choice) {
-        '1'  { @('where') }
-        '2'  { @('init') }
-        '3'  { @('install') }
-        '4'  { @('check') }
-        '5'  { @('status') }
-        '6'  { @('tui') }
-        '7'  { @('up') }
-        '8'  { @('down') }
-        '9'  { @('logs') }
-        '10' {
-            Write-Host ''
-            Write-Host 'Choose ANY unique client ID for one application/provider connection.'
-            Write-Host 'For example: goose-research, webui-private, hermes-automation.'
-            Write-Host 'These are EXAMPLES, not preconfigured names. Do not use a device name unless you want to.'
-            Write-Host 'A new API key is generated and stored under your Windows account (DPAPI).'
-            Write-Host 'Copy the key to KeePass later using menu 14.'
-            $name = Read-Host 'Your new client ID'
-            if ($name -notmatch '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$') {
-                Write-Warning 'Invalid client ID.'
-                @()
+    Write-Host "--- Action $choice ---"
+    $command = @()
+    try {
+        switch ($choice) {
+            '1'  { $command = @('where') }
+            '2'  { $command = @('init') }
+            '3'  { $command = @('install') }
+            '4'  { $command = @('check') }
+            '5'  { $command = @('status') }
+            '6'  { $command = @('tui') }
+            '7'  { $command = @('up') }
+            '8'  { $command = @('down') }
+            '9'  { $command = @('logs') }
+            '10' {
+                Write-Host 'A client ID is an arbitrary unique label for an application.'
+                Write-Host 'Example: editor-agent. Examples are NOT preconfigured clients.'
+                $name = Read-Host 'New client ID (letters/digits/._-; Enter cancels)'
+                if ($name -and $name -match '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$') {
+                    $command = @('client', 'add', $name, '--policy', 'passthrough')
+                } elseif ($name) { Write-Warning 'Invalid client ID.' }
             }
-            else {
-                @('client', 'add', $name, '--policy', 'passthrough')
+            '11' { $command = @('client', 'list') }
+            '12' { $command = @('client', 'render') }
+            '13' {
+                Write-Host 'Import an existing shared credential to preserve old client access.'
+                Write-Host 'This is NOT a new individual key; do not distribute it to new apps.'
+                $name = Read-Host 'Existing logical ID (Enter cancels)'
+                if ($name) {
+                    $path = Read-Host 'Path to existing Windows DPAPI file'
+                    if ($path) {
+                        $command = @('client', 'import-dpapi', $name, '--policy', 'passthrough', '--from-file', $path)
+                    }
+                }
             }
-        }
-        '11' { @('client', 'list') }
-        '12' { @('client', 'render') }
-        '13' {
-            $path = Read-Host 'Existing gateway DPAPI file (e.g. C:\Caddy\speedy-api-key.dpapi)'
-            if (-not $path) { @() }
-            else { @('client', 'import-dpapi', 'home-gateway', '--policy', 'passthrough', '--from-file', $path) }
-        }
-        '14' {
-            Write-Host 'Copy an ORIGINAL API key into the clipboard for KeePass.'
-            Write-Host 'WARNING: Clipboard history/sync can retain this sensitive key.'
-            Write-Host 'Paste into a KeePass Password field and clear clipboard/history afterward.'
-            $id = Read-Host 'Existing client ID'
-            if (-not $id) { @() }
-            else {
-                $confirm = Read-Host 'Copy sensitive original key to clipboard? [y/N]'
-                if ($confirm -in @('y','Y')) { @('client', 'copy', $id) }
-                else { @() }
+            '14' {
+                $id = Select-RegisteredClient -Purpose 'copy an original key' -ForCopy $true
+                if ($id) {
+                    Write-Host 'The clipboard can be logged/synced by Windows. Use a trusted password manager.'
+                    $confirm = Read-Host "Copy key for '$id' to clipboard? [y/N]"
+                    if ($confirm -in @('y','Y')) { $command = @('client', 'copy', $id) }
+                }
             }
+            '15' { Show-KeyConcepts }
+            '16' {
+                $old = Select-RegisteredClient -Purpose 'rename'
+                if ($old) {
+                    $new = Read-Host "New ID for '$old' (Enter cancels)"
+                    if ($new) { $command = @('client', 'rename', $old, $new) }
+                }
+            }
+            default { Write-Warning "Unknown option '$choice'. Press ? to see the menu." }
         }
-        '15' {
-            Write-Host ''
-            Write-Host 'A CLIENT is one application/provider connection, not a computer or person.'
-            Write-Host 'Client IDs are labels YOU choose. Examples are suggestions only.'
-            Write-Host 'services.yaml = names and policies; process-compose.yaml = native processes.'
-            Write-Host 'secrets/*.dpapi = actual API keys encrypted for this Windows user.'
-            Write-Host 'clients.json = ONE-WAY HASHES, read by Dispatcher to authenticate requests.'
-            Write-Host 'IMPORTANT: clients.json is NOT a backup of your usable API keys.'
-            Write-Host 'KeePass: choose menu 14 for EACH key and paste it into an entry Password field.'
-            Write-Host 'Never copy your entire secrets folder as a portable credential backup.'
-            Write-Host 'Client changes DO NOT alter the running Dispatcher/Caddy automatically.'
-            @()
+
+        if ($command.Count -gt 0) {
+            if ($choice -in @('7', '8')) {
+                $answer = Read-Host "Execute '$($command -join ' ')' now? [y/N]"
+                if ($answer -notin @('y','Y')) { $command = @() }
+            }
+            if ($command.Count -gt 0) { Invoke-NativeServices $command }
         }
-        '16' {
-            Write-Host 'Rename client identity. Its protected API key remains unchanged.'
-            $oldId = Read-Host 'Existing client ID'
-            $newId = Read-Host 'New unique client ID'
-            if (-not $oldId -or -not $newId) { @() }
-            else { @('client', 'rename', $oldId, $newId) }
-        }
-        default { Write-Warning 'Unknown choice.'; @() }
-    })
-    if ($command.Count -eq 0) { continue }
-    if ($choice -in @('7','8')) {
-        $answer = Read-Host "Execute '$($command -join ' ')' now? [y/N]"
-        if ($answer -ne 'y' -and $answer -ne 'Y') { continue }
     }
-    try { Invoke-NativeServices $command }
     catch { Write-Warning $_.Exception.Message }
+    Write-Host "--- End of action $choice (press ? for menu) ---"
 }
