@@ -166,6 +166,12 @@ jobs:
             if (-not (Test-Path $ownerRecord)) {
               throw 'Windows supervisor identity/PID marker missing.'
             }
+            $duplicateRejected = $false
+            try { & ./bootstrap/windows/Services.ps1 up }
+            catch { $duplicateRejected = $true }
+            if (-not $duplicateRejected) {
+              throw 'A second supervisor was unexpectedly allowed on the same port.'
+            }
             & ./bootstrap/windows/Services.ps1 status
             & ./bootstrap/windows/Services.ps1 logs
           }
@@ -174,6 +180,12 @@ jobs:
           }
           if (Test-Path "$env:AIW_SERVICES_DIR/runtime/process-compose-windows.json") {
             throw 'Supervisor ownership record not removed on down.'
+          }
+          $foreignStopRejected = $false
+          try { & ./bootstrap/windows/Services.ps1 down }
+          catch { $foreignStopRejected = $true }
+          if (-not $foreignStopRejected) {
+            throw 'Stop should refuse when no owned supervisor is registered.'
           }
           # Exercise real native Windows HTTPS fallback and verified offline
           # archive import in a distinct temporary workspace.
