@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $testFolder = Join-Path $env:RUNNER_TEMP ('aiw-menu-' + [guid]::NewGuid().ToString('N'))
 $env:AIW_SERVICES_DIR = $testFolder
-$global:aiwMenuAnswers = @('2', '10', 'goose-research', '11', '12', '15', '16', 'goose-research', 'goose-core', '11', '12', '14', 'goose-core', 'y', '1', 'q')
+$global:aiwMenuAnswers = @('2', '10', 'goose-research', '11', '12', '15', '16', '1', 'goose-core', '11', '12', '14', '1', 'y', '1', '?', 'q')
 $global:aiwMenuIndex = 0
 
 # Using a real child script here (instead of a parser-only check) reproduces
@@ -23,7 +23,16 @@ function Read-Host {
 }
 
 try {
-    & (Join-Path $root 'bootstrap/windows/Services.ps1')
+    $menuOutput = (& (Join-Path $root 'bootstrap/windows/Services.ps1') 6>&1) -join "`n"
+    # One initial menu and one explicit '?' redisplay, NOT a full menu
+    # after each action; action delimiters preserve scrollback orientation.
+    $headers = ([regex]::Matches($menuOutput, '=== AI Workstation \\| Native services ===')).Count
+    if ($headers -ne 2) {
+        throw "Menu showed $headers times; expected once + explicit ?."
+    }
+    if ($menuOutput -notmatch '--- End of action 14') {
+        throw 'Menu action boundaries missing from historical output.'
+    }
     if ($global:aiwMenuIndex -ne $global:aiwMenuAnswers.Length) {
         throw "Menu skipped an action or did not read q: $global:aiwMenuIndex"
     }
