@@ -77,11 +77,38 @@ class TestNativeServices(unittest.TestCase):
             module.client_rename(self.folder, "goose-research", "webui-private")
         with self.assertRaises(module.ConfigError):
             module.client_rename(self.folder, "goose-research", "../unsafe")
+        # Backward compatibility: old configs have no origin. Never assume
+        # an old shared credential was generated for one client.
+        old_cfg = module.read_settings(self.folder)
+        del old_cfg["clients"]["goose-research"]["origin"]
+        module.save_settings(self.folder, old_cfg)
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as log:
+            module.run(["--directory", str(self.folder), "client", "list",
+                        "--format", "json"])
+        rows = json.loads(log.getvalue())["clients"]
+        self.assertEqual(rows[0]["origin"], "unknown")
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as log:
+            module.run(["--directory", str(self.folder), "client", "list",
+                        "--format", "tsv"])
+        self.assertIn("goose-research\\tunknown", log.getvalue())
         module.client_render(self.folder, self.folder / "clients.json")
         rendered = json.loads((self.folder / "clients.json").read_text())
         self.assertEqual(rendered["clients"][0]["id"], "goose-research")
         self.assertEqual(rendered["clients"][0]["token_sha256"],
                          hashlib.sha256(old_secret.encode()).hexdigest())
+
+    def test_imported_origin_in_render_does_not_leak_metadata(self):
+        module.client_add(self.folder, "existing-service", "passthrough")
+        config = module.read_settings(self.folder)
+        config["clients"]["existing-service"]["origin"] = "imported"
+        module.save_settings(self.folder, config)
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            module.run(["--directory", str(self.folder), "client", "list", "--format", "json"])
+        self.assertEqual(json.loads(out.getvalue())["clients"][0]["origin"], "imported")
+        module.client_render(self.folder, self.folder / "clients.json")
+        output = json.loads((self.folder / "clients.json").read_text())
+        self.assertNotIn("origin", output["clients"][0])
+        self.assertEqual(output["clients"][0]["id"], "existing-service")
 
     def test_clipboard_transfer_unavailable_on_linux(self):
         module.client_add(self.folder, "goose-research", "passthrough")
