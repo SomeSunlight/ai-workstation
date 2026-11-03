@@ -11,7 +11,8 @@
 - [x] Create [operator runbook](docs/gateway-client-migration.md) for client provisioning, DPAPI-original-key recovery, Dispatcher/Caddy S02 authorization boundary, WebUI connections, request audit, negative tests and rollback.
 - [x] Link runbook from [native-services guide](docs/native-services.md); correct accepted STATE/PLAN checkpoint and owner-prioritized #41 after #44 merge.
 - [x] Create [draft PR #45](https://github.com/SomeSunlight/ai-workstation/pull/45) for the runbook and reconciliation. No live host changes; keep draft until owner's review.
-- [ ] Confirm exact-head Ubuntu/Windows CI and review the final diff; leave activation and production takeover blocked until separate approval.
+- [x] Reviewed the first four-document scope and the new renderer/PowerShell/CI changes in draft PR #45; initial Linux/Windows CI green on `efdf394...`, reconfirm at final exact-head merge gate.
+- [ ] Require explicit owner acceptance of the complete migration before merge, and separately approve live production service takeover.
 
 **Owner first-test gate (2026-11-03):** The first useful Speedy acceptance test must be an end-to-end AIW/Process Compose service host, **not** a mixture that still needs the private Caddy-folder PowerShell starter. After one-time guarded import of the existing program paths/configuration, AIW must independently start **Strata → attached Dispatcher → Caddy**, show readiness/status/logs/TUI and stop/restart owned processes; on Windows reboot the operator can open AIW and start the whole stack again. Preserve the original script only for rollback, never start both. Native Open WebUI continues as an existing separate application and authenticates to Dispatcher with its own client key. This does **not** imply automatic OS boot start, which is an opt-in separate feature.
 
@@ -22,7 +23,7 @@
 
 - [x] Add private, machine-neutral native Windows Caddy/Dispatcher/Strata configuration, rendered Process Compose dependency/health project, DPAPI-protected child launcher and drift/collision checks; private commands and keys stay outside Git.
 - [x] Expose native setup (menu 17), render (18), preflight (19), and existing Validate/Start/Status/Logs/TUI/Stop actions; no implicit live start in setup/render.
-- [ ] Verify Windows CI parse/render/preflight/disabled regression (tests/windows/native-host.ps1); actual full-stack Start/Status/Logs/TUI/Stop/Reboot remains owner-host acceptance after security gate. Do not claim tested process-tree ownership from renderer tests.
+- [x] Windows real pinned Process Compose dry-run, template/render, collision, stale-config and production-gate regressions passed; Ubuntu release/ContextCanon checks also passed on review head `efdf394b7abcac8f1db07611884a1a1109471ff3` ([run #41728615114](https://github.com/SomeSunlight/ai-workstation/actions/runs/41728615114)). This is **not** real native service/child-tree adoption.
 - [x] Preserve strict production security gate without any new bypass; actual real-host Start remains blocked until a patched checksum-verified Process Compose binary and Windows child-tree stop proof.
 
 
