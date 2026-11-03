@@ -58,6 +58,14 @@ jobs:
               allowed = (
                   ".context" in parts or "CONTEXT" in parts
                   or parts[-1] in {"CONTEXT.md", "CONTEXT.src.md", "CONTEXT-format.md"}
+                  or (
+                      name.endswith("/README.md")
+                      and str(pathlib.PurePosixPath(name).parent) in {
+                          "bin", "bootstrap", "bootstrap/ansible",
+                          "bootstrap/linux", "bootstrap/windows",
+                          "compose", "compose/goose", "compose/open-webui",
+                      }
+                  )
               )
               if not allowed:
                   print(f"Refusing non-ContextCanon change: {name}", file=sys.stderr)
