@@ -34,7 +34,7 @@ Details: CONTEXT-format.md
 -->
 
 <!-- contextcanon-placement-overview:start -->
-- AI Workstation is a reproducible workstation built from Windows/WSL bootstrap, Linux host configuration, and containerized application runtimes.
+- AI Workstation is a general-purpose, reproducible installer/operator with host-native Windows services, WSL2/Linux and native Linux execution paths, plus independently managed containers. The currently accepted full installation path is Windows/WSL; native Linux host acceptance is a separate gate.
   <!-- cc:placement-overview id="ONB-468CE58AC863" -->
 <!-- contextcanon-placement-overview:end -->
 
@@ -88,6 +88,12 @@ Details: CONTEXT-format.md
 - **Keep secrets out of Git images and Compose:** Secrets must not be committed, copied into images or stored in Compose files.
   Why: Keeps credentials out of durable repository history and built artifacts.
   <!-- ctx:rule id="ONB-DCF5EB952F7D" -->
+
+- **Keep shipped product behavior general and English-language:** Design and document AI Workstation for native Windows, Linux under WSL and native Linux using platform-specific adapters where needed. Keep public code, menu/CLI text, default examples and documentation in English regardless of the conversation language. Personal hostnames, usernames, domains, provider preferences and password-manager choices belong in private operator configuration, not product assumptions.
+  Why: A reusable workstation must remain understandable and portable across owners, operating systems and future hardware; distinguish intended compatibility from actually validated platform support.
+
+- **Make operator workflows discoverable with little memorization:** Prefer concise menus that preserve readable action results, redisplay choices on request, offer numbered selection of already known objects and briefly distinguish terms such as original credentials versus derived hashes. Keep details in linked guidance and test representative user journeys on each relevant operating system.
+  Why: Users should be able to return weeks later without recalling identifiers or internal commands; these are practical UX preferences, not a requirement to build another TUI or a ban on direct CLI commands.
 <!-- contextcanon-placement-rules:end -->
 
 ## Local Topics
