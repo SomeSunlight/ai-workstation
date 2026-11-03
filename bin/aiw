@@ -10,6 +10,7 @@ readonly CORE="${ROOT}/bin/aiw-core"
 source "${ROOT}/bin/aiw-menu-config.sh"
 readonly LOCAL_INFERENCE_MANAGER="${ROOT}/runtimes/local-inference/manage.sh"
 readonly LOCAL_INFERENCE_SERVICE="${ROOT}/runtimes/local-inference/service.sh"
+readonly NATIVE_SERVICES="${ROOT}/tools/aiw-services.py"
 readonly LOCAL_INFERENCE_CONFIG="${AIW_LOCAL_INFERENCE_CONFIG:-${HOME}/.config/ai-workstation/local-inference.env}"
 
 fail() {
@@ -29,6 +30,7 @@ run_menu_action() {
         show_status) preview=(aiw status) ;;
         run_core) preview=(aiw "${@:2}") ;;
         show_help) preview=(aiw help) ;;
+        native_services) preview=(aiw services "${@:2}") ;;
     esac
     if (("${#preview[@]}" > 0)) && ! aiw_menu_confirm_command "${preview[@]}"; then
         return 0
@@ -54,6 +56,99 @@ require_local_inference_service() {
 run_core() {
     require_core
     bash "$CORE" "$@"
+}
+
+native_services() {
+    local py="${ROOT}/.venv/bin/python"
+    if [[ ! -x "$py" ]]; then
+        py="$(command -v python3 || true)"
+    fi
+    [[ -n "$py" ]] || fail "Python is missing; use aiw install."
+    "$py" "$NATIVE_SERVICES" "$@"
+}
+
+native_services_menu_help() {
+    cat <<'EOF_SERVICES'
+
+Native services (Process Compose)
+=================================
+ 1 Paths      2 Initialize    3 Install     4 Validate
+ 5 Status     6 TUI           7 Start       8 Stop       9 Logs
+10 Add client 11 Clients     12 Render S02  13 Rename client
+14 Concepts   ? Show menu again             b Back
+The menu prints once; actions remain in scrollback.
+Guide: docs/native-services.md
+EOF_SERVICES
+}
+
+native_services_select_client() {
+    local purpose="$1" selected name origin i=0
+    local -a rows=()
+    mapfile -t rows < <(native_services client list --format tsv) || return 1
+    if (( ${#rows[@]} == 0 )); then
+        printf 'No registered clients. Create one with option 10.\n'
+        return 1
+    fi
+    printf 'Select client to %s (NUMBER):\n' "$purpose" >&2
+    for name in "${rows[@]}"; do
+        ((i+=1))
+        local id="${name%%$'\t'*}"
+        origin="${name#*$'\t'}"
+        printf ' %2d) %s [%s]\n' "$i" "$id" "$origin" >&2
+    done
+    printf '  0) Cancel\n' >&2
+    read -r -p 'Number: ' selected || return 1
+    [[ "$selected" =~ ^[0-9]+$ ]] || return 1
+    (( selected >= 1 && selected <= ${#rows[@]} )) || return 1
+    name="${rows[selected-1]%%$'\t'*}"
+    printf '%s\n' "$name"
+}
+
+native_services_menu() {
+    local choice name old new
+    native_services_menu_help
+    while true; do
+        read -r -p 'Option (?=menu, b=back): ' choice || return
+        case "$choice" in
+            b|B) return ;;
+            '?') native_services_menu_help; continue ;;
+        esac
+        printf '\n--- Action %s ---\n' "$choice"
+        case "$choice" in
+            1) run_menu_action native_services where ;;
+            2) run_menu_action native_services init ;;
+            3) run_menu_action native_services install ;;
+            4) run_menu_action native_services check ;;
+            5) run_menu_action native_services status ;;
+            6) native_services tui ;;
+            7) run_menu_action native_services up ;;
+            8) run_menu_action native_services down ;;
+            9) run_menu_action native_services logs ;;
+            10)
+                printf 'Choose a unique logical client ID (not a machine name).\n'
+                read -r -p 'New client ID (Enter cancels): ' name || return
+                [[ -n "$name" ]] && run_menu_action native_services client add "$name" --policy passthrough
+                ;;
+            11) run_menu_action native_services client list ;;
+            12) run_menu_action native_services client render ;;
+            13)
+                old="$(native_services_select_client rename)" || old=""
+                if [[ -n "$old" ]]; then
+                    read -r -p 'New client ID (Enter cancels): ' new || return
+                    [[ -n "$new" ]] && run_menu_action native_services client rename "$old" "$new"
+                fi
+                ;;
+            14)
+                printf 'Client ID = label for one application/provider, chosen by you.\n'
+                printf 'Original key = secret for client authentication; stored privately.\n'
+                printf 'services.yaml = client names/policies; clients.json = hashes ONLY.\n'
+                printf 'Imported key = existing shared credential, retained for migration.\n'
+                printf 'Full details: docs/native-services.md\n'
+                ;;
+            *) printf 'Unknown option. Press ? to show the menu.\n' ;;
+        esac
+        printf '%s\n' "--- End of action $choice (press ? for menu) ---"
+    done
 }
 
 local_inference_enabled() {
@@ -87,6 +182,16 @@ local_inference() {
 show_help() {
     run_core help
     cat <<'EOF'
+
+Native host processes (Process Compose, optional):
+  aiw services init          Create the PRIVATE per-host YAML (once)
+  aiw services install       Install pinned, checksum-verified native binary
+  aiw services check         Validate YAML; never starts services
+  aiw services up            Explicitly start the configured native project
+  aiw services status        Inspect native processes
+  aiw services client add goose-laptop --policy passthrough
+  aiw services client render # Render hashes for DISPATCHER_CLIENT_CONFIG
+  aiw services where         Show editable config location
 
 Optional local inference:
   aiw local-inference setup sycl
@@ -194,6 +299,7 @@ AI Workstation
 4) Update installation
 5) Command help
 6) Configure AI Workstation (edit YAML settings)
+7) Native services (Process Compose)
 q) Exit
 EOF
         read -r -p 'Select: ' choice || return
@@ -204,6 +310,7 @@ EOF
             4) run_menu_action run_core update ;;
             5) run_menu_action show_help ;;
             6) run_menu_action aiw_menu_edit_config ;;
+            7) native_services_menu ;;
             q|Q) return ;;
             *) printf 'Unknown selection.\n' ;;
         esac
@@ -218,6 +325,9 @@ case "$command_name" in
         ;;
     local-inference|local_inference|local)
         local_inference "$@"
+        ;;
+    services|service)
+        native_services "$@"
         ;;
     status)
         show_status

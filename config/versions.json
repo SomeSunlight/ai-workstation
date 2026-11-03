@@ -47,6 +47,29 @@
       "minimum_neo_release": "26.31",
       "verified_level_zero_loader": "1.32.0",
       "minimum_level_zero_loader": "1.32"
+    },
+    "process_compose": {
+      "version": "v1.124.0",
+      "releases": {
+        "windows_amd64": {
+          "filename": "process-compose_windows_amd64.zip",
+          "sha256": "a77d51dcb34e3e8d2b88af372ada7ca8a62cb87f0c6af0f78834c0fd6c95e2a7"
+        },
+        "linux_amd64": {
+          "filename": "process-compose_linux_amd64.tar.gz",
+          "sha256": "487ce011d5324b4578d3ec1860aaa1dd3a95bd4b2b433e03791f73a23d215fd3"
+        },
+        "linux_arm64": {
+          "filename": "process-compose_linux_arm64.tar.gz",
+          "sha256": "98e02400a05d1da74a6506a4ffb2682b1205f18f02ecfbfdea1005f9389fc52d"
+        }
+      },
+      "security": {
+        "linux_amd64_go_build_verified": "go1.27.0",
+        "go_stdlib_html_template_min_patched": "go1.27.2",
+        "production_adoption_blocked": true,
+        "reason": "Official v1.124.0 Linux AMD64 binary reports go1.27.0; do not assume template vulnerabilities reachable, but avoid production cutover pending patched toolchain rebuild/security audit."
+      }
     }
   }
 }

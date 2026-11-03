@@ -38,7 +38,25 @@ jobs:
           bash tests/smoke/goose-runtime.sh
           bash tests/smoke/open-webui-runtime.sh
           bash tests/smoke/interactive-menu.sh
+          uv run --frozen python tests/smoke/services-registry.py
 
+      - name: Verify actual pinned native Process Compose (disposable Ubuntu project)
+        run: |
+          export AIW_SERVICES_DIR="$(mktemp -d)"
+          uv run --frozen python tools/aiw-services.py init
+          uv run --frozen python tools/aiw-services.py install
+          uv run --frozen python tools/aiw-services.py check
+          # Prove native UNIX detached lifecycle, rather than just mocked args.
+          sed -i 's/disabled: true/disabled: false/' "$AIW_SERVICES_DIR/process-compose.yaml"
+          trap 'uv run --frozen python tools/aiw-services.py down || true' EXIT
+          uv run --frozen python tools/aiw-services.py up
+          uv run --frozen python tools/aiw-services.py status
+          uv run --frozen python tools/aiw-services.py logs
+          uv run --frozen python tools/aiw-services.py down
+          trap - EXIT
+          if command -v go >/dev/null 2>&1; then
+            go version -m "$AIW_SERVICES_DIR/bin/process-compose"
+          fi
       - name: Install Ansible collection
         run: |
           mkdir -p .ansible/collections
@@ -74,6 +92,107 @@ jobs:
           sparse-checkout: |
             bootstrap/windows
             tests/windows
+            tools/aiw-secret-windows.ps1
+            tools/aiw-download-windows.ps1
+            tools/aiw-services.py
+            config/versions.json
       - name: Verify Windows shortcut creation and safe rename migration
         shell: pwsh
         run: ./tests/windows/shortcuts.ps1
+      - name: Parse native Windows Process Compose and DPAPI helper
+        shell: pwsh
+        run: |
+          foreach ($path in @('bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $path).Path, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$path : $($_.Message)" }
+              exit 1
+            }
+          }
+      - name: Install pinned uv for Windows native client test
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.26"
+      - name: Exercise the real native Windows menu under StrictMode
+        shell: pwsh
+        run: ./tests/windows/services-menu.ps1
+      - name: Real Windows DPAPI and named-client registration (temporary only)
+        shell: pwsh
+        run: |
+          $env:AIW_SERVICES_DIR = Join-Path $env:RUNNER_TEMP "aiw-test-services"
+          & ./bootstrap/windows/Services.ps1 init
+          & ./bootstrap/windows/Services.ps1 client add goose-laptop --policy passthrough
+          & ./bootstrap/windows/Services.ps1 client add webui-laptop --policy default
+          & ./bootstrap/windows/Services.ps1 client render
+          $clients = Get-Content "$env:AIW_SERVICES_DIR/clients.json" -Raw | ConvertFrom-Json
+          if ($clients.clients.Count -ne 2) { throw 'Expected 2 identities.' }
+          if ($clients.clients[0].id -ne 'goose-laptop' -or $clients.clients[1].id -ne 'webui-laptop') {
+            throw 'Wrong S02 identity name/order.'
+          }
+          $dpapi = "$env:AIW_SERVICES_DIR/secrets/goose-laptop.dpapi"
+          if (-not (Test-Path $dpapi) -or (Get-Item $dpapi).Length -lt 50) {
+            throw 'Missing protected Windows DPAPI client credential.'
+          }
+          # "client render" already decrypted the DPAPI value and hashed it.
+          # Never recover or print a plaintext test token in GitHub Actions logs.
+          if ($clients.clients[0].token_sha256 -cnotmatch '^[0-9a-f]{64}$') {
+            throw 'Invalid S02 token digest.'
+          }
+          # Revoke the temporary original ID first: S02 MUST reject
+          # duplicate credential digests under different client names.
+          & ./bootstrap/windows/Services.ps1 client remove goose-laptop
+          & ./bootstrap/windows/Services.ps1 client import-dpapi home-gateway --from-file $dpapi --policy passthrough
+          & ./bootstrap/windows/Services.ps1 client render
+          $remaining = Get-Content "$env:AIW_SERVICES_DIR/clients.json" -Raw | ConvertFrom-Json
+          if ($remaining.clients.Count -ne 2 -or
+              $remaining.clients[0].id -ne 'webui-laptop' -or
+              $remaining.clients[1].id -ne 'home-gateway') {
+            throw 'Revocation or DPAPI transitional identity import failed.'
+          }
+          # Real checked native Windows executable + config validation, no services started.
+          & ./bootstrap/windows/Services.ps1 install
+          & ./bootstrap/windows/Services.ps1 check
+          # Real native Windows lifecycle: Windows upstream deliberately has
+          # NO --detached; AIW bootstraps its own headless supervisor process.
+          $fixture = "$env:AIW_SERVICES_DIR/process-compose.yaml"
+          (Get-Content $fixture -Raw).Replace('disabled: true', 'disabled: false') |
+            Set-Content -LiteralPath $fixture
+          try {
+            & ./bootstrap/windows/Services.ps1 up
+            $ownerRecord = "$env:AIW_SERVICES_DIR/runtime/process-compose-windows.json"
+            if (-not (Test-Path $ownerRecord)) {
+              throw 'Windows supervisor identity/PID marker missing.'
+            }
+            $duplicateRejected = $false
+            try { & ./bootstrap/windows/Services.ps1 up }
+            catch { $duplicateRejected = $true }
+            if (-not $duplicateRejected) {
+              throw 'A second supervisor was unexpectedly allowed on the same port.'
+            }
+            & ./bootstrap/windows/Services.ps1 status
+            & ./bootstrap/windows/Services.ps1 logs
+          }
+          finally {
+            & ./bootstrap/windows/Services.ps1 down
+          }
+          if (Test-Path "$env:AIW_SERVICES_DIR/runtime/process-compose-windows.json") {
+            throw 'Supervisor ownership record not removed on down.'
+          }
+          $foreignStopRejected = $false
+          try { & ./bootstrap/windows/Services.ps1 down }
+          catch { $foreignStopRejected = $true }
+          if (-not $foreignStopRejected) {
+            throw 'Stop should refuse when no owned supervisor is registered.'
+          }
+          # Exercise real native Windows HTTPS fallback and verified offline
+          # archive import in a distinct temporary workspace.
+          $offline = Join-Path $env:RUNNER_TEMP "process-compose_windows_amd64.zip"
+          & ./tools/aiw-download-windows.ps1 -Uri "https://github.com/F1bonacc1/process-compose/releases/download/v1.124.0/process-compose_windows_amd64.zip" -Destination $offline
+          $env:AIW_SERVICES_DIR = Join-Path $env:RUNNER_TEMP "aiw-offline-import-test"
+          & ./bootstrap/windows/Services.ps1 init
+          & ./bootstrap/windows/Services.ps1 install --archive $offline
+          & ./bootstrap/windows/Services.ps1 check
+          Remove-Item -LiteralPath $offline -Force

@@ -1,10 +1,131 @@
 # AI Workstation Plan
 
-## Current implementation block — Issue #33: native Ubuntu host-mode foundations
+## Current review block — Issue #34: native Process Compose and named clients (2026-11-02)
+
+**Accepted base:** AI Workstation PR #36 was squash-merged on 2026-11-01
+as 13eb053becde1a66de9d275e25cbe1fb716062ab; real native Ubuntu
+still awaits validation (#33). Llama Dispatcher S03 PR #27 was
+owner-tested with real Laptop/WSL Goose and Open WebUI via Speedy's
+authenticated Caddy → Dispatcher → native Strata, SQLite verified,
+and squash-merged on 2026-11-02 as 2f076e2f1c6f95b1921cafcb6921cf365b2d1ae4.
+
+**Owner-approved change of scope:** The original documentation-only
+[draft PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37)
+is expanded at the owner's request, before review/merge, to the first
+usable native Process Compose and named S02 client onboarding slice.
+
+**Decision:** Process Compose is chosen (no further tool selection).
+AI Workstation provides host-native entrypoints; native Process Compose
+YAML is the **sole process registry**. Windows on Speedy and Linux
+inside Laptop/WSL each run their **own** supervisor; native Linux
+reuses the Linux code path. Docker Compose remains the owner of
+containerized Goose/Open WebUI and future isolated Hermes. No merged
+TUI or MCP process control. A native, operator-accessible CLI/TUI is enough.
+
+**Writable scope:** PLAN.md, STATE.md, docs/process-manager-discovery.md,
+docs/native-services.md, README.md, bin/aiw, bootstrap/windows/Services.ps1,
+tools/aiw-services.py, tools/aiw-secret-windows.ps1,
+config/versions.json, tests/smoke/services-registry.py,
+tests/windows/, .github/workflows/validate.yml, tools/release-check.sh,
+and PR #37 description. No Caddyfile, native Strata/Dispatcher process,
+live DPAPI files, production Windows scheduled tasks, systemd units,
+Goose containers or ContextCanon authored/generated packages are changed
+on the user's hosts. Existing Speedy Start-SpeedyAI.ps1 remains the
+working rollback. Multiple Goose workspace mounts are separate issue #38.
+
+- [x] Verify accepted #36 and Dispatcher #27 and audit the private Speedy
+  startup behavior versus existing Linux systemd local inference.
+- [x] Select Process Compose as native supervisor; verify official v1.124.0
+  (2026-10-27) release and Windows/Linux archive digests; document
+  architecture/security and no-double-owner rule.
+- [x] Design KISS host-local config: services.yaml for named client
+  identities/policies and native Process Compose project reference,
+  process-compose.yaml as the **only native process definitions**,
+  protected local secret files and generated S02 hash-only clients.json.
+- [x] Add opt-in version/checksum-pinned installation, native
+  validation/start/status/logs/TUI entrypoints in AI Workstation under
+  WSL/Linux and a native Windows PowerShell menu on Speedy.
+- [x] Implement strongly named client credential generation, explicit
+  revocation and S02 hash-only output. Windows DPAPI and Linux 0600;
+  never silently replace live Caddy/S02 config.
+- [x] Open separate multi-directory Goose mount issue #38 after confirming
+  the current one-RW-workspace limit; capture the separately scoped
+  usable containerized Speedy Goose/Hermes Workbench as issue #39.
+- [x] Run the **actual official v1.124.0 Linux binary** with Go build
+  metadata: the binary is Go **1.27.0**, below the 1.27.2 patch for
+  two October html/template CVEs. This is a toolchain finding,
+  **not proven exploitability**. Mark the production cutover blocked
+  in config/versions.json and enforce an **actual code guard** that
+  allows only the harmless aiw-smoke fixture for Process Compose
+  native starts until a patched release/build is reviewed. Caddy,
+  Strata, Dispatcher and containers remain outside this pilot.
+- [x] Verify Linux focused security/CLI tests, Windows PowerShell
+  syntax, real Windows DPAPI onboarding/import/revocation, checksum-pinned
+  **actual** Process Compose binary/dry-run on Windows and Linux, and
+  Go 1.27.0 production-block regression tests. Initial complete
+  windows/ubuntu success at [run #41479217299](https://github.com/SomeSunlight/ai-workstation/actions/runs/41479217299);
+  the security-guard exact-head Windows/Ubuntu run is
+  [#41480747041](https://github.com/SomeSunlight/ai-workstation/actions/runs/41480747041).
+  Final PLAN-only checkpoint requires fresh exact-head CI before merge.
+- [x] Rework the operator UX after real owner feedback: the Windows and
+  Linux native-services menus are **displayed once** (`?` redisplays),
+  with clear result separators; existing clients can be selected by
+  **number**, not by retyping an exact ID. Distinguish generated,
+  imported shared and legacy unknown-origin keys. Avoid hardware names
+  and password-manager brands in the general UI/guide. Preserve
+  existing `services.yaml`/S02 compatibility and native Docker Compose
+  ownership. Windows/Ubuntu CI green on review head
+  `526870b9cd79f3b797649843c2e3fbe2b368031d`
+  ([run #41540972843](https://github.com/SomeSunlight/ai-workstation/actions/runs/41540972843)).
+  This PLAN-only checkpoint requires fresh exact-head CI.
+- [x] Owner tested initialization/install/check/client management on real
+  native Windows and reported the first real `aiw-smoke` Start attempt
+  failed: `unknown flag: --detached`. Verified **upstream v1.124.0
+  source**: Windows deliberately excludes `-D/--detached` while Unix
+  supports it; the published cross-platform CLI documentation obscures
+  the distinction. Replaced the Windows start path with an independent
+  headless OS process (`--keep-project --tui=false`), bounded readiness,
+  private log, and a PID/path/creation-time owner record for safe Stop.
+  Linux/WSL keeps upstream detached mode; TUI now **attaches** instead
+  of creating another supervisor. Native Process Compose logs now use
+  an explicit project name (required by the upstream CLI).
+  The upstream `PROC_COMP_CONFIG` setting binds its general config home
+  to the existing private folder without spurious XDG debug messages.
+  Native Windows and Ubuntu test-host **full up/status/logs/down**
+  verified in [CI run #41546447273](https://github.com/SomeSunlight/ai-workstation/actions/runs/41546447273).
+- [ ] Owner repeats the isolated `aiw-smoke` smoke test on actual Windows
+  and reviews the platform-specific lifecycle changes.
+  **Never merge without owner approval.**
+- [ ] Separate **real host pilot**: recheck isolated harmless process
+  on the owner's own Windows host (CI now proves actual Windows/Ubuntu
+  binary up/status/logs/down), especially unknown-port-owner refusal,
+  runtime identity, recovery after crash and graceful stop, with NO GPU
+  or live production processes. Production services remain blocked until
+  a reviewed patched Process Compose binary is adopted.
+- [ ] Separate **real operational handoff** after pilot: implement
+  DPAPI-aware native start adapters, preserve existing shared key
+  during the one-time multi-client Caddy S02 trust boundary transition,
+  activate separate Goose/WebUI/Hermes client IDs, move ownership
+  per service with rollback. No Process Compose vs existing
+  Windows-script/systemd simultaneous ownership. The owner explicitly
+  controls activation.
+- [ ] Separate Hermes container and Speedy Workbench deployment under
+  Docker Compose (and ordinary Open WebUI user onboarding) with
+  individually reviewed AIW entrypoints.
+
+**Meaning of CI:** green source/command-contract tests and Windows
+script parsing are not proof of working native Windows Process Compose
+process-tree shutdown, secure token ACLs, DPAPI under the owner's
+account, Caddy auth reconfiguration or full Linux host deployment.
+Those remain genuine operator gates and must not be claimed completed.
+
+---
+
+## Accepted first slice — Issue #33: native Ubuntu host-mode foundations (real native host still deferred)
 
 Purpose: make the existing Linux bootstrap behave correctly on WSL2 **and** native Ubuntu 24.04, without pretending that a full native install has yet been hardware-tested. First slice deliberately avoids cloud accounts, model downloads, GPU drivers, process-manager changes, secrets, and changing the Windows install path.
 
-Branch: `feature/issue-33-native-linux-first-slice` from accepted PR #35 merge `4b4c5f2f03bc092d1fb05c39851b365c5f00a795`.
+Historical implementation branch: `feature/issue-33-native-linux-first-slice`, based on accepted PR #35 merge `4b4c5f2f03bc092d1fb05c39851b365c5f00a795`; its review [PR #36](https://github.com/SomeSunlight/ai-workstation/pull/36) is now **merged**.
 
 Writable scope: `PLAN.md`, `bootstrap/linux/install.sh`, `bin/aiw-core`, new `tools/host-platform.sh`, `tests/smoke/repository-layout.sh`, `tests/smoke/update-recovery.sh` (fixture now needs the shared host adapter), new `tests/smoke/host-platform.sh`, `tools/release-check.sh`, `.github/workflows/validate.yml`, `README.md`, new `docs/native-linux.md`, `docs/troubleshooting.md`. No ContextCanon source/generated changes in this first slice: official supported-platform statements remain accurate until an actual native installation is accepted.
 
@@ -14,7 +135,7 @@ Writable scope: `PLAN.md`, `bootstrap/linux/install.sh`, `bin/aiw-core`, new `to
 - [x] Make Open WebUI browser hints and Docker diagnostics truthful on native desktops and headless remote Linux, without breaking WSL Windows browser launch.
 - [x] Add automated regression tests and concise native Ubuntu installation and validation guidance; initial standalone host-platform smoke passed in CI. The update-recovery fixture must include the shared helper.
 - [x] Run focused host adapter checks, fix the isolated update-recovery fixture, and pass full Ubuntu/Windows Validate on code head `6802a1375cd3cf9af014a63ce5fc505ed004722d` ([run 41228326996](https://github.com/SomeSunlight/ai-workstation/actions/runs/41228326996)). Publish [draft review PR #36](https://github.com/SomeSunlight/ai-workstation/pull/36); this does not constitute native-host acceptance.
-- [ ] Owner reviews the first Linux/WSL slice; after approval, require an exact-head green merge gate. **Do not merge without explicit owner approval.**
+- [x] Owner reviewed and accepted the first Linux/WSL host-mode slice; [PR #36](https://github.com/SomeSunlight/ai-workstation/pull/36) passed its final CI gate and was squash-merged on 2026-11-01 as `13eb053becde1a66de9d275e25cbe1fb716062ab`.
 - [ ] Separate later real-host gate: disposable native Ubuntu 24.04 x86-64 with systemd and Docker, installer rerun, Goose/Open WebUI functionality; only then update supported platform state and relevant ContextCanon packages.
 
 Known intentional limits: Intel SYCL auto-setup remains restricted to WSL2 with /dev/dxg; optional inference can be disabled; native host systemd services are not a substitute for the future external manager (#34). Native Ubuntu may use a legitimate `/mnt` mount, while WSL continues to reject `/mnt/*` checkouts as before.

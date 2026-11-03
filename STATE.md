@@ -16,7 +16,7 @@ PR #24 (merged as `9bd87860571b972cf33a41a49e213a55ee22dfae`) removed forced Ope
 
 PR #28 was owner-tested successfully on Windows/WSL and squash-merged on 2026-10-09 as `f0a8b553d22b903c3431fa36aea433e7f5654dbc`. It accepts recovery-first onboarding, dual Linux launcher names, and an opt-in YAML-backed menu command preview.
 
-**Current accepted `main` checkpoint:** PR #32, squash-merged on 2026-10-14 as `b33949ccd72352a26c305d46f60b643d6a60adad`, after the owner confirmed the new PowerShell-based penguin launchers solved the observed Linux-start issue. This preserves the actual accepted behavior; no native Ubuntu (non-WSL) installation has been tested or accepted yet.
+**Accepted host-platform checkpoint:** PR #36 was owner-accepted and squash-merged on 2026-11-01 as `13eb053becde1a66de9d275e25cbe1fb716062ab`. It adds the WSL/native-Ubuntu 24.04 host-mode first slice and shared Linux host preflight without a full real native-host acceptance. The previous accepted Windows/WSL launcher checkpoint was PR #32 (`b33949ccd72352a26c305d46f60b643d6a60adad`, 2026-10-14). The normal supported production path remains Windows 11 + WSL2; native Ubuntu 24.04 remains experimental until a real dedicated systemd host test.
 
 ## Accepted local-inference infrastructure
 
@@ -56,8 +56,10 @@ This file records accepted checkpoints only. Broader operational state for Goose
 
 ## Native Linux status (not yet accepted)
 
-Issue [#33](https://github.com/SomeSunlight/ai-workstation/issues/33) proposes native Ubuntu 24.04 x86-64 as a first-class future target. Existing `install.sh` and Ansible localhost/systemd paths are reusable, but WSL-specific assumptions in onboarding, mount validation and user-facing integrations still require a separate reviewed implementation and actual disposable native-host validation. No native Linux support claim is accepted on `main` yet.
+Issue [#33](https://github.com/SomeSunlight/ai-workstation/issues/33) is **partially implemented**: [PR #36](https://github.com/SomeSunlight/ai-workstation/pull/36) merged the shared host-mode and preflight improvements into `main` on 2026-11-01. A complete Ubuntu 24.04 native systemd installation, idempotent rerun, Goose/Open WebUI operation and rollback have **not** been tested on real native Linux, so this platform is **not yet accepted as supported**. No rental/cloud setup is needed for current Speedy/Dispatcher work.
 
 ## Next planned work
 
-Continue from `PLAN.md` with an explicit issue-backed block. For laptop inference, treat Issue #8 as the accepted SYCL/Level Zero baseline and Issue #9 as the completed DZN/Vulkan evidence package; treat Issue #14 / PR #18 as the accepted provisioning checkpoint. The detailed backend findings and representative measurements are preserved in `runtimes/local-inference/TUNING.md`.
+Continue from `PLAN.md` with an explicit issue-backed block. **Current owner-review work:** [#34](https://github.com/SomeSunlight/ai-workstation/issues/34), [draft PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37): the owner has **selected Process Compose**, with opt-in native Windows/WSL/Linux CLI and a protected named S02 client registry, plus a safe disposable Windows pilot **after owner review**. This implementation is **not merged or accepted yet**. The private YAML/secret scaffold and hash output do **not** change live Caddy, Strata or Dispatcher. The 2026-11-02 owner accepted [Llama Dispatcher S03 PR #27](https://github.com/SomeSunlight/Llama_Dispatcher/pull/27) via real Speedy/Strata + Caddy → authenticated Dispatcher → Laptop/WSL Goose and Open WebUI, with SQLite proxy request audit. That working gateway must **not** be reconfigured or assigned to a second supervisor during M00. The existing Linux `runtimes/local-inference/service.sh` systemd service remains the owner of its *legacy llama.cpp* instance until a separately approved migration; Dispatcher is **attach-only for Strata**, not globally attach-only yet.
+
+For laptop inference, treat Issue #8 as the accepted SYCL/Level Zero baseline and Issue #9 as the completed DZN/Vulkan evidence package; treat Issue #14 / PR #18 as the accepted provisioning checkpoint. The detailed backend findings and representative measurements are preserved in `runtimes/local-inference/TUNING.md`.

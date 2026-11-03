@@ -18,6 +18,9 @@ bash ./tests/smoke/menu-preview.sh
 bash ./tests/smoke/goose-runtime.sh
 bash ./tests/smoke/goose-provider-config.sh
 bash ./tests/smoke/goose-compose-config.sh
+if [[ -x "${ROOT}/.venv/bin/python" ]]; then
+  "${ROOT}/.venv/bin/python" tests/smoke/services-registry.py
+fi
 
 if [[ -x "${HOME}/.local/bin/uv" ]]; then
   "${HOME}/.local/bin/uv" lock --check --python /usr/bin/python3
