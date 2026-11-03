@@ -4,6 +4,8 @@
 **Status:** PR #37 accepted (2026-11-03); existing real host services are **not** yet migrated.
 **Key principle:** use the menu for everyday operation, native CLI for automation.
 
+For the first native Windows **Caddy + Dispatcher + Strata** supervised start and reboot-acceptance procedure, see [Native Windows host operations](native-host-operations.md) (#41). The old private PowerShell launcher is a rollback only after a separate ownership gate; this first pilot must not depend on it to start services.
+
 For the three independent remote/local applications (Goose in WSL, Open WebUI in WSL, and an existing native-host Open WebUI), see the staged [gateway client migration and rollback runbook](gateway-client-migration.md) (#41). This guide separates **registering a new original key** from **activating S02 in Dispatcher and forwarding the key through Caddy**; neither happens automatically.
 
 ## Start
