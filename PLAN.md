@@ -15,6 +15,9 @@
 
 **Review block B (future separate implementation and owner-host validation):**
 
+- [ ] Implement **clean native Windows host provisioning** for checksum/version-verified Caddy, native Llama Dispatcher and Strata + Process Compose with reproducible host-local config and run/readiness interfaces; distinguish a fresh install from guarded attach/adoption of an existing service. Check Strata distribution and user-owned model/license prerequisites rather than assuming they are auto-downloadable.
+
+
 - [ ] Read-only inventory and diff for Caddy/Dispatcher/Strata process ownership and existing protected routes/config/secrets; never import private host data into Git.
 - [ ] Verify patched checksum-pinned Process Compose release and Windows child-process termination; keep `production_adoption_blocked` until verified.
 - [ ] Implement generic Caddy component / owned service definitions and a staged, reversible migration, retaining direct-Strata fallback and no-double-owner preflight.
