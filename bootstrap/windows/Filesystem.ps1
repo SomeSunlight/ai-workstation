@@ -29,24 +29,26 @@ function Remove-AiwOwnedStagingTree {
             throw "Staging root is not a directory: $candidate"
         }
 
-        # Inspect the entire tree before Remove-Item: a nested junction or
-        # symlink is not part of the disposable stage. Never traverse it.
-        $pending = [Collections.Generic.Stack[string]]::new()
-        $pending.Push($candidate)
-        while ($pending.Count -gt 0) {
-            $directory = $pending.Pop()
-            foreach ($child in Get-ChildItem -LiteralPath $directory -Force -ErrorAction Stop) {
-                if (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
-                    throw "Refusing to clean staging tree with a reparse point: $($child.FullName)"
-                }
-                if ($child.PSIsContainer) { $pending.Push($child.FullName) }
-            }
-        }
-
         try {
+            # Inspect before removing: a nested junction/symlink is not owned.
+            # An AV lock during enumeration is retryable just like a delete lock.
+            $pending = [Collections.Generic.Stack[string]]::new()
+            $pending.Push($candidate)
+            while ($pending.Count -gt 0) {
+                $directory = $pending.Pop()
+                foreach ($child in Get-ChildItem -LiteralPath $directory -Force -ErrorAction Stop) {
+                    if (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                        throw [InvalidOperationException]::new(
+                            "Refusing to clean staging tree with a reparse point: $($child.FullName)"
+                        )
+                    }
+                    if ($child.PSIsContainer) { $pending.Push($child.FullName) }
+                }
+            }
             Remove-Item -LiteralPath $candidate -Recurse -Force -ErrorAction Stop
         }
         catch {
+            if ($_.Exception -is [InvalidOperationException]) { throw }
             # A partly removed *disposable* stage is never reused. The caller
             # selects a new unique location if Windows keeps this one locked.
             if (-not (Test-Path -LiteralPath $candidate)) { return $true }
