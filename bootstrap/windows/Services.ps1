@@ -77,6 +77,7 @@ function Show-ServicesMenu {
     Write-Host '  5  Status      6  TUI            7  Start        8  Stop       9  Logs'
     Write-Host ' 10  Add client 11  Clients       12  Render S02   13  Import key'
     Write-Host ' 14  Copy key   15  Concepts      16  Rename client'
+    Write-Host ' 17  Host setup   18  Render host  19  Host preflight'
     Write-Host '  ?   Show menu again           q   Exit'
     Write-Host 'Guide: docs/native-services.md (in this checkout)'
     Write-Host 'Actions remain visible above; the menu is not repeated automatically.'
@@ -154,6 +155,13 @@ while ($true) {
                     if ($new) { $command = @('client', 'rename', $old, $new) }
                 }
             }
+            '17' { $command = @('host', 'init') }
+            '18' {
+                Write-Host 'Render three private Windows host service definitions. No process will start.'
+                $answer = Read-Host 'Replace AIW-managed native project with rendered definition? [y/N]'
+                if ($answer -in @('y', 'Y')) { $command = @('host', 'render') }
+            }
+            '19' { $command = @('host', 'preflight') }
             default { Write-Warning "Unknown option '$choice'. Press ? to see the menu." }
         }
 
