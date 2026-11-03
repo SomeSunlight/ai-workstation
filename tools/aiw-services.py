@@ -667,7 +667,7 @@ def native_host_setup(folder: Path, action: str, process: str | None = None) -> 
         cmd += ["--service", process]
     result = subprocess.run(cmd, check=False)
     if result.returncode:
-        raise ConfigError("Native three-service host " + action + " failed.")
+        raise ConfigError("Native Windows host " + action + " failed.")
 
 
 def native(folder: Path, action: str, process: str | None) -> None:
