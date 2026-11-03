@@ -8,8 +8,8 @@
 
 - [x] Reconcile PR #42 merge, owner acceptance, committed compiled Context and current ordinary CI evidence.
 - [x] Record the approved source/package baseline and the remaining independent verification in PLAN.
-- [ ] Add a pinned, read-only `contextcanon check --all .` job to Ubuntu CI; do not silently regenerate packages.
-- [ ] Update STATE and CHANGELOG to record the actual accepted merge and next focus (#39 before #41).
+- [x] Add a pinned, read-only `contextcanon check --all .` step to Ubuntu CI (ContextCanon 0.8.0 SHA `d285ae09795994239a802ce50342404fadd482b7`); do not silently regenerate packages. CI result still pending.
+- [x] Update STATE and CHANGELOG to record the actual accepted merge and next focus (#39 before #41).
 - [ ] Obtain the exact-head CI result, inspect generated-drift status and submit this narrow follow-up for owner acceptance. If drift is found, investigate separately with the actual compiler before approval.
 
 ---
