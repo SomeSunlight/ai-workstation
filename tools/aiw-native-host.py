@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a private, Windows-native Caddy / Dispatcher / Strata project for Process Compose.
+"""Render a private Windows-native inference/gateway project for Process Compose.
 
 No production process is started by this tool. The existing AIW process-compose
 runtime remains the only process owner. All host paths and credentials stay local.
@@ -19,11 +19,13 @@ from urllib.parse import urlsplit
 
 import yaml
 
-NAMES = ("strata", "dispatcher", "caddy")
+REQUIRED_NAMES = ("strata", "dispatcher", "caddy")
+NAMES = REQUIRED_NAMES + ("open-webui",)
 MARKER = "# AIW native-host project — generated from private host configuration"
 ENV_NAME = __import__("re").compile(r"^[A-Za-z_][A-Za-z_0-9]*$")
 SECRET_NAME = __import__("re").compile(r"(?:SECRET|TOKEN|KEY|PASS|AUTH|CREDENTIAL)", __import__("re").I)
-DEFAULT_PORTS = {"strata": [8080], "dispatcher": [8001], "caddy": [443]}
+DEFAULT_PORTS = {"strata": [8080], "dispatcher": [8001], "caddy": [443],
+                 "open-webui": [3000]}
 
 
 class ConfigurationError(Exception):
@@ -39,6 +41,7 @@ def template() -> dict:
                 "executable": "",
                 "working_directory": "",
                 "arguments": [],
+                "required_paths": [],
                 "listen_ports": DEFAULT_PORTS[name],
                 "environment": {},
                 "secret_environment": {},
@@ -63,14 +66,17 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
     if type(config["schema_version"]) is not int or config["schema_version"] != 1:
         raise ConfigurationError("Unsupported native host configuration version.")
     services = config["services"]
-    if not isinstance(services, dict) or set(services) != set(NAMES):
-        raise ConfigurationError("Exactly strata, dispatcher and caddy are required.")
+    if not isinstance(services, dict) or not set(REQUIRED_NAMES) <= set(services) or not set(services) <= set(NAMES):
+        raise ConfigurationError("Strata, Dispatcher and Caddy required; Open WebUI optional.")
     registered_ports = set()
-    for name in NAMES:
+    for name in services:
         service = services[name]
-        if not isinstance(service, dict) or set(service) != {
+        if not isinstance(service, dict) or not {
             "enabled", "executable", "working_directory", "arguments", "listen_ports",
             "environment", "secret_environment", "readiness"
+        } <= set(service) or not set(service) <= {
+            "enabled", "executable", "working_directory", "arguments", "required_paths",
+            "listen_ports", "environment", "secret_environment", "readiness"
         }:
             raise ConfigurationError(name + ": invalid service fields.")
         if type(service["enabled"]) is not bool:
@@ -90,6 +96,13 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
         args = service["arguments"]
         if not isinstance(args, list) or not all(isinstance(x, str) for x in args):
             raise ConfigurationError(name + ": arguments must be an array of strings.")
+        required = service.get("required_paths", [])
+        if not isinstance(required, list) or not all(isinstance(x, str) and x for x in required):
+            raise ConfigurationError(name + ": required_paths must be an array of paths.")
+        if os.name == "nt":
+            for path in required:
+                if not Path(path).is_absolute() or (verify_paths and not Path(path).exists()):
+                    raise ConfigurationError(name + ": missing or relative required path.")
         ports = service["listen_ports"]
         if not isinstance(ports, list) or not ports:
             raise ConfigurationError(name + ": declare listening ports for collision checks.")
@@ -181,7 +194,7 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
     if (folder / "runtime" / "process-compose-windows.json").exists():
         raise ConfigurationError("A Windows supervisor ownership record exists. Stop it before rendering.")
     processes = {}
-    for name in NAMES:
+    for name in config["services"]:
         service = config["services"][name]
         p = {
             "command": encoded_command(launcher, native_config_path(folder), name),
@@ -197,6 +210,8 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
             p["depends_on"] = {"strata": {"condition": "process_healthy"}}
         elif name == "caddy":
             p["depends_on"] = {"dispatcher": {"condition": "process_healthy"}}
+        elif name == "open-webui":
+            p["depends_on"] = {"caddy": {"condition": "process_healthy"}}
         processes[name] = p
     source_digest = hashlib.sha256(native_config_path(folder).read_bytes()).hexdigest()
     body = MARKER + "\n# aiw-config-sha256: " + source_digest + "\n" + yaml.safe_dump(
@@ -230,9 +245,9 @@ def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = 
         if (not contents.startswith(MARKER + "\n") or
                 "\n# aiw-config-sha256: " + source_digest + "\n" not in contents[:200]):
             raise ConfigurationError("Private host configuration differs from rendered project; render again while stopped.")
-    names = [process] if process else list(NAMES)
+    names = [process] if process else list(config["services"])
     for name in names:
-        if name not in NAMES:
+        if name not in config["services"]:
             raise ConfigurationError("Unknown native service.")
         if not config["services"][name]["enabled"]:
             continue
@@ -274,7 +289,7 @@ def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = 
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Prepare native Windows three-service host.")
+    parser = argparse.ArgumentParser(description="Prepare native Windows inference host.")
     parser.add_argument("action", choices=("init", "render", "preflight"))
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--service", choices=NAMES)
