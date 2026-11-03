@@ -1,6 +1,26 @@
 # AI Workstation Plan
 
-## Active post-merge closure — Issue #40 (2026-11-03)
+## Active implementation — Issue #41: protected gateway and three auditable clients (2026-11-03)
+
+**Owner-clarified deployment:** Native Windows workstation runs Caddy → authenticated Dispatcher → native Strata and an existing native Open WebUI. A separate AI Workstation in laptop/WSL runs existing Docker Compose Goose and Open WebUI over the protected home gateway. Do **not** deploy additional host-side Goose/Hermes containers (#39 deferred). Each of the three application clients (`Goose` WSL, `Open WebUI` WSL, native-host `Open WebUI`) needs its **own S02 identity**; `home-gateway` remains transitional. Client labels in product documentation are examples, not machine-specific defaults. Native Open WebUI may connect to loopback Dispatcher, while network clients use Caddy.
+
+**Review block A (this branch):** document the operator order and safety/rollback checkpoints, reconcile accepted PR #44/#40 state and clarify existing independent WebUI instance. No live secrets, Caddyfile, Windows host process, Process Compose production guard, upstream version pin or canonical Context nodes may be changed. A draft PR is for review, **not** approval for deployment or trust-boundary cutover.
+
+- [x] Confirm accepted PR #44 (`0a54b6c9`) and close issue #40, preserve zero ContextCanon drift findings.
+- [x] Record new scope and the required independent native Open WebUI client identity in issue #41.
+- [ ] Create operator runbook for client provisioning, DPAPI-original-key recovery, Dispatcher/Caddy S02 authorization boundary, WebUI connections, request audit, negative tests and rollback.
+- [ ] Link the runbook from native-services guide; correct stale accepted STATE/PLAN checkpoint and priority.
+- [ ] Create a reviewable draft PR on this branch; run available proportionate static checks and request owner review. Never merge without explicit approval.
+
+**Review block B (future separate implementation and owner-host validation):**
+
+- [ ] Read-only inventory and diff for Caddy/Dispatcher/Strata process ownership and existing protected routes/config/secrets; never import private host data into Git.
+- [ ] Verify patched checksum-pinned Process Compose release and Windows child-process termination; keep `production_adoption_blocked` until verified.
+- [ ] Implement generic Caddy component / owned service definitions and a staged, reversible migration, retaining direct-Strata fallback and no-double-owner preflight.
+- [ ] After separate owner approval activate each client's S02 key, verify Goose/WebUI requests + SQLite attribution and controlled gateway/restart rollback; then explicitly approve production process handoff.
+
+---
+## Accepted post-merge closure — Issue #40 (2026-11-03)
 
 **Accepted baseline:** [PR #42](https://github.com/SomeSunlight/ai-workstation/pull/42) was owner-tested and merged at `49e8d67246763b83502f58fb4f6628e0801c76fb`. Its source, nine compiled ContextCanon Nodes and eight normative Parent/Child relationships are already consistent; the merged PR's ordinary CI did not invoke ContextCanon.
 
@@ -15,7 +35,7 @@
 - [x] Remove the temporary branch-only rebuild workflow; the final review diff must contain only the four intended files.
 - [x] Review the final four-file diff (CI, PLAN, STATE, CHANGELOG) and verify Ubuntu/Windows CI green on review head `0d54f5cac74fe00dcbe6da16b1385d2b10c9bcb6` ([run #41642078845](https://github.com/SomeSunlight/ai-workstation/actions/runs/41642078845)). At the eventual owner-approved merge gate, check the *then-current* exact head again.
 - [x] Present [PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44) as the four-file draft for owner review; do not merge.
-- [ ] Await explicit owner acceptance; on final exact-head green verification, merge only after that approval and close issue #40 through the post-merge baseline checkpoint.
+- [x] Owner merged [PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44) into main as `0a54b6c9393b8f4b06c7deb20b473ad305af81e1` after exact-head green validation; [issue #40](https://github.com/SomeSunlight/ai-workstation/issues/40) closed. Subsequent scoped implementation is tracked under #41.
 
 
 ---
@@ -46,7 +66,7 @@ Purpose: under native Windows, temporarily locked prior staging folders must not
 - [x] Pinned matching compiler (`contextcanon` CLI 0.10.0, package compiler 0.8.0) ran `build --all` with no changes and `check --all` with nine OK/eight current Parent/Child relations on the post-merge review branch (workflow #41641727621); no generated Context files were hand-edited.
 - [x] PR [#42](https://github.com/SomeSunlight/ai-workstation/pull/42) was accepted by the owner ("tested successfully") and merged on 2026-11-03 at `49e8d67246763b83502f58fb4f6628e0801c76fb`; final review head was `a02eb558d333a1695ecdfdec64ae31b76daedadf`. Historical pre-merge verification caveats remain in PR discussion.
 
-**Next operational sequence after post-merge closure:** prioritize a reversible, separately sandboxed Goose/Hermes Docker Workbench (#39), beginning with prerequisite and secret/network review; integrate managed Caddy and per-client S02 gateway routing (#41) only in a separate, approved production trust-boundary change. Preserve the existing working gateway and the Process Compose production hold until verified patched binaries and owner approval. The current live gateway does **not** automatically consume the keys created by PR #37.
+**Revised owner priority (2026-11-03):** managed native Caddy/Dispatcher/Strata and three distinct WSL/native WebUI/Goose identities (#41) are first. Native Windows Goose/Hermes containers (#39) are deferred and not required. Treat trust-boundary and service-ownership changes as separate approved steps. Preserve the existing working gateway and the Process Compose production hold until verified patched binaries and owner approval. The current live gateway does **not** automatically consume the keys created by PR #37.
 
 ---
 
