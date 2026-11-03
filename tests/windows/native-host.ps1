@@ -12,16 +12,17 @@ try {
     $data = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -AsHashtable
     $exe = (Get-Command pwsh).Source
     $cwd = Split-Path -Parent $exe
-    $ports = @{ strata = 19881; dispatcher = 19882; caddy = 19883 }
-    foreach ($name in @('strata', 'dispatcher', 'caddy')) {
+    $ports = @{ strata = 19881; dispatcher = 19882; caddy = 19883; 'open-webui' = 19884 }
+    foreach ($name in @('strata', 'dispatcher', 'caddy', 'open-webui')) {
         $item = $data.services[$name]
         $item.executable = $exe
         $item.working_directory = $cwd
         $item.arguments = @('-NoProfile', '-NonInteractive', '-Command', 'exit 0')
+        $item.required_paths = @($cwd)
         $item.listen_ports = @($ports[$name])
         $item.readiness.url = 'http://127.0.0.1:' + $ports[$name] + '/'
         $item.readiness.expected_status = 200
-        if ($name -eq 'strata') { $item.enabled = $true }
+        if ($name -in @('strata', 'open-webui')) { $item.enabled = $true }
     }
     $data | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $path -Encoding utf8
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host render
@@ -37,7 +38,7 @@ try {
             throw "Service $name missing from project."
         }
     }
-    if ($yaml -notmatch 'condition: process_healthy' -or $yaml -notmatch 'disabled: true') {
+    if ($yaml -notmatch 'condition: process_healthy' -or $yaml -notmatch 'disabled: true' -or $yaml -notmatch 'open-webui:') {
         throw 'Native project lacks dependencies or safe disabled defaults.'
     }
     # An independently owned listener must block the full-stack preflight.
