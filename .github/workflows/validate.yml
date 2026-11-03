@@ -103,6 +103,9 @@ jobs:
             tools/aiw-secret-windows.ps1
             tools/aiw-download-windows.ps1
             tools/aiw-services.py
+            tools/aiw-native-host.py
+            tools/aiw-native-child.ps1
+            tools/aiw-native-health.ps1
             config/versions.json
       - name: Verify Windows shortcut creation and safe rename migration
         shell: pwsh
@@ -113,7 +116,7 @@ jobs:
       - name: Parse native Windows Process Compose and DPAPI helper
         shell: pwsh
         run: |
-          foreach ($path in @('bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1')) {
+          foreach ($path in @('bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1', 'tools/aiw-native-child.ps1', 'tools/aiw-native-health.ps1', 'tests/windows/native-host.ps1')) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
@@ -130,6 +133,9 @@ jobs:
       - name: Exercise the real native Windows menu under StrictMode
         shell: pwsh
         run: ./tests/windows/services-menu.ps1
+      - name: Validate private three-service Windows host setup (no processes started)
+        shell: pwsh
+        run: ./tests/windows/native-host.ps1
       - name: Real Windows DPAPI and named-client registration (temporary only)
         shell: pwsh
         run: |
