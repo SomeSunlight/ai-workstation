@@ -1,5 +1,5 @@
 # aiw operator interface — Local Context Source
-<!-- ctx:node id="6417ee7c-a9d0-40c7-ada3-6762d4a3900b" name="aiw operator interface" version="0.2.3-draft" -->
+<!-- ctx:node id="6417ee7c-a9d0-40c7-ada3-6762d4a3900b" name="aiw operator interface" version="0.2.2-draft" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
