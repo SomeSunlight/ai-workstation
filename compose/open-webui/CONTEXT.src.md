@@ -1,5 +1,5 @@
 # Open WebUI — Local Context Source
-<!-- ctx:node id="dbf13d04-e686-4cda-9434-c439e23bb400" name="Open WebUI" version="0.2.2-draft" -->
+<!-- ctx:node id="dbf13d04-e686-4cda-9434-c439e23bb400" name="Open WebUI" version="0.2.3-draft" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.

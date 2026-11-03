@@ -1,5 +1,5 @@
 # Windows and WSL bootstrap — Local Context Source
-<!-- ctx:node id="a46c5141-dcdf-4f28-9839-4053a02e04cf" name="Windows and WSL bootstrap" version="0.2.2-draft" -->
+<!-- ctx:node id="a46c5141-dcdf-4f28-9839-4053a02e04cf" name="Windows and WSL bootstrap" version="0.2.3-draft" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.

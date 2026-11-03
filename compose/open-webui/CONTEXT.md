@@ -3,20 +3,18 @@
 > [!CAUTION]
 > **GENERATED FILE — DO NOT EDIT.**
 > This is the compact official entry for this Context Node.
-> Together with `CONTEXT/` it forms the human/agent-facing Official Context Package.
 >
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** Open WebUI  
-**Context version:** `0.2.2-draft`
-
-**Resulting imported Contexts:**
-
-- **Development Workflow** — `0.3.0-draft` — via Parent Context **Containerized application runtimes** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../../.context/versions/d7d451281483f0a6/CONTEXT.md)
-- **ai-workstation** — `0.2.2` — via Parent Context **Containerized application runtimes** — [inspect accepted carrier](../../.context/versions/d7d451281483f0a6/CONTEXT.md)
-- **Containerized application runtimes** — `0.2.2-draft` — direct Parent Context — [inspect accepted carrier](../../.context/versions/d7d451281483f0a6/CONTEXT.md)
+**Context version:** `0.2.3-draft`
 
 ## Local Overview
+
+<!-- contextcanon:format Local Overview
+Format: Ordinary Markdown orientation, local to this Node. Any existing placement identity follows its paragraph/item; do not change it.
+Details: CONTEXT-format.md
+-->
 
 <!-- contextcanon-placement-overview:start -->
 - Open WebUI runs as a persistent Docker service accessed from the Windows browser through WSL localhost forwarding.
@@ -27,6 +25,11 @@
 <!-- contextcanon-placement-overview:end -->
 
 ## Local State
+
+<!-- contextcanon:format Local State
+Format: Ordinary Markdown describing the current local situation. Any existing placement identity follows its paragraph/item; preserve it.
+Details: CONTEXT-format.md
+-->
 
 <!-- contextcanon-placement-state:start -->
 - The default Open WebUI address is `http://localhost:3000`.
@@ -42,112 +45,6 @@
 ## How to use this context
 
 Apply all Rules below to every task in this Node.
-
-For the current task, evaluate each Topic condition. When one matches, read every **Required** target before continuing; read **Optional** targets only when useful.
-
-## Rules from Development Workflow
-
-### Recoverable planning
-
-#### `CCW-010` — Back every change with an Issue
-
-Before implementation, framework-context, or substantial documentation changes, ensure an Issue records why the change exists; it may be brief.
-
-#### `CCW-001` — Plan a coherent change block before editing
-
-Before starting a new coherent development block, record a short purpose and checklist in the project's durable planning surface; use `PLAN.md` when the project follows this workflow convention.
-
-#### `CCW-002` — Checkpoint completed plan items immediately
-
-When a listed step is actually complete, mark its `PLAN.md` checkbox `[x]` immediately rather than reconstructing completion at the end of a long session.
-
-#### `CCW-003` — Keep recovery-critical knowledge in the repository
-
-Put decisions, active constraints, accepted state, and next steps needed to resume work in repository documentation such as `PLAN.md`, `STATE.md`, or the project's equivalent rather than relying on chat history or model memory.
-
-#### `CCW-007` — Resume recent explicit continuation without re-proving unchanged state
-
-When the project owner resumes work after a short conversational interruption, explicitly says to continue, and reports no intervening repository changes, continue from the last established branch/PR state unless a repository operation gives evidence that it changed. Do not spend a new work cycle re-checking already established repository facts merely to prove that nothing happened.
-
-### Transparent machine semantics
-
-#### `CCW-012` — Mark machine-significant Markdown explicitly
-
-When Markdown is also parsed, compiled, extracted, or otherwise given machine-significant meaning, every field or wording whose value affects machine semantics must live in an explicitly marked machine structure rather than being inferred from ordinary presentation prose. Keep that machine significance recognizable in rendered and review surfaces; rendering may style or summarize the control structure, but must not make the machine/human boundary indistinguishable.
-
-### Proportional verification
-
-#### `CCW-004` — Batch related edits before expensive final verification
-
-For one coherent correction block, make the related authoring/code changes and run proportionate focused checks first; do not repeat the project's most expensive generated-output, integration, packaging, or full verification cycle after every micro-edit.
-
-#### `CCW-009` — Use owner-approved fast-run blocks without weakening the final gate
-
-When the project owner explicitly approves a coherent implementation scope and says intermediate product review is unnecessary, mark the fast-run as active in the durable PLAN with its scope and exit condition, keep recovery checkpoints and focused verification inside bounded work blocks, and defer repeated PR-description polish, full CI, generated-output regeneration, and other review ceremony until the coherent review candidate. When the fast-run ends, record that closure before returning to ordinary review cadence.
-
-#### `CCW-005` — Require exact-head green verification at the merge gate, not the first review gate
-
-A coherent development block may be presented for project-owner review while understood and disclosed CI failures or generated drift remain. After explicit project-owner approval and before merging, require the exact current head to pass the project's complete merge-gate verification, including zero generated drift when generated canonical output is part of the project contract.
-
-### Human review gate
-
-#### `CCW-011` — Expand change scope explicitly
-
-Applicable Context constrains a task; it does not silently expand its writable scope.
-
-#### `CCW-006` — Do not merge without explicit project-owner approval
-
-Keep a review PR or equivalent change set open until the project owner explicitly approves the reviewed result.
-
-### Accepted baseline
-
-#### `CCW-008` — Close the post-merge baseline checkpoint before new development
-
-After a reviewed change is successfully merged into the accepted branch, reconcile the durable repository state that records the accepted baseline before starting the next coherent development block. Record the merge outcome in `PLAN.md`, update `STATE.md` or equivalent current-state documentation, and refresh README/CHANGELOG or review-status wording made stale by the merge when applicable.
-
-## Rules from ai-workstation
-
-### Onboarding placement
-
-#### `ONB-6566E6E85D48` — Repository is the installation specification
-
-The repository is the installation specification; running containers and manually modified hosts are not the source of truth.
-
-#### `ONB-504C6A92475F` — Keep WSL development inside its Linux filesystem
-
-When developing or installing Linux workloads under WSL, use the WSL Linux filesystem rather than `/mnt/c`; native Windows and native Linux tools use their own appropriate host filesystems.
-
-#### `ONB-02E2C1B8C47B` — Keep versions documentation and tests aligned
-
-Update `config/versions.json`, documentation and tests together.
-
-#### `ONB-BE08FE3A5E3D` — Run release check before committing
-
-Run `./tools/release-check.sh` before committing.
-
-#### `ONB-DCF5EB952F7D` — Keep secrets out of Git images and Compose
-
-Secrets must not be committed, copied into images or stored in Compose files.
-
-#### `RULE-81304E42320A` — Keep shipped product behavior general and English-language
-
-Design and document AI Workstation for native Windows, Linux under WSL and native Linux using platform-specific adapters where needed. Keep public code, menu/CLI text, default examples and documentation in English regardless of the conversation language. Personal hostnames, usernames, domains, provider preferences and password-manager choices belong in private operator configuration, not product assumptions.
-
-#### `RULE-7E9AB1D9A8A0` — Make operator workflows discoverable with little memorization
-
-Prefer concise menus that preserve readable action results, redisplay choices on request, offer numbered selection of already known objects and briefly distinguish terms such as original credentials versus derived hashes. Keep details in linked guidance and test representative user journeys on each relevant operating system.
-
-## Rules from Containerized application runtimes
-
-### Onboarding placement
-
-#### `ONB-C582F0CA4FCE` — Application containers do not receive the Docker socket
-
-Agent and application containers do not receive the Docker socket.
-
-#### `ONB-E7F7BAC0BF5F` — Runtime credentials use protected local storage
-
-Runtime credentials stay outside Git, images and authored Compose definitions. Applications may use their native persistent secret store; environment-based credentials use a protected untracked file with mode `600`, scoped to the intended application.
 
 ## Local Rules
 
@@ -176,39 +73,3 @@ Use a strong password for the Open WebUI administrator account.
 #### `ONB-4D2A3FDC8A51` — Do not expose Open WebUI without added controls
 
 Do not publish the Open WebUI localhost port through a proxy or LAN interface without appropriate TLS, authentication and network controls.
-
-## Topics from Development Workflow
-
-### Executing a development block
-
-When planning, resuming, checkpointing, reviewing, testing, finalizing, merging, or closing the accepted baseline for a coherent development block:
-
-**Required**
-
-- [`CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md`](CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md)
-
-## Topics from ai-workstation
-
-### Security reporting resource
-
-When reporting a vulnerability or checking the project security-reporting procedure, read the security document.
-
-**Required**
-
-- [`CONTEXT/references/n86fee10195c6f43/SECURITY.md`](CONTEXT/references/n86fee10195c6f43/SECURITY.md)
-
-### Troubleshooting guide
-
-When diagnosing installation, WSL access, permissions, Docker-session, elevation or recovery problems, read the troubleshooting guide.
-
-**Required**
-
-- [`CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md`](CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md)
-
-### Public repository creation procedure
-
-When recreating or auditing the original public-repository setup from the tested prototype, read the repository setup guide.
-
-**Required**
-
-- [`CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md`](CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md)
