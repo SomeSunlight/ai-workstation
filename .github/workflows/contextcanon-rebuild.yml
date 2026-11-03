@@ -1,0 +1,84 @@
+# Temporary, branch-restricted compiler repair workflow for issue #40.
+# Remove this workflow from the review PR once the generated outputs are committed.
+name: ContextCanon branch-only rebuild
+on:
+  push:
+    branches:
+      - agent/issue-40-post-42-contextcanon-verification
+
+permissions:
+  contents: write
+
+concurrency:
+  group: issue-40-contextcanon-rebuild
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    if: github.repository == 'SomeSunlight/ai-workstation'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the exact review branch
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.26"
+
+      - name: Install locked project tools
+        run: uv sync --frozen
+
+      - name: Compile all nine ContextCanon Nodes and verify immediately
+        run: |
+          uvx --from "git+https://github.com/SomeSunlight/context-canon.git@d285ae09795994239a802ce50342404fadd482b7" contextcanon build --all .
+          uvx --from "git+https://github.com/SomeSunlight/context-canon.git@d285ae09795994239a802ce50342404fadd482b7" contextcanon check --all .
+
+      - name: Verify that only ContextCanon compiler outputs changed
+        run: |
+          python - <<'PY'
+          import pathlib
+          import subprocess
+          import sys
+
+          raw = subprocess.check_output(["git", "status", "--porcelain=v1", "-z"])
+          records = [entry for entry in raw.split(b"\x00") if entry]
+          for entry in records:
+              if entry[:2] in (b"R ", b" R", b"C ", b" C"):
+                  raise SystemExit("Unexpected rename/copy in ContextCanon build")
+              name = entry[3:].decode("utf-8", "surrogateescape")
+              parts = pathlib.PurePosixPath(name).parts
+              allowed = (
+                  ".context" in parts or "CONTEXT" in parts
+                  or parts[-1] in {"CONTEXT.md", "CONTEXT.src.md", "CONTEXT-format.md"}
+              )
+              if not allowed:
+                  print(f"Refusing non-ContextCanon change: {name}", file=sys.stderr)
+                  raise SystemExit(1)
+          print(f"Compiler-owned changed paths: {len(records)}")
+          PY
+          git status --short
+
+      - name: Verify repository release rules before publication
+        run: bash tools/release-check.sh
+
+      - name: Commit compiler outputs only to this review branch
+        env:
+          REVIEW_BRANCH: agent/issue-40-post-42-contextcanon-verification
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git add -A
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'build(context): regenerate nine official packages with ContextCanon 0.8.0 (#40)'
+          git push origin "HEAD:refs/heads/${REVIEW_BRANCH}"
