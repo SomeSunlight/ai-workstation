@@ -25,18 +25,26 @@ Parent/Child relationships current. The first attempted check with an older
 CLI 0.8.0/internal compiler 0.6.0 falsely reported nine-node drift.
 That incompatible generated candidate was rejected and removed from the
 current review tree; inherited Development Workflow rules are intact.
-A correctly pinned read-only CI gate and this closure are proposed in
-[PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44), not yet
-merged. No production Caddy/Dispatcher/Strata or container service
-was migrated by PR #42.
+The correctly pinned, read-only CI gate and post-merge context closure
+were accepted in [PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44),
+squash-merged into `main` on 2026-11-03 as
+`0a54b6c9393b8f4b06c7deb20b473ad305af81e1`; [issue #40](https://github.com/SomeSunlight/ai-workstation/issues/40)
+is closed. Neither #42 nor #44 migrated live Caddy/Dispatcher/Strata
+or container services.
 
-**Next priority:** issue [#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
-(usable, separately isolated Goose/Hermes Docker Workbench after host
-prerequisite review), then issue
-[#41](https://github.com/SomeSunlight/ai-workstation/issues/41)
-(generic Caddy management and owner-approved per-client authentication
-cutover with the working gateway preserved). The Process Compose
-production hold remains active.
+**Active priority: [issue #41](https://github.com/SomeSunlight/ai-workstation/issues/41).**
+Native Windows host AI Workstation must eventually manage the existing
+Caddy + S02 Dispatcher + native Strata using one approved Process Compose
+supervisor and reversible replacement of the private PowerShell starter.
+Keep the existing native-host Open WebUI instance and give it its **own**
+S02 application credential; laptop/WSL Goose and Open WebUI keep their
+separate Docker Compose setup and **different** S02 credentials. Protected
+home-network Caddy access and the legacy shared key must remain intact
+until an owner-approved staged cutover. A review-stage operator runbook
+is proposed in [docs/gateway-client-migration.md](docs/gateway-client-migration.md).
+Additional native-host Goose/Hermes Docker containers [#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
+are deferred: not needed for this deployment. The Process Compose production
+hold is unchanged and still active.
 
 ## Accepted repository baseline
 
