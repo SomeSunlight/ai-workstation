@@ -4,13 +4,15 @@
 
 **Accepted fact:** [PR #42](https://github.com/SomeSunlight/ai-workstation/pull/42) was owner-tested and merged at `49e8d67246763b83502f58fb4f6628e0801c76fb`. Its compiled ContextCanon root/child artifacts are on `main` and the exact PR head passed Ubuntu/Windows CI. That workflow did **not** run ContextCanon's read-only drift check.
 
-**Scope of this follow-up review:** `PLAN.md`, `STATE.md`, `CHANGELOG.md`, `.github/workflows/validate.yml` and PR #42 status description. No authored Context Source or compiler-generated package modifications, host services, secrets, binary pins or live gateway changes. Do not merge without fresh owner approval.
+**Scope of this follow-up review:** `PLAN.md`, `STATE.md`, `CHANGELOG.md`, `.github/workflows/validate.yml`, a temporary branch-scoped `.github/workflows/contextcanon-rebuild.yml` for genuine compiler output, generated `CONTEXT.src.md`/`CONTEXT.md`/`CONTEXT/`/`.context/` files from that compiler only, and PR #42 status description. No authored Context Source or compiler-generated package modifications, host services, secrets, binary pins or live gateway changes. Do not merge without fresh owner approval.
 
 - [x] Reconcile PR #42 merge, owner acceptance, committed compiled Context and current ordinary CI evidence.
 - [x] Record the approved source/package baseline and the remaining independent verification in PLAN.
 - [x] Add a pinned, read-only `contextcanon check --all .` step to Ubuntu CI (ContextCanon 0.8.0 SHA `d285ae09795994239a802ce50342404fadd482b7`); do not silently regenerate packages. CI result still pending.
 - [x] Update STATE and CHANGELOG to record the actual accepted merge and next focus (#39 before #41).
-- [ ] Obtain the exact-head CI result, inspect generated-drift status and submit this narrow follow-up for owner acceptance. If drift is found, investigate separately with the actual compiler before approval.
+- [x] Run pinned ContextCanon 0.8.0 read-only check in CI: **failed** on all nine Nodes (run #41640517137). Root version 0.2.2 was reused although compiler requires 0.2.3; the original #42 package is not drift-free.
+- [ ] Rebuild with the **actual pinned compiler** on the isolated review branch only; commit authentic compiler outputs (including any version/ID changes), not hand edits. Use a temporary branch-scoped GitHub Actions workflow because this environment cannot clone/run the repository locally; remove the temporary workflow after publication.
+- [ ] Re-run `contextcanon check --all .`, full exact-head CI and review the generated diff; update PR for owner acceptance. Never merge automatically.
 
 ---
 
