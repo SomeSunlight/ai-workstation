@@ -24,6 +24,10 @@ try {
     }
     $data | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $path -Encoding utf8
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host render
+    # Verify the real pinned Windows Process Compose executable accepts the
+    # generated dependency/health schema (dry-run; no child process start).
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') install
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') check
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host preflight
     $project = Join-Path $temp 'process-compose.yaml'
     $yaml = Get-Content -LiteralPath $project -Raw
