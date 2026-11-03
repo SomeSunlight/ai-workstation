@@ -58,6 +58,6 @@ try {
     Write-Host 'Windows installer staging cleanup tests passed.'
 }
 finally {
-    Remove-Item Function:\Remove-Item -ErrorAction SilentlyContinue
+    Microsoft.PowerShell.Management\Remove-Item -LiteralPath Function:\Remove-Item -Force -ErrorAction SilentlyContinue
     Microsoft.PowerShell.Management\Remove-Item -LiteralPath $fixture -Recurse -Force -ErrorAction SilentlyContinue
 }
