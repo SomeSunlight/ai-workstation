@@ -68,6 +68,11 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
     services = config["services"]
     if not isinstance(services, dict) or not set(REQUIRED_NAMES) <= set(services) or not set(services) <= set(NAMES):
         raise ConfigurationError("Strata, Dispatcher and Caddy required; Open WebUI optional.")
+    # A dependent enabled process cannot wait for a disabled prerequisite.
+    for child, parent in (("dispatcher", "strata"), ("caddy", "dispatcher"),
+                          ("open-webui", "caddy")):
+        if child in services and services[child].get("enabled") and not services[parent].get("enabled"):
+            raise ConfigurationError(child + ": enable prerequisite " + parent + " first.")
     registered_ports = set()
     for name in services:
         service = services[name]
