@@ -14,6 +14,8 @@
 - [x] Reviewed the first four-document scope and the new renderer/PowerShell/CI changes in draft PR #45; initial Linux/Windows CI green on `efdf394...`, reconfirm at final exact-head merge gate.
 - [ ] Require explicit owner acceptance of the complete migration before merge, and separately approve live production service takeover.
 
+**Owner refinement (2026-11-04):** Native Windows Open WebUI is now the **fourth** Process Compose-managed native process, reusing its existing executable/virtualenv and DATA_DIR. The uploaded private starter shows exact Strata/Caddy/WebUI commands but does **not** start Dispatcher; his separate native S03 launcher and S02 migration are reviewed independently. A private generated native-host.json exists only for operator use, not public Git. First-test acceptance is Strata → Dispatcher → Caddy → Open WebUI, with no legacy-script dependency. Four-service Process Compose dry-run and safety tests must be green; live host startup still requires the release-security gate and owner's separate cutover permission.
+
 **Owner first-test gate (2026-11-03):** The first useful Speedy acceptance test must be an end-to-end AIW/Process Compose service host, **not** a mixture that still needs the private Caddy-folder PowerShell starter. After one-time guarded import of the existing program paths/configuration, AIW must independently start **Strata → attached Dispatcher → Caddy**, show readiness/status/logs/TUI and stop/restart owned processes; on Windows reboot the operator can open AIW and start the whole stack again. Preserve the original script only for rollback, never start both. Native Open WebUI continues as an existing separate application and authenticates to Dispatcher with its own client key. This does **not** imply automatic OS boot start, which is an opt-in separate feature.
 
 **Review block B — concrete reversible three-service host configuration:**
@@ -21,7 +23,7 @@
 - [x] Document first operational acceptance: no former script during the test, operator-selected Start after reboot, and safe rollback in [native host guide](docs/native-host-operations.md).
 
 
-- [x] Add private, machine-neutral native Windows Caddy/Dispatcher/Strata configuration, rendered Process Compose dependency/health project, DPAPI-protected child launcher and drift/collision checks; private commands and keys stay outside Git.
+- [x] Add private, machine-neutral Windows Strata/Dispatcher/Caddy with **optional existing native Open WebUI** configuration, ordered Process Compose dependency/health project, DPAPI-only child launcher, required existing data/config paths and drift/collision checks; private commands and keys stay outside Git.
 - [x] Expose native setup (menu 17), render (18), preflight (19), and existing Validate/Start/Status/Logs/TUI/Stop actions; no implicit live start in setup/render.
 - [x] Windows real pinned Process Compose dry-run, template/render, collision, stale-config and production-gate regressions passed; Ubuntu release/ContextCanon checks also passed on review head `efdf394b7abcac8f1db07611884a1a1109471ff3` ([run #41728615114](https://github.com/SomeSunlight/ai-workstation/actions/runs/41728615114)). This is **not** real native service/child-tree adoption.
 - [x] Preserve strict production security gate without any new bypass; actual real-host Start remains blocked until a patched checksum-verified Process Compose binary and Windows child-tree stop proof.
