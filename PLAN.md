@@ -13,8 +13,9 @@
 - [x] Add the correctly pinned, **read-only** ContextCanon check to ordinary Ubuntu CI, with no implicit generation or Parent package upgrade.
 - [x] Align accepted PLAN, STATE and CHANGELOG; keep product priority #39 before #41, with no changes to the live Caddy gateway.
 - [x] Remove the temporary branch-only rebuild workflow; the final review diff must contain only the four intended files.
-- [ ] Confirm the four-file final review diff and obtain green Ubuntu/Windows exact-head CI.
-- [ ] Present [PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44) for owner review and explicit approval. Keep issue #40 open until accepted merge and final closure.
+- [x] Review the final four-file diff (CI, PLAN, STATE, CHANGELOG) and verify Ubuntu/Windows CI green on review head `0d54f5cac74fe00dcbe6da16b1385d2b10c9bcb6` ([run #41642078845](https://github.com/SomeSunlight/ai-workstation/actions/runs/41642078845)). At the eventual owner-approved merge gate, check the *then-current* exact head again.
+- [x] Present [PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44) as the four-file draft for owner review; do not merge.
+- [ ] Await explicit owner acceptance; on final exact-head green verification, merge only after that approval and close issue #40 through the post-merge baseline checkpoint.
 
 
 ---
