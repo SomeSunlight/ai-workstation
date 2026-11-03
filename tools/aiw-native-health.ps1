@@ -6,7 +6,7 @@ A Caddy 401 probe (without bearer) is intentionally healthy when configured.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$Config,
-    [Parameter(Mandatory)][ValidateSet('strata', 'dispatcher', 'caddy')][string]$Service
+    [Parameter(Mandatory)][ValidateSet('strata', 'dispatcher', 'caddy', 'open-webui')][string]$Service
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -33,7 +33,7 @@ try {
     }
     # No redirects, no TLS bypass. A 401 from the protected gateway is valid
     # only if expected_status is deliberately 401.
-    $response = Invoke-WebRequest -Method Get -Uri $uri -Headers $headers -SkipHttpErrorCheck -MaximumRedirection 0 -TimeoutSec 5 -ErrorAction Stop
+    $response = Invoke-WebRequest -Method Get -Uri $uri -Headers $headers -SkipHttpErrorCheck -MaximumRedirection 0 -TimeoutSec 5 -NoProxy -ErrorAction Stop
     if ([int]$response.StatusCode -eq [int]$probe.expected_status) { exit 0 }
 }
 catch {
