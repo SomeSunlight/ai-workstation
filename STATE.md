@@ -18,6 +18,51 @@ PR #28 was owner-tested successfully on Windows/WSL and squash-merged on 2026-10
 
 **Accepted host-platform checkpoint:** PR #36 was owner-accepted and squash-merged on 2026-11-01 as `13eb053becde1a66de9d275e25cbe1fb716062ab`. It adds the WSL/native-Ubuntu 24.04 host-mode first slice and shared Linux host preflight without a full real native-host acceptance. The previous accepted Windows/WSL launcher checkpoint was PR #32 (`b33949ccd72352a26c305d46f60b643d6a60adad`, 2026-10-14). The normal supported production path remains Windows 11 + WSL2; native Ubuntu 24.04 remains experimental until a real dedicated systemd host test.
 
+## Accepted native-services and client-identity checkpoint (2026-11-03)
+
+[AI Workstation PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37)
+was **owner-tested and squash-merged** into `main` on 2026-11-03 as
+`da108899518d261a960edae9ff8867a6e57bb459`.
+The owner exercised the native Windows Process Compose CLI lifecycle:
+private initialization, pinned checksum-verified binary install,
+configuration validation, named client/DPAPI key registration,
+harmless `aiw-smoke` **start → status → logs → TUI → stop**, all
+successful. Independent Ubuntu/Windows CI also exercised real native
+Process Compose `up/status/logs/down` and double-start/unknown-stop
+refusal. This is acceptance of **the first safe operator tooling slice**,
+not acceptance of real production process ownership.
+
+**Architectural responsibilities:** AI Workstation installs/configures
+software and offers platform entrypoints; Process Compose owns only
+native host processes (Windows binary on Windows, Linux binary inside
+WSL or on native Linux); Docker Compose independently owns agent and
+container lifecycles. Client IDs and credentials are operator-selected,
+host-local; generated `clients.json` holds only S02 token hashes.
+Native Windows Process Compose requires AIW's headless OS launcher
+because upstream v1.124.0 has **no `--detached`** on Windows.
+Native Linux full installation remains **experimental** until #33 real
+host acceptance; CLI compatibility tests do not imply full host support.
+
+**Production hold:** official Process Compose v1.124.0 Linux AMD64 build
+reports Go 1.27.0, before the Go 1.27.2 `html/template` fixes.
+This alone does not prove exploitable Process Compose code paths.
+AIW's explicit launch guard remains
+`production_adoption_blocked: true`; native *production* service
+takeover must wait for a verified patched build and separate review.
+
+**Not yet adopted:** the existing native Caddy, Strata, Dispatcher
+and Open WebUI host services remain controlled by their current owner
+setup. AI Workstation does **not yet** install or manage the live Caddy
+gateway. The legacy shared `home-gateway` bearer still exists until
+the owner-approved S02/Caddy trust boundary change; generating new
+per-client secrets does **not** activate them in the running services.
+Next gateway work is tracked in
+[#41](https://github.com/SomeSunlight/ai-workstation/issues/41)
+(alongside #34); the independent Docker agent Workbench is
+[#39](https://github.com/SomeSunlight/ai-workstation/issues/39).
+Multiple explicit Goose mounts remain [#38](https://github.com/SomeSunlight/ai-workstation/issues/38).
+No manual Caddy cutover or secret redistribution is implied by this merge.
+
 ## Accepted local-inference infrastructure
 
 Local inference is optional. When enabled, `llama.cpp` and Llama Dispatcher run directly on the WSL/Linux host rather than in containers; remote-only AI Workstations remain valid.
@@ -60,6 +105,20 @@ Issue [#33](https://github.com/SomeSunlight/ai-workstation/issues/33) is **parti
 
 ## Next planned work
 
-Continue from `PLAN.md` with an explicit issue-backed block. **Current owner-review work:** [#34](https://github.com/SomeSunlight/ai-workstation/issues/34), [draft PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37): the owner has **selected Process Compose**, with opt-in native Windows/WSL/Linux CLI and a protected named S02 client registry, plus a safe disposable Windows pilot **after owner review**. This implementation is **not merged or accepted yet**. The private YAML/secret scaffold and hash output do **not** change live Caddy, Strata or Dispatcher. The 2026-11-02 owner accepted [Llama Dispatcher S03 PR #27](https://github.com/SomeSunlight/Llama_Dispatcher/pull/27) via real Speedy/Strata + Caddy → authenticated Dispatcher → Laptop/WSL Goose and Open WebUI, with SQLite proxy request audit. That working gateway must **not** be reconfigured or assigned to a second supervisor during M00. The existing Linux `runtimes/local-inference/service.sh` systemd service remains the owner of its *legacy llama.cpp* instance until a separately approved migration; Dispatcher is **attach-only for Strata**, not globally attach-only yet.
+Begin with the post-merge accepted-baseline and project-context
+checkpoint, issue [#40](https://github.com/SomeSunlight/ai-workstation/issues/40).
+Separate future work: [#41](https://github.com/SomeSunlight/ai-workstation/issues/41)
+to make Caddy a reproducibly installed and safely operated AIW native
+service with independently authenticated clients; [#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
+to offer isolated Goose/Hermes agent containers and a usable host-local
+Workbench. A patched Process Compose build, reversible process
+ownership handoff, real-host tests and owner approval are required
+**before any live Caddy/Strata/Dispatcher migration**. The current
+working Caddy → authenticated Dispatcher → native Strata gateway is
+the operational baseline and rollback. Real native Ubuntu host
+validation remains deferred (#33). Reusable operator UX guidance
+is proposed independently in
+[ContextCanon #126](https://github.com/SomeSunlight/context-canon/issues/126);
+its pinned parent Context is unchanged.
 
 For laptop inference, treat Issue #8 as the accepted SYCL/Level Zero baseline and Issue #9 as the completed DZN/Vulkan evidence package; treat Issue #14 / PR #18 as the accepted provisioning checkpoint. The detailed backend findings and representative measurements are preserved in `runtimes/local-inference/TUNING.md`.
