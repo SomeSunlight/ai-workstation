@@ -9,11 +9,11 @@
 | Native service host (Windows) | Caddy HTTPS ingress | Private host configuration now; Process Compose **only after an approved handoff** |
 | Native service host (Windows) | Llama Dispatcher (S02 + S03 attached Strata) | Caddy routes `/v1` to loopback Dispatcher; independent bearer identities |
 | Native service host (Windows) | Strata | Native loopback inference, independently owned until approved; Dispatcher alone supplies Strata's separate native credential |
-| Native service host (Windows) | Open WebUI | **Preserve its existing instance and data**; point its OpenAI-compatible API connection at Dispatcher with its own S02 key |
+| Native service host (Windows) | Open WebUI | **Preserve its executable, venv and data directory**; optionally have the native AIW/Process Compose supervisor start it as a fourth process; point its OpenAI-compatible API connection at Dispatcher with its own S02 key |
 | Laptop/WSL | Goose (Docker Compose) | Existing AIW Goose; connect to **HTTPS Caddy `/v1`**, its own S02 key |
 | Laptop/WSL | Open WebUI (Docker Compose) | Existing AIW Open WebUI; connect to **HTTPS Caddy `/v1`**, another S02 key |
 
-No native-host Goose/Hermes containers, no replacement Open WebUI instance and no remote Process Compose control API are required. This is a reusable Windows/WSL/Linux product: actual device names, domains, credential-provider choices and paths are private operator settings.
+No native-host Goose/Hermes containers, no replacement Open WebUI instance and no remote Process Compose control API are required. The existing Windows WebUI may be supervised as a **fourth** native process, with unchanged persistent DATA_DIR. This is a reusable Windows/WSL/Linux product: actual device names, domains, credential-provider choices and paths are private operator settings.
 
 ## Important: the keys are distinct
 
@@ -82,7 +82,7 @@ The Open WebUI *provider* API key is different from a WebUI **user** API key (th
 
    Expect separately named requests from **all three clients**. Verify appropriate 401 responses for an unknown or absent key. The Dispatcher records client identity and safe request telemetry, **not** Goose's file-by-file actions or a WebUI user's personal identity.
 3. If any application fails, restore **its previous connection** and the existing gateway configuration/old key while investigating; do not revoke `home-gateway` until the entire old path and new clients have passed. Dispatcher configuration is read at startup: changes to digests take effect only after a controlled restart.
-4. Only in a **separate owner-approved service-management step**, after checking patched Process Compose artifact checksums/security and real Windows process-tree shutdown, hand ownership of Caddy, Dispatcher and Strata from the old private start script to a **single** AIW/Process Compose supervisor. Never let two managers start or stop the same process. Retain the old private script as documented rollback; supervisor commands must refuse unknown PIDs/port owners.
+4. Only in a **separate owner-approved service-management step**, after checking patched Process Compose artifact checksums/security and real Windows process-tree shutdown, hand ownership of Caddy, Dispatcher, Strata and optional existing native Open WebUI from the old private start script to a **single** AIW/Process Compose supervisor. Never let two managers start or stop the same process. Retain the old private script as documented rollback; supervisor commands must refuse unknown PIDs/port owners.
 5. When owner verification is complete, explicitly decide whether to retire `home-gateway`. Do not silently revoke existing access or expose management/Strata endpoints publicly.
 
 ## Stop conditions
