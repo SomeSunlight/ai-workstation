@@ -8,8 +8,8 @@
 
 - [x] Confirm accepted PR #44 (`0a54b6c9`) and close issue #40, preserve zero ContextCanon drift findings.
 - [x] Record new scope and the required independent native Open WebUI client identity in issue #41.
-- [ ] Create operator runbook for client provisioning, DPAPI-original-key recovery, Dispatcher/Caddy S02 authorization boundary, WebUI connections, request audit, negative tests and rollback.
-- [ ] Link the runbook from native-services guide; correct stale accepted STATE/PLAN checkpoint and priority.
+- [x] Create [operator runbook](docs/gateway-client-migration.md) for client provisioning, DPAPI-original-key recovery, Dispatcher/Caddy S02 authorization boundary, WebUI connections, request audit, negative tests and rollback.
+- [x] Link runbook from [native-services guide](docs/native-services.md); correct accepted STATE/PLAN checkpoint and owner-prioritized #41 after #44 merge.
 - [ ] Create a reviewable draft PR on this branch; run available proportionate static checks and request owner review. Never merge without explicit approval.
 
 **Review block B (future separate implementation and owner-host validation):**
