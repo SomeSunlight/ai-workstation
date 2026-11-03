@@ -1,5 +1,5 @@
 # Goose — Local Context Source
-<!-- ctx:node id="3fd2ae4e-d712-4232-917a-7059b03a3cd4" name="Goose" version="0.2.1-draft" -->
+<!-- ctx:node id="3fd2ae4e-d712-4232-917a-7059b03a3cd4" name="Goose" version="0.2.2-draft" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
@@ -21,8 +21,8 @@ Details: CONTEXT-format.md
 -->
 
 <!-- contextcanon-placement-parent:start -->
-- [Containerized application runtimes](..) — `0.2.1-draft` — `relationship=parent`
-  <!-- ctx:source id="90dd976e-8753-495b-a631-d708b13878d1" version="0.2.1-draft" normalized-digest="f13e52872c981885879b987fdb935a659114a13d52ccf8693284131be8f0f4b9" package-digest="82cc2035ff42d44f7a5877108ce79118317612203f50d261d0893c43963497d1" -->
+- [Containerized application runtimes](..) — `0.2.2-draft` — `relationship=parent`
+  <!-- ctx:source id="90dd976e-8753-495b-a631-d708b13878d1" version="0.2.2-draft" normalized-digest="fd96d1bb7decd28a8ef518f1ed0a1df8aad6e8646bdb319627f242b075cae3a8" package-digest="13249e3eff44e555cbcd8f6d2482ff4fc46155b670410a5ebb2cd1acf45de0ba" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview

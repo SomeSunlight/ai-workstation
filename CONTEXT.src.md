@@ -1,5 +1,5 @@
 # ai-workstation — Local Context Source
-<!-- ctx:node id="aea56adf-2a26-43f0-b712-3bbeab7a3097" name="ai-workstation" version="0.2.1" adapters="agents,goose" -->
+<!-- ctx:node id="aea56adf-2a26-43f0-b712-3bbeab7a3097" name="ai-workstation" version="0.2.2" adapters="agents,goose" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
@@ -91,10 +91,12 @@ Details: CONTEXT-format.md
 
 - **Keep shipped product behavior general and English-language:** Design and document AI Workstation for native Windows, Linux under WSL and native Linux using platform-specific adapters where needed. Keep public code, menu/CLI text, default examples and documentation in English regardless of the conversation language. Personal hostnames, usernames, domains, provider preferences and password-manager choices belong in private operator configuration, not product assumptions.
   Why: A reusable workstation must remain understandable and portable across owners, operating systems and future hardware; distinguish intended compatibility from actually validated platform support.
+  <!-- ctx:rule id="RULE-81304E42320A" -->
 
 - **Make operator workflows discoverable with little memorization:** Prefer concise menus that preserve readable action results, redisplay choices on request, offer numbered selection of already known objects and briefly distinguish terms such as original credentials versus derived hashes. Keep details in linked guidance and test representative user journeys on each relevant operating system.
   Why: Users should be able to return weeks later without recalling identifiers or internal commands; these are practical UX preferences, not a requirement to build another TUI or a ban on direct CLI commands.
 <!-- contextcanon-placement-rules:end -->
+  <!-- ctx:rule id="RULE-7E9AB1D9A8A0" -->
 
 ## Local Topics
 

@@ -1,5 +1,5 @@
 # Linux bootstrap — Local Context Source
-<!-- ctx:node id="1e85ca79-6021-4b66-ae0c-4da90f78d6e9" name="Linux bootstrap" version="0.2.1-draft" -->
+<!-- ctx:node id="1e85ca79-6021-4b66-ae0c-4da90f78d6e9" name="Linux bootstrap" version="0.2.2-draft" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
@@ -21,8 +21,8 @@ Details: CONTEXT-format.md
 -->
 
 <!-- contextcanon-placement-parent:start -->
-- [Bootstrap](..) — `0.2.1-draft` — `relationship=parent`
-  <!-- ctx:source id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.2.1-draft" normalized-digest="d1ce55c3070f7d5265d2d4ba28523d1efe41f2cf1cb55fa64eadb4cac4155831" package-digest="8ae276c530d72401d155eb5f25fb0abd44d4b2a2ecc207fd1b374dc300dc34a5" -->
+- [Bootstrap](..) — `0.2.2-draft` — `relationship=parent`
+  <!-- ctx:source id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.2.2-draft" normalized-digest="1e795319abed6f4d66c0c48f227a5bc89b72dc3f50b394b549489a660c8623b8" package-digest="1cea3ebe40730eb2d962e15cb9c5e967ab6d13443a030fead969db897d1b68c7" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview
