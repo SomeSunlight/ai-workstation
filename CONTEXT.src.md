@@ -73,8 +73,8 @@ Details: CONTEXT-format.md
   Why: Prevents runtime or host drift from becoming an implicit configuration authority.
   <!-- ctx:rule id="ONB-6566E6E85D48" -->
 
-- **Develop inside the WSL filesystem:** Work inside the WSL Linux filesystem, not under `/mnt/c`.
-  Why: Keeps development on the Linux filesystem the project expects.
+- **Keep WSL development inside its Linux filesystem:** When developing or installing Linux workloads under WSL, use the WSL Linux filesystem rather than `/mnt/c`; native Windows and native Linux tools use their own appropriate host filesystems.
+  Why: Avoids WSL filesystem performance and permission problems without incorrectly imposing WSL paths on the other supported execution modes.
   <!-- ctx:rule id="ONB-504C6A92475F" -->
 
 - **Keep versions documentation and tests aligned:** Update `config/versions.json`, documentation and tests together.
