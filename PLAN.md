@@ -1,5 +1,23 @@
 # AI Workstation Plan
 
+## Accepted baseline closure + generic operator guidance — Issues #34/#40 (2026-11-03)
+
+**Verified accepted merge:** Owner completed the native Windows **7 → 5 → 9 → 6 (TUI) → 8** harmless Process Compose test successfully, approved [PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37), and squash-merged it to `main` on **2026-11-03** as `da108899518d261a960edae9ff8867a6e57bb459`. The merged code provides opt-in native Process Compose entrypoints for Windows and Linux/WSL plus private named Dispatcher S02 client registration, **not** live production ownership or the Caddy multi-client cutover.
+
+**Current documentation review PR** (issue [#40](https://github.com/SomeSunlight/ai-workstation/issues/40)): close the post-merge accepted baseline, state the general-purpose/English/OS-neutral product scope in **authored** `CONTEXT.src.md` with minimal positive operator-UX guidance, and align README/STATE/CHANGELOG. This does **not** modify any runtime, product binaries, Caddy, Docker, customer-specific secrets or parent ContextCanon package.
+
+**Writable scope:** `PLAN.md`, `STATE.md`, `README.md`, `CHANGELOG.md`, root `CONTEXT.src.md`, plus **generated** root/child ContextCanon outputs **only** through the normal authenticated `contextcanon build --all .` step. The published/pinned inherited Development Workflow package is not silently updated. Additional reusable UX guidance is proposed in upstream [ContextCanon issue #126](https://github.com/SomeSunlight/context-canon/issues/126); do not edit its published package without the separate review/versioning workflow.
+
+- [x] Confirm actual PR #37 squash merge and real owner Windows Process Compose/TUI acceptance; distinguish CI smoke from on-host validation.
+- [x] Separate operational next work: [#41](https://github.com/SomeSunlight/ai-workstation/issues/41) generic Caddy installation/process ownership and multi-client gateway trust-boundary migration; [#39](https://github.com/SomeSunlight/ai-workstation/issues/39) containerized agent Workbench; [#38](https://github.com/SomeSunlight/ai-workstation/issues/38) additional Goose workspace directories; [#33](https://github.com/SomeSunlight/ai-workstation/issues/33) real native Ubuntu acceptance.
+- [ ] Update accepted status and concise, *host-neutral* AIW Context guidance; add no personal machine/domain/password-manager defaults.
+- [ ] Rebuild/check **authored** ContextCanon changes using the actual compiler and verify no generated drift; CI alone is not proof of this. Never hand-edit generated Context.
+- [ ] Review changes and submit documentation-only PR for owner approval; do not merge without explicit approval.
+
+**Next operational sequence after documentation acceptance:** review patched Process Compose build + Windows/WSL process semantics; implement AIW-managed native Caddy with identity handoff and rollback (#41) while preserving the current working gateway; implement separately sandboxed Goose/Hermes agent Workbench (#39), then exercise real tasks and distinct Dispatcher audit IDs. The current live gateway does **not** automatically consume the keys created by PR #37.
+
+---
+
 ## Current review block — Issue #34: native Process Compose and named clients (2026-11-02)
 
 **Accepted base:** AI Workstation PR #36 was squash-merged on 2026-11-01
@@ -93,15 +111,19 @@ working rollback. Multiple Goose workspace mounts are separate issue #38.
   to the existing private folder without spurious XDG debug messages.
   Native Windows and Ubuntu test-host **full up/status/logs/down**
   verified in [CI run #41546447273](https://github.com/SomeSunlight/ai-workstation/actions/runs/41546447273).
-- [ ] Owner repeats the isolated `aiw-smoke` smoke test on actual Windows
-  and reviews the platform-specific lifecycle changes.
-  **Never merge without owner approval.**
-- [ ] Separate **real host pilot**: recheck isolated harmless process
-  on the owner's own Windows host (CI now proves actual Windows/Ubuntu
-  binary up/status/logs/down), especially unknown-port-owner refusal,
-  runtime identity, recovery after crash and graceful stop, with NO GPU
-  or live production processes. Production services remain blocked until
-  a reviewed patched Process Compose binary is adopted.
+- [x] Owner completed the isolated native Windows `aiw-smoke` test,
+  including start, status, logs, native TUI and stop; accepted PR #37 and
+  squash-merged on 2026-11-03 as `da108899518d261a960edae9ff8867a6e57bb459`.
+  The accepted merge is closed in the dedicated baseline block above.
+- [x] Complete the **basic real Windows harmless-process acceptance**:
+  owner validated actual start/status/log/TUI/stop, with no GPU or
+  production service handoff. The CI additionally checked duplicate
+  start and unknown-stop rejection.
+- [ ] Later hardening gate: verify crash recovery, process-tree shutdown,
+  unexpected listener ownership and restart semantics for real services.
+  **Production adoption remains blocked** until the verified patched
+  Process Compose build/security review. Track the gateway migration
+  and process ownership within #41 and #34.
 - [ ] Separate **real operational handoff** after pilot: implement
   DPAPI-aware native start adapters, preserve existing shared key
   during the one-time multi-client Caddy S02 trust boundary transition,
