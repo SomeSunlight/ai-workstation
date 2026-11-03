@@ -30,6 +30,15 @@ Example operator-chosen client IDs (no defaults are preinstalled):
 
 A client ID identifies the **application connection**, not the user sitting in front of Open WebUI. Multiple human users of one Open WebUI instance share that instance's Dispatcher client ID; WebUI's own user/audit system is responsible for finer attribution.
 
+## Fresh-install contract (versus existing installation adoption)
+
+AI Workstation must ultimately support **both** paths under #41. This draft documents the migration but does **not yet implement** this contract:
+
+- **Fresh supported Windows host:** guided, repeatable provisioning of pinned/verified Caddy, native Llama Dispatcher, Strata and Process Compose, plus private configuration, readiness validation and controlled service lifecycle. Verify the actual Strata distribution/install route and any separate licensing or GPU prerequisites before promising automated binary installation.
+- **Existing Windows host:** discover exact installed program/configuration and process ownership, then attach/adopt safely without uninstalling, overwriting private files, changing ports or launching duplicate processes.
+- **Both:** no personal domains, native keys, models or user databases in Git; explain required operator-provided TLS/DNS configuration, model weights, native GPU drivers and secrets. Have a safe rollback and explicit approval before re-owning running processes.
+
+Installing AI Workstation should remain the **operator's primary entry point** on a new host; installing Caddy/Dispatcher/Strata by hand must not silently be treated as the generic prerequisite.
 ## Phase A — preparation that can be done **without changing live traffic**
 
 1. Confirm the existing native Caddy → Dispatcher → Strata path and the existing WSL Goose/Open WebUI route still work. Record current process owner, executable path, PID + creation time, ports, private Caddy configuration path, Dispatcher instance/config + SQLite location, Strata endpoint, WebUI data directories, old shared credential reference and the direct-Strata fallback. **Keep those details private**; a redacted checklist is sufficient for review. Do not stop, reload or replace any process during inventory.
