@@ -10,7 +10,7 @@
 
 - [x] Confirm actual PR #37 squash merge and real owner Windows Process Compose/TUI acceptance; distinguish CI smoke from on-host validation.
 - [x] Separate operational next work: [#41](https://github.com/SomeSunlight/ai-workstation/issues/41) generic Caddy installation/process ownership and multi-client gateway trust-boundary migration; [#39](https://github.com/SomeSunlight/ai-workstation/issues/39) containerized agent Workbench; [#38](https://github.com/SomeSunlight/ai-workstation/issues/38) additional Goose workspace directories; [#33](https://github.com/SomeSunlight/ai-workstation/issues/33) real native Ubuntu acceptance.
-- [ ] Update accepted status and concise, *host-neutral* AIW Context guidance; add no personal machine/domain/password-manager defaults.
+- [x] Update accepted PLAN/STATE/README/CHANGELOG and author two concise host-neutral, English-language, low-memory operator rules in `CONTEXT.src.md`; add no new personal machine/domain/password-manager defaults. The generated Context is **not** updated until the separate build/check gate.
 - [ ] Rebuild/check **authored** ContextCanon changes using the actual compiler and verify no generated drift; CI alone is not proof of this. Never hand-edit generated Context.
 - [ ] Review changes and submit documentation-only PR for owner approval; do not merge without explicit approval.
 
