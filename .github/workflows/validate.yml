@@ -25,6 +25,14 @@ jobs:
           version: "0.11.26"
       - name: Synchronize locked environment
         run: uv sync --frozen
+      # Check the committed Official Context packages without regenerating them.
+      # Pin CLI 0.10.0 (internal compiler 0.8.0) to the exact verified source revision;
+      # do not silently import newer ContextCanon or Development Workflow semantics.
+      - name: Verify ContextCanon generated packages (read-only)
+        run: |
+          uvx --from "git+https://github.com/SomeSunlight/context-canon.git@786c50957c4c06f9209ebacfa021609b592c0b07" contextcanon --version
+          uvx --from "git+https://github.com/SomeSunlight/context-canon.git@786c50957c4c06f9209ebacfa021609b592c0b07" contextcanon check --all .
+
       - name: Verify repository files
         run: |
           test -f uv.lock

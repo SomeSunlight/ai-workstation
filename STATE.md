@@ -1,5 +1,43 @@
 # AI Workstation Current State
 
+## Accepted PR #42 baseline (2026-11-03)
+
+[AI Workstation PR #42](https://github.com/SomeSunlight/ai-workstation/pull/42)
+was owner-tested ("tested successfully") and merged into `main` on
+2026-11-03 as `49e8d67246763b83502f58fb4f6628e0801c76fb`
+(final PR head `a02eb558d333a1695ecdfdec64ae31b76daedadf`).
+It carries the accepted post-#37 PLAN/STATE/README/CHANGELOG checkpoint,
+two concise project-specific rules in authored `CONTEXT.src.md`, and
+compiler-generated root and child Official Context packages
+(compiler metadata `0.8.0`). Those rules require general-purpose,
+English-language behavior and a compact, self-explaining operator UX.
+It also accepts the bounded Windows installer staging retry/fresh-root
+fix (#43), with owner testing and successful Ubuntu/Windows CI
+[run #41637116958](https://github.com/SomeSunlight/ai-workstation/actions/runs/41637116958).
+
+Independent post-merge verification under issue #40 used the matching
+ContextCanon **CLI 0.10.0** (internal compiler **0.8.0**, SHA
+`786c50957c4c06f9209ebacfa021609b592c0b07`). In Linux
+[workflow #41641727621](https://github.com/SomeSunlight/ai-workstation/actions/runs/41641727621),
+`contextcanon build --all .` made **no changes** across all nine Nodes;
+`contextcanon check --all .` reported **nine OK** and all eight
+Parent/Child relationships current. The first attempted check with an older
+CLI 0.8.0/internal compiler 0.6.0 falsely reported nine-node drift.
+That incompatible generated candidate was rejected and removed from the
+current review tree; inherited Development Workflow rules are intact.
+A correctly pinned read-only CI gate and this closure are proposed in
+[PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44), not yet
+merged. No production Caddy/Dispatcher/Strata or container service
+was migrated by PR #42.
+
+**Next priority:** issue [#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
+(usable, separately isolated Goose/Hermes Docker Workbench after host
+prerequisite review), then issue
+[#41](https://github.com/SomeSunlight/ai-workstation/issues/41)
+(generic Caddy management and owner-approved per-client authentication
+cutover with the working gateway preserved). The Process Compose
+production hold remains active.
+
 ## Accepted repository baseline
 
 PR #2 was squash-merged to `main` as `db65575c415f18a8c81db6e1bfcb32a50a56fb32`. Issue #1 is complete.
@@ -105,13 +143,15 @@ Issue [#33](https://github.com/SomeSunlight/ai-workstation/issues/33) is **parti
 
 ## Next planned work
 
-Begin with the post-merge accepted-baseline and project-context
-checkpoint, issue [#40](https://github.com/SomeSunlight/ai-workstation/issues/40).
-Separate future work: [#41](https://github.com/SomeSunlight/ai-workstation/issues/41)
-to make Caddy a reproducibly installed and safely operated AIW native
-service with independently authenticated clients; [#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
-to offer isolated Goose/Hermes agent containers and a usable host-local
-Workbench. A patched Process Compose build, reversible process
+Issue [#40](https://github.com/SomeSunlight/ai-workstation/issues/40)
+now concerns only post-#42 independent ContextCanon verification and
+documentation closure. The next **product work** is
+[#39](https://github.com/SomeSunlight/ai-workstation/issues/39):
+isolated Goose/Hermes containers and a usable host-local Workbench,
+starting with an explicit Windows Docker/prerequisite and secret review.
+Only subsequently address [#41](https://github.com/SomeSunlight/ai-workstation/issues/41):
+reproducible Caddy installation, safe native process ownership and
+independently authenticated S02 gateway clients. A patched Process Compose build, reversible process
 ownership handoff, real-host tests and owner approval are required
 **before any live Caddy/Strata/Dispatcher migration**. The current
 working Caddy → authenticated Dispatcher → native Strata gateway is
