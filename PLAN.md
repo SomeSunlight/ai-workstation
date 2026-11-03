@@ -1,18 +1,20 @@
 # AI Workstation Plan
 
-## Active post-merge verification / closure — Issue #40 (2026-11-03)
+## Active post-merge closure — Issue #40 (2026-11-03)
 
-**Accepted fact:** [PR #42](https://github.com/SomeSunlight/ai-workstation/pull/42) was owner-tested and merged at `49e8d67246763b83502f58fb4f6628e0801c76fb`. Its compiled ContextCanon root/child artifacts are on `main` and the exact PR head passed Ubuntu/Windows CI. That workflow did **not** run ContextCanon's read-only drift check.
+**Accepted baseline:** [PR #42](https://github.com/SomeSunlight/ai-workstation/pull/42) was owner-tested and merged at `49e8d67246763b83502f58fb4f6628e0801c76fb`. Its source, nine compiled ContextCanon Nodes and eight normative Parent/Child relationships are already consistent; the merged PR's ordinary CI did not invoke ContextCanon.
 
-**Scope of this follow-up review:** `PLAN.md`, `STATE.md`, `CHANGELOG.md`, `.github/workflows/validate.yml`, a temporary branch-scoped `.github/workflows/contextcanon-rebuild.yml` for genuine compiler output, generated `CONTEXT.src.md`/`CONTEXT.md`/`CONTEXT/`/`.context/` files from that compiler only, and PR #42 status description. No authored Context Source or compiler-generated package modifications, host services, secrets, binary pins or live gateway changes. Do not merge without fresh owner approval.
+**Current scope:** `PLAN.md`, `STATE.md`, `CHANGELOG.md` and `.github/workflows/validate.yml`; the temporary `.github/workflows/contextcanon-rebuild.yml` is removed before final review. No authored Context Source, compiler-generated package or live runtime changes are necessary. No Process Compose production adoption or Caddy cutover. Never merge without owner approval.
 
-- [x] Reconcile PR #42 merge, owner acceptance, committed compiled Context and current ordinary CI evidence.
-- [x] Record the approved source/package baseline and the remaining independent verification in PLAN.
-- [x] Add a pinned, read-only `contextcanon check --all .` step to Ubuntu CI (ContextCanon 0.8.0 SHA `d285ae09795994239a802ce50342404fadd482b7`); do not silently regenerate packages. CI result still pending.
-- [x] Update STATE and CHANGELOG to record the actual accepted merge and next focus (#39 before #41).
-- [x] Run pinned ContextCanon 0.8.0 read-only check in CI: **failed** on all nine Nodes (run #41640517137). Root version 0.2.2 was reused although compiler requires 0.2.3; the original #42 package is not drift-free.
-- [ ] Rebuild with the **actual pinned compiler** on the isolated review branch only; commit authentic compiler outputs (including any version/ID changes), not hand edits. Use a temporary branch-scoped GitHub Actions workflow because this environment cannot clone/run the repository locally; remove the temporary workflow after publication.
-- [ ] Re-run `contextcanon check --all .`, full exact-head CI and review the generated diff; update PR for owner acceptance. Never merge automatically.
+- [x] Verify PR #42 merge and owner's acceptance, then update the durable post-merge status.
+- [x] Identify and correct the **verification-tool mismatch**: early run [#41640517137](https://github.com/SomeSunlight/ai-workstation/actions/runs/41640517137) used CLI 0.8.0 (`d285ae...`), whose internal compiler was **0.6.0**. Its nine-node drift report was a false positive due to incompatible compiler versions.
+- [x] Restore original PR #42 Context packages after rejecting the old compiler's candidate output, including all inherited CCW rules; use CLI **0.10.0**, internal compiler **0.8.0**, pinned at `786c50957c4c06f9209ebacfa021609b592c0b07`.
+- [x] In isolated, one-time Linux workflow [#41641727621](https://github.com/SomeSunlight/ai-workstation/actions/runs/41641727621), run the **correct compiler**: `contextcanon build --all .` reports **no changes** across all nine Nodes, `contextcanon check --all .` reports **nine OK**, all **eight Parent/Child links current**, and full `tools/release-check.sh` passed.
+- [x] Add the correctly pinned, **read-only** ContextCanon check to ordinary Ubuntu CI, with no implicit generation or Parent package upgrade.
+- [x] Align accepted PLAN, STATE and CHANGELOG; keep product priority #39 before #41, with no changes to the live Caddy gateway.
+- [ ] Remove the temporary branch-only rebuild workflow, confirm the final review diff contains only the four intended files and obtain green Ubuntu/Windows exact-head CI.
+- [ ] Present [PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44) for owner review and explicit approval. Keep issue #40 open until accepted merge and final closure.
+
 
 ---
 
@@ -23,7 +25,7 @@ Purpose: under native Windows, temporarily locked prior staging folders must not
 - [x] Create [AI Workstation #43](https://github.com/SomeSunlight/ai-workstation/issues/43) and keep implementation inside existing draft PR #42.
 - [x] Use bounded cleanup retry for the old tool-owned stage, fall back to a unique fresh stage when still locked, and verify the copied entry point.
 - [x] Add isolated Windows regression tests for a transient failure, persistent lock, idempotence and refusing foreign directories; wire into Windows CI.
-- [x] Exact-head Ubuntu/Windows CI completed successfully ([run #41637116958](https://github.com/SomeSunlight/ai-workstation/actions/runs/41637116958)); owner commented "tested successfully" and merged PR #42 on 2026-11-03. Generated ContextCanon packages were included in the accepted change; read-only compiler verification is tracked below.
+- [x] Exact-head Ubuntu/Windows CI completed successfully ([run #41637116958](https://github.com/SomeSunlight/ai-workstation/actions/runs/41637116958)); owner commented "tested successfully" and merged PR #42 on 2026-11-03. Generated ContextCanon packages were included in the accepted change; independent pinned build/check confirmed zero drift in the issue #40 closure above.
 
 
 
@@ -37,9 +39,9 @@ Purpose: under native Windows, temporarily locked prior staging folders must not
 
 - [x] Confirm actual PR #37 squash merge and real owner Windows Process Compose/TUI acceptance; distinguish CI smoke from on-host validation.
 - [x] Separate operational next work: [#41](https://github.com/SomeSunlight/ai-workstation/issues/41) generic Caddy installation/process ownership and multi-client gateway trust-boundary migration; [#39](https://github.com/SomeSunlight/ai-workstation/issues/39) containerized agent Workbench; [#38](https://github.com/SomeSunlight/ai-workstation/issues/38) additional Goose workspace directories; [#33](https://github.com/SomeSunlight/ai-workstation/issues/33) real native Ubuntu acceptance.
-- [x] Update accepted PLAN/STATE/README/CHANGELOG and author two concise host-neutral, English-language, low-memory operator rules in `CONTEXT.src.md`; add no new personal machine/domain/password-manager defaults. The generated Context is **not** updated until the separate build/check gate.
+- [x] Update accepted PLAN/STATE/README/CHANGELOG and author two concise host-neutral, English-language, low-memory operator rules in `CONTEXT.src.md`; add no new personal machine/domain/password-manager defaults. At the original source-edit stage the generated Context was pending; PR #42 subsequently included it and the matching compiler confirmed zero drift.
 - [x] Compiler-generated root and dependent ContextCanon packages were committed in the accepted PR #42, including two new root rules (compiler metadata `0.8.0`).
-- [ ] Verify **read-only** `contextcanon check --all .` on a clean exact-head checkout using a pinned compiler; inspect result rather than inferring success from the ordinary release CI. Never hand-edit generated Context.
+- [x] Pinned matching compiler (`contextcanon` CLI 0.10.0, package compiler 0.8.0) ran `build --all` with no changes and `check --all` with nine OK/eight current Parent/Child relations on the post-merge review branch (workflow #41641727621); no generated Context files were hand-edited.
 - [x] PR [#42](https://github.com/SomeSunlight/ai-workstation/pull/42) was accepted by the owner ("tested successfully") and merged on 2026-11-03 at `49e8d67246763b83502f58fb4f6628e0801c76fb`; final review head was `a02eb558d333a1695ecdfdec64ae31b76daedadf`. Historical pre-merge verification caveats remain in PR discussion.
 
 **Next operational sequence after post-merge closure:** prioritize a reversible, separately sandboxed Goose/Hermes Docker Workbench (#39), beginning with prerequisite and secret/network review; integrate managed Caddy and per-client S02 gateway routing (#41) only in a separate, approved production trust-boundary change. Preserve the existing working gateway and the Process Compose production hold until verified patched binaries and owner approval. The current live gateway does **not** automatically consume the keys created by PR #37.
