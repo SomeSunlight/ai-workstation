@@ -42,6 +42,9 @@ try {
     try { & (Join-Path $root 'bootstrap/windows/Services.ps1') host preflight }
     catch { $rejected = $true }
     if (-not $rejected) { throw 'Stale service definitions were accepted.' }
+    # A deliberately rejected native CLI leaves LASTEXITCODE=1. The expected
+    # negative test passed; do not make the CI PowerShell step fail as a result.
+    $global:LASTEXITCODE = 0
     # No real service start is permitted by the production security gate.
     Write-Host '[PASS] Native host init, render, preflight, dependency and drift refusal.'
 }
