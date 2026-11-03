@@ -42,6 +42,24 @@ separate Docker Compose setup and **different** S02 credentials. Protected
 home-network Caddy access and the legacy shared key must remain intact
 until an owner-approved staged cutover. A review-stage operator runbook
 is proposed in [docs/gateway-client-migration.md](docs/gateway-client-migration.md).
+
+**Current #41 draft implementation:** [PR #45](https://github.com/SomeSunlight/ai-workstation/pull/45)
+adds a private three-service Windows host input and native Process Compose
+renderer, DPAPI-only native child launch and authenticated readiness probes,
+no-double-owner listening-port preflight, menu actions 17/18/19, and the
+[native-host operations guide](docs/native-host-operations.md). The generated
+project has an explicit Strata → Dispatcher → Caddy healthy-start dependency.
+Actual program paths, launch arguments, private credentials and host secrets
+must be configured only on the operator's host. CI verified the real pinned
+Windows native Process Compose **configuration dry-run with three processes**,
+Windows collision/drift/security-gate refusals and existing Linux release
+checks. **The production hold remains active**: no live native service has
+been adopted or started, no patched supervisor has been qualified, and
+Speedy real child-tree stop/reboot tests are not yet complete. After those
+gates, the required first real acceptance test must Start/Status/Logs/TUI/Stop
+all three services via AIW alone and restore them by AIW Start after reboot;
+the existing private PowerShell starter is rollback only.
+
 Additional native-host Goose/Hermes Docker containers [#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
 are deferred: not needed for this deployment. The Process Compose production
 hold is unchanged and still active.
