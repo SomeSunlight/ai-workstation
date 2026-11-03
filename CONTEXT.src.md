@@ -1,5 +1,5 @@
 # ai-workstation — Local Context Source
-<!-- ctx:node id="aea56adf-2a26-43f0-b712-3bbeab7a3097" name="ai-workstation" version="0.2.1" adapters="agents,goose" -->
+<!-- ctx:node id="aea56adf-2a26-43f0-b712-3bbeab7a3097" name="ai-workstation" version="0.2.2" adapters="agents,goose" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
@@ -34,7 +34,7 @@ Details: CONTEXT-format.md
 -->
 
 <!-- contextcanon-placement-overview:start -->
-- AI Workstation is a reproducible workstation built from Windows/WSL bootstrap, Linux host configuration, and containerized application runtimes.
+- AI Workstation is a general-purpose, reproducible installer/operator with host-native Windows services, WSL2/Linux and native Linux execution paths, plus independently managed containers. The currently accepted full installation path is Windows/WSL; native Linux host acceptance is a separate gate.
   <!-- cc:placement-overview id="ONB-468CE58AC863" -->
 <!-- contextcanon-placement-overview:end -->
 
@@ -73,8 +73,8 @@ Details: CONTEXT-format.md
   Why: Prevents runtime or host drift from becoming an implicit configuration authority.
   <!-- ctx:rule id="ONB-6566E6E85D48" -->
 
-- **Develop inside the WSL filesystem:** Work inside the WSL Linux filesystem, not under `/mnt/c`.
-  Why: Keeps development on the Linux filesystem the project expects.
+- **Keep WSL development inside its Linux filesystem:** When developing or installing Linux workloads under WSL, use the WSL Linux filesystem rather than `/mnt/c`; native Windows and native Linux tools use their own appropriate host filesystems.
+  Why: Avoids WSL filesystem performance and permission problems without incorrectly imposing WSL paths on the other supported execution modes.
   <!-- ctx:rule id="ONB-504C6A92475F" -->
 
 - **Keep versions documentation and tests aligned:** Update `config/versions.json`, documentation and tests together.
@@ -88,7 +88,15 @@ Details: CONTEXT-format.md
 - **Keep secrets out of Git images and Compose:** Secrets must not be committed, copied into images or stored in Compose files.
   Why: Keeps credentials out of durable repository history and built artifacts.
   <!-- ctx:rule id="ONB-DCF5EB952F7D" -->
+
+- **Keep shipped product behavior general and English-language:** Design and document AI Workstation for native Windows, Linux under WSL and native Linux using platform-specific adapters where needed. Keep public code, menu/CLI text, default examples and documentation in English regardless of the conversation language. Personal hostnames, usernames, domains, provider preferences and password-manager choices belong in private operator configuration, not product assumptions.
+  Why: A reusable workstation must remain understandable and portable across owners, operating systems and future hardware; distinguish intended compatibility from actually validated platform support.
+  <!-- ctx:rule id="RULE-81304E42320A" -->
+
+- **Make operator workflows discoverable with little memorization:** Prefer concise menus that preserve readable action results, redisplay choices on request, offer numbered selection of already known objects and briefly distinguish terms such as original credentials versus derived hashes. Keep details in linked guidance and test representative user journeys on each relevant operating system.
+  Why: Users should be able to return weeks later without recalling identifiers or internal commands; these are practical UX preferences, not a requirement to build another TUI or a ban on direct CLI commands.
 <!-- contextcanon-placement-rules:end -->
+  <!-- ctx:rule id="RULE-7E9AB1D9A8A0" -->
 
 ## Local Topics
 

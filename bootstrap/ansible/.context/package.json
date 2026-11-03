@@ -2,19 +2,19 @@
   "changes": [],
   "compiler_version": "0.8.0",
   "digests": {
-    "normalized": "a02c98e5b7d369c7d21ae78b7d931770c83557fe04cd5eb08f2bc1409851eb87",
-    "package": "a83a46dc8573639723b7989ca327b822b8f369aef59f423555bc85b943798fc2"
+    "normalized": "aa5c119b2078585bd0dc410b73a028fca8cc943ec627f60a4dafcac21a72f487",
+    "package": "8e6c9b544faeb4ab1bb574f18dc2df56c7b1093a1d6ec9cf7381a41d1b92393a"
   },
   "files": [
     {
       "path": ".context/resource-origins.json",
-      "sha256": "6283dd129e43fb4c81e6512428904e4194fa3d4f31e716a6a34db1f3fc6003db",
-      "size": 1074
+      "sha256": "0caa06a9a9688f40221942ddb61c4bfdaa208b45c902b6c53864a967a20e9019",
+      "size": 1260
     },
     {
       "path": "CONTEXT.md",
-      "sha256": "7b9f276c22f9f91d4e6ae2750c89e2588d10cef28a8945560b9891be38b2890c",
-      "size": 9394
+      "sha256": "6d5c62de4e33b0df95653b3a2630c18504df3bc17df644024019fbeb1514fd57",
+      "size": 10463
     },
     {
       "path": "CONTEXT/README.md",
@@ -37,14 +37,19 @@
       "size": 1409
     },
     {
+      "path": "CONTEXT/references/n86fee10195c6f43/docs/native-linux.md",
+      "sha256": "090a5a251d43dcdb8189426b158f3f864c1c96c3d927246ca1feb3011a6815eb",
+      "size": 4317
+    },
+    {
       "path": "CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md",
       "sha256": "6b348ebc0c4f23aca4229f5a6886bc2eb964fc80bd5ea458c1170823ee2d0c9f",
       "size": 2233
     },
     {
       "path": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md",
-      "sha256": "c0403fd56f695723f90edc9dcb1ff276f9775b15c42dcc75b883e6c463b4e12c",
-      "size": 5644
+      "sha256": "5f48cc76c2f3aaf76ea730d03ec5fe158b831bd329b2673ef6d28559906436ff",
+      "size": 6400
     }
   ],
   "imports": [
@@ -59,24 +64,24 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a",
-      "package_digest": "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb",
-      "version": "0.2.1",
+      "normalized_digest": "72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9",
+      "package_digest": "3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0",
+      "version": "0.2.2",
       "why": null
     },
     {
       "id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
       "name": "Bootstrap",
-      "normalized_digest": "d1ce55c3070f7d5265d2d4ba28523d1efe41f2cf1cb55fa64eadb4cac4155831",
-      "package_digest": "8ae276c530d72401d155eb5f25fb0abd44d4b2a2ecc207fd1b374dc300dc34a5",
-      "version": "0.2.1-draft",
+      "normalized_digest": "1e795319abed6f4d66c0c48f227a5bc89b72dc3f50b394b549489a660c8623b8",
+      "package_digest": "1cea3ebe40730eb2d962e15cb9c5e967ab6d13443a030fead969db897d1b68c7",
+      "version": "0.2.2-draft",
       "why": null
     }
   ],
   "node": {
     "id": "ad9cbb59-ae04-4290-9c53-5d70cfefe434",
     "name": "Ansible host configuration",
-    "version": "0.2.1-draft"
+    "version": "0.2.2-draft"
   },
   "parents": [],
   "removed_rules": [],
@@ -217,9 +222,9 @@
       "modifications": [],
       "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "origin_node_name": "ai-workstation",
-      "statement": "Work inside the WSL Linux filesystem, not under `/mnt/c`.",
-      "title": "Develop inside the WSL filesystem",
-      "why": "Keeps development on the Linux filesystem the project expects."
+      "statement": "When developing or installing Linux workloads under WSL, use the WSL Linux filesystem rather than `/mnt/c`; native Windows and native Linux tools use their own appropriate host filesystems.",
+      "title": "Keep WSL development inside its Linux filesystem",
+      "why": "Avoids WSL filesystem performance and permission problems without incorrectly imposing WSL paths on the other supported execution modes."
     },
     {
       "group": "Onboarding placement",
@@ -250,6 +255,26 @@
       "statement": "Secrets must not be committed, copied into images or stored in Compose files.",
       "title": "Keep secrets out of Git images and Compose",
       "why": "Keeps credentials out of durable repository history and built artifacts."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "RULE-81304E42320A",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Design and document AI Workstation for native Windows, Linux under WSL and native Linux using platform-specific adapters where needed. Keep public code, menu/CLI text, default examples and documentation in English regardless of the conversation language. Personal hostnames, usernames, domains, provider preferences and password-manager choices belong in private operator configuration, not product assumptions.",
+      "title": "Keep shipped product behavior general and English-language",
+      "why": "A reusable workstation must remain understandable and portable across owners, operating systems and future hardware; distinguish intended compatibility from actually validated platform support."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "RULE-7E9AB1D9A8A0",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Prefer concise menus that preserve readable action results, redisplay choices on request, offer numbered selection of already known objects and briefly distinguish terms such as original credentials versus derived hashes. Keep details in linked guidance and test representative user journeys on each relevant operating system.",
+      "title": "Make operator workflows discoverable with little memorization",
+      "why": "Users should be able to return weeks later without recalling identifiers or internal commands; these are practical UX preferences, not a requirement to build another TUI or a ban on direct CLI commands."
     },
     {
       "group": "Onboarding placement",
@@ -317,10 +342,10 @@
     {
       "id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
       "name": "Bootstrap",
-      "normalized_digest": "d1ce55c3070f7d5265d2d4ba28523d1efe41f2cf1cb55fa64eadb4cac4155831",
-      "package_digest": "8ae276c530d72401d155eb5f25fb0abd44d4b2a2ecc207fd1b374dc300dc34a5",
+      "normalized_digest": "1e795319abed6f4d66c0c48f227a5bc89b72dc3f50b394b549489a660c8623b8",
+      "package_digest": "1cea3ebe40730eb2d962e15cb9c5e967ab6d13443a030fead969db897d1b68c7",
       "relationship": "parent",
-      "version": "0.2.1-draft",
+      "version": "0.2.2-draft",
       "why": null
     }
   ],

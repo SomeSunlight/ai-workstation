@@ -99,6 +99,9 @@ jobs:
       - name: Verify Windows shortcut creation and safe rename migration
         shell: pwsh
         run: ./tests/windows/shortcuts.ps1
+      - name: Verify Windows installer staging cleanup under transient locks
+        shell: pwsh
+        run: ./tests/windows/staging-cleanup.ps1
       - name: Parse native Windows Process Compose and DPAPI helper
         shell: pwsh
         run: |

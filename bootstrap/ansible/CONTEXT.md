@@ -8,13 +8,13 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** Ansible host configuration  
-**Context version:** `0.2.1-draft`
+**Context version:** `0.2.2-draft`
 
 **Resulting imported Contexts:**
 
-- **Development Workflow** — `0.3.0-draft` — via Parent Context **Bootstrap** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../../.context/versions/0294a3aff9e1d337/CONTEXT.md)
-- **ai-workstation** — `0.2.1` — via Parent Context **Bootstrap** — [inspect accepted carrier](../../.context/versions/0294a3aff9e1d337/CONTEXT.md)
-- **Bootstrap** — `0.2.1-draft` — direct Parent Context — [inspect accepted carrier](../../.context/versions/0294a3aff9e1d337/CONTEXT.md)
+- **Development Workflow** — `0.3.0-draft` — via Parent Context **Bootstrap** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../../.context/versions/37b676f7bc008873/CONTEXT.md)
+- **ai-workstation** — `0.2.2` — via Parent Context **Bootstrap** — [inspect accepted carrier](../../.context/versions/37b676f7bc008873/CONTEXT.md)
+- **Bootstrap** — `0.2.2-draft` — direct Parent Context — [inspect accepted carrier](../../.context/versions/37b676f7bc008873/CONTEXT.md)
 
 ## Local Overview
 
@@ -110,9 +110,9 @@ After a reviewed change is successfully merged into the accepted branch, reconci
 
 The repository is the installation specification; running containers and manually modified hosts are not the source of truth.
 
-#### `ONB-504C6A92475F` — Develop inside the WSL filesystem
+#### `ONB-504C6A92475F` — Keep WSL development inside its Linux filesystem
 
-Work inside the WSL Linux filesystem, not under `/mnt/c`.
+When developing or installing Linux workloads under WSL, use the WSL Linux filesystem rather than `/mnt/c`; native Windows and native Linux tools use their own appropriate host filesystems.
 
 #### `ONB-02E2C1B8C47B` — Keep versions documentation and tests aligned
 
@@ -125,6 +125,14 @@ Run `./tools/release-check.sh` before committing.
 #### `ONB-DCF5EB952F7D` — Keep secrets out of Git images and Compose
 
 Secrets must not be committed, copied into images or stored in Compose files.
+
+#### `RULE-81304E42320A` — Keep shipped product behavior general and English-language
+
+Design and document AI Workstation for native Windows, Linux under WSL and native Linux using platform-specific adapters where needed. Keep public code, menu/CLI text, default examples and documentation in English regardless of the conversation language. Personal hostnames, usernames, domains, provider preferences and password-manager choices belong in private operator configuration, not product assumptions.
+
+#### `RULE-7E9AB1D9A8A0` — Make operator workflows discoverable with little memorization
+
+Prefer concise menus that preserve readable action results, redisplay choices on request, offer numbered selection of already known objects and briefly distinguish terms such as original credentials versus derived hashes. Keep details in linked guidance and test representative user journeys on each relevant operating system.
 
 ## Rules from Bootstrap
 

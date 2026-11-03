@@ -8,7 +8,7 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** ai-workstation  
-**Context version:** `0.2.1`
+**Context version:** `0.2.2`
 
 **Resulting imported Contexts:**
 
@@ -17,7 +17,7 @@
 ## Local Overview
 
 <!-- contextcanon-placement-overview:start -->
-- AI Workstation is a reproducible workstation built from Windows/WSL bootstrap, Linux host configuration, and containerized application runtimes.
+- AI Workstation is a general-purpose, reproducible installer/operator with host-native Windows services, WSL2/Linux and native Linux execution paths, plus independently managed containers. The currently accepted full installation path is Windows/WSL; native Linux host acceptance is a separate gate.
   <!-- cc:placement-overview id="ONB-468CE58AC863" -->
 <!-- contextcanon-placement-overview:end -->
 
@@ -111,9 +111,9 @@ After a reviewed change is successfully merged into the accepted branch, reconci
 
 The repository is the installation specification; running containers and manually modified hosts are not the source of truth.
 
-#### `ONB-504C6A92475F` — Develop inside the WSL filesystem
+#### `ONB-504C6A92475F` — Keep WSL development inside its Linux filesystem
 
-Work inside the WSL Linux filesystem, not under `/mnt/c`.
+When developing or installing Linux workloads under WSL, use the WSL Linux filesystem rather than `/mnt/c`; native Windows and native Linux tools use their own appropriate host filesystems.
 
 #### `ONB-02E2C1B8C47B` — Keep versions documentation and tests aligned
 
@@ -126,6 +126,14 @@ Run `./tools/release-check.sh` before committing.
 #### `ONB-DCF5EB952F7D` — Keep secrets out of Git images and Compose
 
 Secrets must not be committed, copied into images or stored in Compose files.
+
+#### `RULE-81304E42320A` — Keep shipped product behavior general and English-language
+
+Design and document AI Workstation for native Windows, Linux under WSL and native Linux using platform-specific adapters where needed. Keep public code, menu/CLI text, default examples and documentation in English regardless of the conversation language. Personal hostnames, usernames, domains, provider preferences and password-manager choices belong in private operator configuration, not product assumptions.
+
+#### `RULE-7E9AB1D9A8A0` — Make operator workflows discoverable with little memorization
+
+Prefer concise menus that preserve readable action results, redisplay choices on request, offer numbered selection of already known objects and briefly distinguish terms such as original credentials versus derived hashes. Keep details in linked guidance and test representative user journeys on each relevant operating system.
 
 ## Topics from Development Workflow
 

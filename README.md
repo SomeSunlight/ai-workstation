@@ -59,22 +59,34 @@ q) Exit
 
 The menu evolves as new capabilities are added; the example above is a snapshot and is updated periodically.
 
-### Native services and multiple inference clients (review candidate)
+### Native services and named inference clients (accepted first slice)
 
-[Issue #34](https://github.com/SomeSunlight/ai-workstation/issues/34)
-adds a native Process Compose CLI/TUI entrypoint and **separately named**
-Dispatcher clients: `aiw services` on WSL/native Linux and
-`bootstrap/windows/Services.ps1` on native Windows. Client secrets are
-host-local (DPAPI on Windows, restricted files under Linux); the generated
-S02 configuration contains only hashes. Native process definitions stay
-in Process Compose YAML, while Docker Compose continues to own Goose,
-Open WebUI containers and future Hermes Agent.
+[PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37)
+introduced owner-tested, **opt-in** native Process Compose CLI/TUI
+entrypoints: `aiw services` on WSL/Linux and
+`bootstrap/windows/Services.ps1` on native Windows. The owner
+successfully tested Windows installation, client identity setup, a
+harmless managed process and the native TUI. Distinct client identities
+are user-chosen labels; original credentials remain protected locally
+(DPAPI on Windows, restricted files on Linux), and the generated
+S02 `clients.json` contains hashes **rather than portable API keys**.
 
-**This is not an automatic replacement of the currently functioning
-Speedy startup script.** The process owner cutover and Caddy single-key
-to multi-client change require separate review and real host tests.
-See the [native-services operator guide](docs/native-services.md)
-for menu choices, private YAML layout, safe onboarding and rollback.
+Process Compose is the native service supervisor, and Docker Compose
+remains the container runtime manager. These facilities work through
+AI Workstation entrypoints without a second custom dashboard.
+The project is intended to support native Windows services, Linux
+under WSL and native Linux hosts; **full native Linux host installation
+remains experimental**, not yet owner-accepted.
+
+**Not automatically activated:** installing Process Compose or adding
+client keys does not change an existing host gateway, native inference
+services, or the active Dispatcher. [Issue #41](https://github.com/SomeSunlight/ai-workstation/issues/41)
+tracks future *AI Workstation-managed Caddy* installation and the
+separately reviewed multi-client authentication/ownership handoff;
+[#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
+tracks isolated agent containers. The existing running gateway remains
+untouched until that explicit operational acceptance gate. Read the
+[operator guide](docs/native-services.md) for the portable workflow.
 
 ## Quick start
 

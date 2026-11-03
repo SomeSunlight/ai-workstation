@@ -1,5 +1,5 @@
 # Containerized application runtimes — Local Context Source
-<!-- ctx:node id="90dd976e-8753-495b-a631-d708b13878d1" name="Containerized application runtimes" version="0.2.1-draft" -->
+<!-- ctx:node id="90dd976e-8753-495b-a631-d708b13878d1" name="Containerized application runtimes" version="0.2.2-draft" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
@@ -21,8 +21,8 @@ Details: CONTEXT-format.md
 -->
 
 <!-- contextcanon-placement-parent:start -->
-- [ai-workstation](..) — `0.2.1` — `relationship=parent`
-  <!-- ctx:source id="aea56adf-2a26-43f0-b712-3bbeab7a3097" version="0.2.1" normalized-digest="110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a" package-digest="8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb" -->
+- [ai-workstation](..) — `0.2.2` — `relationship=parent`
+  <!-- ctx:source id="aea56adf-2a26-43f0-b712-3bbeab7a3097" version="0.2.2" normalized-digest="72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9" package-digest="3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview

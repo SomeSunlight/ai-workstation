@@ -9,7 +9,7 @@ compiler_version: "0.8.0"
 node:
   id: "ad9cbb59-ae04-4290-9c53-5d70cfefe434"
   name: "Ansible host configuration"
-  version: "0.2.1-draft"
+  version: "0.2.2-draft"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
 parents: []
@@ -18,11 +18,11 @@ parents: []
 sources:
   - id: "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
     name: "Bootstrap"
-    version: "0.2.1-draft"
+    version: "0.2.2-draft"
     relationship: "parent"
     locator: ".."
-    normalized_digest: "d1ce55c3070f7d5265d2d4ba28523d1efe41f2cf1cb55fa64eadb4cac4155831"
-    package_digest: "8ae276c530d72401d155eb5f25fb0abd44d4b2a2ecc207fd1b374dc300dc34a5"
+    normalized_digest: "1e795319abed6f4d66c0c48f227a5bc89b72dc3f50b394b549489a660c8623b8"
+    package_digest: "1cea3ebe40730eb2d962e15cb9c5e967ab6d13443a030fead969db897d1b68c7"
 
 # Direct informational References. Their Rules are not effective and they are not exported to Children.
 references: []
@@ -37,14 +37,14 @@ imports:
     why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.2.1"
-    normalized_digest: "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a"
-    package_digest: "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb"
+    version: "0.2.2"
+    normalized_digest: "72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9"
+    package_digest: "3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0"
   - id: "f78265e4-e023-4d7a-9b26-9a917ef68a4a"
     name: "Bootstrap"
-    version: "0.2.1-draft"
-    normalized_digest: "d1ce55c3070f7d5265d2d4ba28523d1efe41f2cf1cb55fa64eadb4cac4155831"
-    package_digest: "8ae276c530d72401d155eb5f25fb0abd44d4b2a2ecc207fd1b374dc300dc34a5"
+    version: "0.2.2-draft"
+    normalized_digest: "1e795319abed6f4d66c0c48f227a5bc89b72dc3f50b394b549489a660c8623b8"
+    package_digest: "1cea3ebe40730eb2d962e15cb9c5e967ab6d13443a030fead969db897d1b68c7"
 
 # Elements authored in this Node's CONTEXT.src.md.
 local:
@@ -73,10 +73,12 @@ official:
     - {"id": "CCW-006", "title": "Do not merge without explicit project-owner approval", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-008", "title": "Close the post-merge baseline checkpoint before new development", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "ONB-6566E6E85D48", "title": "Repository is the installation specification", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
-    - {"id": "ONB-504C6A92475F", "title": "Develop inside the WSL filesystem", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "ONB-504C6A92475F", "title": "Keep WSL development inside its Linux filesystem", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-02E2C1B8C47B", "title": "Keep versions documentation and tests aligned", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-BE08FE3A5E3D", "title": "Run release check before committing", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-DCF5EB952F7D", "title": "Keep secrets out of Git images and Compose", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "RULE-81304E42320A", "title": "Keep shipped product behavior general and English-language", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "RULE-7E9AB1D9A8A0", "title": "Make operator workflows discoverable with little memorization", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-14050ED3235E", "title": "Keep installation entry points thin", "origin_node_id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a", "origin_node_name": "Bootstrap", "local": false, "overrides": []}
     - {"id": "ONB-F02E76A8ECF4", "title": "Preserve installer idempotency", "origin_node_id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a", "origin_node_name": "Bootstrap", "local": false, "overrides": []}
     - {"id": "ONB-DDE1BB850066", "title": "No automatic destructive migration", "origin_node_id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a", "origin_node_name": "Bootstrap", "local": false, "overrides": []}
@@ -119,10 +121,11 @@ resources:
   - {"source": null, "published": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md"}
   - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/CONTEXT.md"}
   - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/SECURITY.md"}
+  - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/docs/native-linux.md"}
   - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md"}
   - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md"}
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "a02c98e5b7d369c7d21ae78b7d931770c83557fe04cd5eb08f2bc1409851eb87"
-  package_digest: "a83a46dc8573639723b7989ca327b822b8f369aef59f423555bc85b943798fc2"
+  normalized_digest: "aa5c119b2078585bd0dc410b73a028fca8cc943ec627f60a4dafcac21a72f487"
+  package_digest: "8e6c9b544faeb4ab1bb574f18dc2df56c7b1093a1d6ec9cf7381a41d1b92393a"

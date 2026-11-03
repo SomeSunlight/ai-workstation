@@ -9,7 +9,7 @@ compiler_version: "0.8.0"
 node:
   id: "6417ee7c-a9d0-40c7-ada3-6762d4a3900b"
   name: "aiw operator interface"
-  version: "0.2.1-draft"
+  version: "0.2.2-draft"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
 parents: []
@@ -18,11 +18,11 @@ parents: []
 sources:
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.2.1"
+    version: "0.2.2"
     relationship: "parent"
     locator: ".."
-    normalized_digest: "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a"
-    package_digest: "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb"
+    normalized_digest: "72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9"
+    package_digest: "3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0"
 
 # Direct informational References. Their Rules are not effective and they are not exported to Children.
 references: []
@@ -37,9 +37,9 @@ imports:
     why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.2.1"
-    normalized_digest: "110f487c96f95d5bacbb8db7c507e314254da3d2d7e0392ac4a98b6a371ed97a"
-    package_digest: "8214a97deb618a237af88b10e15f75be2950ffe4c2eb8428926d4d52fd1378eb"
+    version: "0.2.2"
+    normalized_digest: "72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9"
+    package_digest: "3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0"
 
 # Elements authored in this Node's CONTEXT.src.md.
 local:
@@ -65,10 +65,12 @@ official:
     - {"id": "CCW-006", "title": "Do not merge without explicit project-owner approval", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "CCW-008", "title": "Close the post-merge baseline checkpoint before new development", "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40", "origin_node_name": "Development Workflow", "local": false, "overrides": []}
     - {"id": "ONB-6566E6E85D48", "title": "Repository is the installation specification", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
-    - {"id": "ONB-504C6A92475F", "title": "Develop inside the WSL filesystem", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "ONB-504C6A92475F", "title": "Keep WSL development inside its Linux filesystem", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-02E2C1B8C47B", "title": "Keep versions documentation and tests aligned", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-BE08FE3A5E3D", "title": "Run release check before committing", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-DCF5EB952F7D", "title": "Keep secrets out of Git images and Compose", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "RULE-81304E42320A", "title": "Keep shipped product behavior general and English-language", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "RULE-7E9AB1D9A8A0", "title": "Make operator workflows discoverable with little memorization", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
   removed_rules: []
   topic_ids: ["CCW-TOPIC-CHANGE-WORKFLOW", "ONB-FA47F00F43A9", "ONB-0513F8B51242", "ONB-716FC7DB282B"]
   resource_root: "CONTEXT/"
@@ -105,10 +107,11 @@ resources:
   - {"source": null, "published": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md"}
   - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/CONTEXT.md"}
   - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/SECURITY.md"}
+  - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/docs/native-linux.md"}
   - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md"}
   - {"source": null, "published": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md"}
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "b227c3966aa79d768cfcf26671812030cbfad6e0bd870c44c368bfa50843934d"
-  package_digest: "9e3685ffe30a6806436639dda4d5d41efc997bc118a262c338ef1c3252729ae3"
+  normalized_digest: "70c03ba00f6bbc4291b5cc41646aaedfa7be2ae9fbea41bd679e5e5f28b86f18"
+  package_digest: "e61e66f0a4d264e42597a1a735345a915d87c3c548ea07e11b594a692c82d178"

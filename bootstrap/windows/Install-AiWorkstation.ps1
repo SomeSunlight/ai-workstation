@@ -109,6 +109,8 @@ function Stop-Log {
     }
 }
 
+. (Join-Path $PSScriptRoot 'Filesystem.ps1')
+
 function Stage-Installer {
     $sourceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
@@ -117,13 +119,22 @@ function Stage-Installer {
     }
 
     if (Test-Path -LiteralPath $script:StagedRoot) {
-        Remove-Item -LiteralPath $script:StagedRoot -Recurse -Force
+        if (-not (Remove-AiwOwnedStagingTree -Path $script:StagedRoot -StateRoot $script:StateRoot)) {
+            # A scanner or indexer can keep this old disposable stage locked,
+            # even across retries. Never copy into a partially deleted tree.
+            $script:StagedRoot = Join-Path $script:StateRoot ('source-' + [Guid]::NewGuid().ToString('N'))
+            $script:StagedEntryPoint = Join-Path $script:StagedRoot 'install.ps1'
+            Write-Step "Old installer stage is locked; using a fresh stage: $script:StagedRoot" Warning
+        }
     }
 
     New-Item -ItemType Directory -Path $script:StagedRoot -Force | Out-Null
 
     Get-ChildItem -LiteralPath $sourceRoot -Force | ForEach-Object {
         Copy-Item -LiteralPath $_.FullName -Destination $script:StagedRoot -Recurse -Force
+    }
+    if (-not (Test-Path -LiteralPath $script:StagedEntryPoint -PathType Leaf)) {
+        throw "Installer staging incomplete: $script:StagedEntryPoint"
     }
 }
 
