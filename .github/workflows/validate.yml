@@ -133,7 +133,7 @@ jobs:
       - name: Exercise the real native Windows menu under StrictMode
         shell: pwsh
         run: ./tests/windows/services-menu.ps1
-      - name: Validate private three-service Windows host setup (no processes started)
+      - name: Validate private four-service Windows host setup (no processes started)
         shell: pwsh
         run: ./tests/windows/native-host.ps1
       - name: Real Windows DPAPI and named-client registration (temporary only)
