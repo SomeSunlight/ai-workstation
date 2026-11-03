@@ -19,6 +19,7 @@ try {
         $item.working_directory = $cwd
         $item.arguments = @('-NoProfile', '-NonInteractive', '-Command', 'exit 0')
         $item.required_paths = @($cwd)
+        if ($name -eq 'open-webui') { $item.environment.DATA_DIR = $cwd }
         $item.listen_ports = @($ports[$name])
         $item.readiness.url = 'http://127.0.0.1:' + $ports[$name] + '/'
         $item.readiness.expected_status = 200
