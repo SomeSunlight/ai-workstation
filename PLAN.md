@@ -13,7 +13,15 @@
 - [x] Create [draft PR #45](https://github.com/SomeSunlight/ai-workstation/pull/45) for the runbook and reconciliation. No live host changes; keep draft until owner's review.
 - [ ] Confirm exact-head Ubuntu/Windows CI and review the final diff; leave activation and production takeover blocked until separate approval.
 
-**Review block B (future separate implementation and owner-host validation):**
+**Owner first-test gate (2026-11-03):** The first useful Speedy acceptance test must be an end-to-end AIW/Process Compose service host, **not** a mixture that still needs the private Caddy-folder PowerShell starter. After one-time guarded import of the existing program paths/configuration, AIW must independently start **Strata → attached Dispatcher → Caddy**, show readiness/status/logs/TUI and stop/restart owned processes; on Windows reboot the operator can open AIW and start the whole stack again. Preserve the original script only for rollback, never start both. Native Open WebUI continues as an existing separate application and authenticates to Dispatcher with its own client key. This does **not** imply automatic OS boot start, which is an opt-in separate feature.
+
+**Review block B — concrete reversible three-service host configuration:**
+
+- [ ] Add a private, machine-neutral native Windows three-process configuration and validation/render tooling; keep actual paths, credentials and per-instance commands outside Git.
+- [ ] Expose setup/inspection through existing Windows AIW menu, with no double-owner port collision and no accidental start during preview.
+- [ ] Exercise Windows mock-service lifecycle (start/readiness/status/logs/TUI/down) on the review branch; test actual native Strata/Dispatcher/Caddy behavior separately with owner.
+- [ ] Preserve strict production security gate; prove a patched and checksum-verified Process Compose Windows build plus process-tree stop safety **before real services can start**.
+
 
 - [ ] Implement **clean native Windows host provisioning** for checksum/version-verified Caddy, native Llama Dispatcher and Strata + Process Compose with reproducible host-local config and run/readiness interfaces; distinguish a fresh install from guarded attach/adoption of an existing service. Check Strata distribution and user-owned model/license prerequisites rather than assuming they are auto-downloadable.
 
