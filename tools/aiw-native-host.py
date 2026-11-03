@@ -125,13 +125,15 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
             raise ConfigurationError(name + ": readiness URL must be a string.")
         parsed = urlsplit(url)
         if (not url or parsed.scheme not in ("http", "https") or not parsed.hostname
-                or parsed.username or parsed.password or parsed.fragment):
+                or parsed.username or parsed.password or parsed.fragment or parsed.query):
             raise ConfigurationError(name + ": readiness requires an HTTP(S) URL without credentials.")
         if type(readiness["expected_status"]) is not int or not 100 <= readiness["expected_status"] <= 599:
             raise ConfigurationError(name + ": invalid readiness status.")
         bearer = readiness["bearer_dpapi"]
         if not isinstance(bearer, str) or bearer and not bearer.lower().endswith(".dpapi"):
             raise ConfigurationError(name + ": readiness bearer must reference a DPAPI file.")
+        if bearer and parsed.hostname not in ("127.0.0.1", "::1", "localhost"):
+            raise ConfigurationError(name + ": bearer readiness probe must use a local loopback URL.")
         if bearer and os.name == "nt" and (not Path(bearer).is_absolute()
                                            or verify_paths and not Path(bearer).is_file()):
             raise ConfigurationError(name + ": missing readiness DPAPI file.")
