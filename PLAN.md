@@ -12,7 +12,8 @@
 - [x] In isolated, one-time Linux workflow [#41641727621](https://github.com/SomeSunlight/ai-workstation/actions/runs/41641727621), run the **correct compiler**: `contextcanon build --all .` reports **no changes** across all nine Nodes, `contextcanon check --all .` reports **nine OK**, all **eight Parent/Child links current**, and full `tools/release-check.sh` passed.
 - [x] Add the correctly pinned, **read-only** ContextCanon check to ordinary Ubuntu CI, with no implicit generation or Parent package upgrade.
 - [x] Align accepted PLAN, STATE and CHANGELOG; keep product priority #39 before #41, with no changes to the live Caddy gateway.
-- [ ] Remove the temporary branch-only rebuild workflow, confirm the final review diff contains only the four intended files and obtain green Ubuntu/Windows exact-head CI.
+- [x] Remove the temporary branch-only rebuild workflow; the final review diff must contain only the four intended files.
+- [ ] Confirm the four-file final review diff and obtain green Ubuntu/Windows exact-head CI.
 - [ ] Present [PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44) for owner review and explicit approval. Keep issue #40 open until accepted merge and final closure.
 
 
