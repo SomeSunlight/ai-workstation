@@ -17,10 +17,13 @@
 
 **Review block B — concrete reversible three-service host configuration:**
 
-- [ ] Add a private, machine-neutral native Windows three-process configuration and validation/render tooling; keep actual paths, credentials and per-instance commands outside Git.
-- [ ] Expose setup/inspection through existing Windows AIW menu, with no double-owner port collision and no accidental start during preview.
-- [ ] Exercise Windows mock-service lifecycle (start/readiness/status/logs/TUI/down) on the review branch; test actual native Strata/Dispatcher/Caddy behavior separately with owner.
-- [ ] Preserve strict production security gate; prove a patched and checksum-verified Process Compose Windows build plus process-tree stop safety **before real services can start**.
+- [x] Document first operational acceptance: no former script during the test, operator-selected Start after reboot, and safe rollback in [native host guide](docs/native-host-operations.md).
+
+
+- [x] Add private, machine-neutral native Windows Caddy/Dispatcher/Strata configuration, rendered Process Compose dependency/health project, DPAPI-protected child launcher and drift/collision checks; private commands and keys stay outside Git.
+- [x] Expose native setup (menu 17), render (18), preflight (19), and existing Validate/Start/Status/Logs/TUI/Stop actions; no implicit live start in setup/render.
+- [ ] Verify Windows CI parse/render/preflight/disabled regression (tests/windows/native-host.ps1); actual full-stack Start/Status/Logs/TUI/Stop/Reboot remains owner-host acceptance after security gate. Do not claim tested process-tree ownership from renderer tests.
+- [x] Preserve strict production security gate without any new bypass; actual real-host Start remains blocked until a patched checksum-verified Process Compose binary and Windows child-tree stop proof.
 
 
 - [ ] Implement **clean native Windows host provisioning** for checksum/version-verified Caddy, native Llama Dispatcher and Strata + Process Compose with reproducible host-local config and run/readiness interfaces; distinguish a fresh install from guarded attach/adoption of an existing service. Check Strata distribution and user-owned model/license prerequisites rather than assuming they are auto-downloadable.
