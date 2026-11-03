@@ -21,6 +21,7 @@ try {
         $item.listen_ports = @($ports[$name])
         $item.readiness.url = 'http://127.0.0.1:' + $ports[$name] + '/'
         $item.readiness.expected_status = 200
+        if ($name -eq 'strata') { $item.enabled = $true }
     }
     $data | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $path -Encoding utf8
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host render
