@@ -35,6 +35,27 @@ try {
     if ($yaml -notmatch 'condition: process_healthy' -or $yaml -notmatch 'disabled: true') {
         throw 'Native project lacks dependencies or safe disabled defaults.'
     }
+    # An independently owned listener must block the full-stack preflight.
+    $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, [int]$ports.strata)
+    $listener.Start()
+    try {
+        $collisionRejected = $false
+        try { & (Join-Path $root 'bootstrap/windows/Services.ps1') host preflight }
+        catch { $collisionRejected = $true }
+        if (-not $collisionRejected) { throw 'An already-owned native service port was accepted.' }
+    }
+    finally { $listener.Stop() }
+    $global:LASTEXITCODE = 0
+    # Existing unpatched Process Compose may still validate but must NOT start
+    # a real native host project, even when its processes are disabled.
+    $launchRejected = $false
+    try { & (Join-Path $root 'bootstrap/windows/Services.ps1') up }
+    catch { $launchRejected = $true }
+    if (-not $launchRejected) { throw 'Unpatched Process Compose was allowed to start native host.' }
+    if (Test-Path (Join-Path $temp 'runtime/process-compose-windows.json')) {
+        throw 'Forbidden native host start created a supervisor ownership record.'
+    }
+    $global:LASTEXITCODE = 0
     # Explicitly changing private input without re-rendering must fail.
     $data.services.caddy.arguments = @('changed')
     $data | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $path -Encoding utf8
