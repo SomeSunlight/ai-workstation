@@ -55,6 +55,38 @@ try {
     }
     catch { $refused = $true }
     Assert-True $refused 'Out-of-scope path was not refused'
+
+    # Matching names do not grant ownership under arbitrary nested state dirs.
+    $nested = Join-Path $state 'logs/source'
+    New-Item -ItemType Directory -Path $nested -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $nested 'keep.txt') -Value 'log data'
+    $refusedNested = $false
+    try {
+        Remove-AiwOwnedStagingTree -Path $nested -StateRoot $state -RetryDelaysMs @(0) | Out-Null
+    }
+    catch { $refusedNested = $true }
+    Assert-True $refusedNested 'Nested staging-like name was not refused'
+    Assert-True (Test-Path -LiteralPath (Join-Path $nested 'keep.txt')) 'Nested data was modified'
+
+    # Link/junction traversal must be rejected before any recursive removal.
+    $nestedLink = Join-Path $blocked 'linked-foreign'
+    $linkCreated = $false
+    try {
+        New-Item -ItemType Junction -Path $nestedLink -Target $foreign -ErrorAction Stop | Out-Null
+        $linkCreated = $true
+    }
+    catch {
+        Write-Host 'Junction creation unavailable; skipping junction safety fixture.'
+    }
+    if ($linkCreated) {
+        $refusedLink = $false
+        try {
+            Remove-AiwOwnedStagingTree -Path $blocked -StateRoot $state -RetryDelaysMs @(0) | Out-Null
+        }
+        catch { $refusedLink = $true }
+        Assert-True $refusedLink 'Nested junction was not refused'
+        Assert-True (Test-Path -LiteralPath (Join-Path $foreign 'keep.txt')) 'Junction target was modified'
+    }
     Write-Host 'Windows installer staging cleanup tests passed.'
 }
 finally {
