@@ -7,7 +7,7 @@ This script runs one foreground process and returns its exit code to supervisor.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$Config,
-    [Parameter(Mandatory)][ValidateSet('strata', 'dispatcher', 'caddy')][string]$Service
+    [Parameter(Mandatory)][ValidateSet('strata', 'dispatcher', 'caddy', 'open-webui')][string]$Service
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
