@@ -15,12 +15,20 @@ It also accepts the bounded Windows installer staging retry/fresh-root
 fix (#43), with owner testing and successful Ubuntu/Windows CI
 [run #41637116958](https://github.com/SomeSunlight/ai-workstation/actions/runs/41637116958).
 
-The ordinary CI did not invoke `contextcanon check --all .`, so the
-independent generated-drift check remains a follow-up verification under
-issue #40; a read-only, pinned check is being added in a separate review
-PR. Presence of generated artifacts and green ordinary CI are not
-substitutes for this check. No production Caddy/Dispatcher/Strata or
-container service was migrated by the merge.
+Independent post-merge verification under issue #40 used the matching
+ContextCanon **CLI 0.10.0** (internal compiler **0.8.0**, SHA
+`786c50957c4c06f9209ebacfa021609b592c0b07`). In Linux
+[workflow #41641727621](https://github.com/SomeSunlight/ai-workstation/actions/runs/41641727621),
+`contextcanon build --all .` made **no changes** across all nine Nodes;
+`contextcanon check --all .` reported **nine OK** and all eight
+Parent/Child relationships current. The first attempted check with an older
+CLI 0.8.0/internal compiler 0.6.0 falsely reported nine-node drift.
+That incompatible generated candidate was rejected and removed from the
+current review tree; inherited Development Workflow rules are intact.
+A correctly pinned read-only CI gate and this closure are proposed in
+[PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44), not yet
+merged. No production Caddy/Dispatcher/Strata or container service
+was migrated by PR #42.
 
 **Next priority:** issue [#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
 (usable, separately isolated Goose/Hermes Docker Workbench after host
