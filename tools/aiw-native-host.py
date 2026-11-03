@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -194,7 +195,8 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
         elif name == "caddy":
             p["depends_on"] = {"dispatcher": {"condition": "process_healthy"}}
         processes[name] = p
-    body = MARKER + "\n" + yaml.safe_dump(
+    source_digest = hashlib.sha256(native_config_path(folder).read_bytes()).hexdigest()
+    body = MARKER + "\n# aiw-config-sha256: " + source_digest + "\n" + yaml.safe_dump(
         {"version": "0.5", "processes": processes}, sort_keys=False
     )
     # Same-directory temp + atomic replacement, never clobber a custom project.
@@ -216,6 +218,15 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
 
 def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = True) -> None:
     config = load(folder, verify_paths=verify_paths)
+    project = folder / "process-compose.yaml"
+    if project.exists():
+        if project.is_symlink():
+            raise ConfigurationError("Linked Process Compose project: refusing startup.")
+        source_digest = hashlib.sha256(native_config_path(folder).read_bytes()).hexdigest()
+        contents = project.read_text(encoding="utf-8")
+        if (not contents.startswith(MARKER + "\n") or
+                "\n# aiw-config-sha256: " + source_digest + "\n" not in contents[:200]):
+            raise ConfigurationError("Private host configuration differs from rendered project; render again while stopped.")
     names = [process] if process else list(NAMES)
     for name in names:
         if name not in NAMES:
