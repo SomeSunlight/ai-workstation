@@ -1,8 +1,10 @@
 # Native services and client identities
 
 **Audience:** operators of AI Workstation on native Windows, WSL or Linux.
-**Status:** PR #37 review; this does **not** migrate running services.
+**Status:** PR #37 accepted (2026-11-03); existing real host services are **not** yet migrated.
 **Key principle:** use the menu for everyday operation, native CLI for automation.
+
+For the three independent remote/local applications (Goose in WSL, Open WebUI in WSL, and an existing native-host Open WebUI), see the staged [gateway client migration and rollback runbook](gateway-client-migration.md) (#41). This guide separates **registering a new original key** from **activating S02 in Dispatcher and forwarding the key through Caddy**; neither happens automatically.
 
 ## Start
 
@@ -198,5 +200,5 @@ manage the same service at once.
 
 **Other tasks:** multi-directory agent workspace mounts are tracked
 in [Issue #38](https://github.com/SomeSunlight/ai-workstation/issues/38);
-a separately reviewed host-local container workbench is tracked in
+optional additional native-host agent containers are deferred and tracked in
 [Issue #39](https://github.com/SomeSunlight/ai-workstation/issues/39).
