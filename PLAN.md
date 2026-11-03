@@ -1,5 +1,16 @@
 # AI Workstation Plan
 
+## Draft PR #42 addition — Windows installer staging resilience (#43)
+
+Purpose: under native Windows, temporarily locked prior staging folders must not block re-elevation or RunOnce setup. Reuse the Development Workflow method tracked in [ContextCanon #127](https://github.com/SomeSunlight/context-canon/issues/127), without disabling antivirus or changing Context pins.
+
+- [x] Create [AI Workstation #43](https://github.com/SomeSunlight/ai-workstation/issues/43) and keep implementation inside existing draft PR #42.
+- [x] Use bounded cleanup retry for the old tool-owned stage, fall back to a unique fresh stage when still locked, and verify the copied entry point.
+- [x] Add isolated Windows regression tests for a transient failure, persistent lock, idempotence and refusing foreign directories; wire into Windows CI.
+- [ ] Obtain passing exact-head Windows CI, review generated Context drift already pending on PR #42, and obtain owner acceptance before merging.
+
+
+
 ## Accepted baseline closure + generic operator guidance — Issues #34/#40 (2026-11-03)
 
 **Verified accepted merge:** Owner completed the native Windows **7 → 5 → 9 → 6 (TUI) → 8** harmless Process Compose test successfully, approved [PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37), and squash-merged it to `main` on **2026-11-03** as `da108899518d261a960edae9ff8867a6e57bb459`. The merged code provides opt-in native Process Compose entrypoints for Windows and Linux/WSL plus private named Dispatcher S02 client registration, **not** live production ownership or the Caddy multi-client cutover.
