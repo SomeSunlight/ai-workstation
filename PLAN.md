@@ -10,7 +10,8 @@
 - [x] Record new scope and the required independent native Open WebUI client identity in issue #41.
 - [x] Create [operator runbook](docs/gateway-client-migration.md) for client provisioning, DPAPI-original-key recovery, Dispatcher/Caddy S02 authorization boundary, WebUI connections, request audit, negative tests and rollback.
 - [x] Link runbook from [native-services guide](docs/native-services.md); correct accepted STATE/PLAN checkpoint and owner-prioritized #41 after #44 merge.
-- [ ] Create a reviewable draft PR on this branch; run available proportionate static checks and request owner review. Never merge without explicit approval.
+- [x] Create [draft PR #45](https://github.com/SomeSunlight/ai-workstation/pull/45) for the runbook and reconciliation. No live host changes; keep draft until owner's review.
+- [ ] Confirm exact-head Ubuntu/Windows CI and review the final diff; leave activation and production takeover blocked until separate approval.
 
 **Review block B (future separate implementation and owner-host validation):**
 
