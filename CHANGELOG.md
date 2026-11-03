@@ -1,12 +1,14 @@
 # Changelog
 
-## Unreleased — accepted native-services checkpoint (2026-11-03)
+## Unreleased
+
+### Accepted native-services checkpoint (PR #37; 2026-11-03)
 
 - Owner tested and accepted [PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37), squash-merged as `da108899518d261a960edae9ff8867a6e57bb459`: native Windows/WSL/Linux Process Compose entrypoints, checksum-pinned installs and a harmless real Windows process/TUI lifecycle smoke.
 - Introduce host-private Dispatcher S02 client IDs, DPAPI/permissions-protected original keys and generated hash-only client configuration, with distinct imported-credential migration tagging, numbered selection and a compact operator menu.
 - Keep live inference services, Caddy and Docker services unchanged; production ownership remains blocked pending a verified patched Process Compose build and separate gateway/security review. Full native Ubuntu host installation is still experimental.
 
-## Unreleased (Issue #29; accepted in PR #32 on 2026-10-14)
+### Earlier accepted launcher checkpoint (Issue #29; PR #32 on 2026-10-14)
 - Show the two Windows penguin launchers and current main `aiw` menu prominently in README, with manual PowerShell startup commands.
 - Replace `cmd.exe` / `call wsl.exe` launcher with directly invoked PowerShell 7 after host-specific WSL launch failure; keep the installed scripts standalone and preserve both icons.
 - Make both shortcuts preflight/start a stopped WSL distribution, require actual Linux execution evidence, retry one initial failure, and distinguish WSL start from working-directory/shell failures.
