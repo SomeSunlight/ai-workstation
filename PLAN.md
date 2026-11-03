@@ -1,13 +1,27 @@
 # AI Workstation Plan
 
-## Draft PR #42 addition — Windows installer staging resilience (#43)
+## Active post-merge verification / closure — Issue #40 (2026-11-03)
+
+**Accepted fact:** [PR #42](https://github.com/SomeSunlight/ai-workstation/pull/42) was owner-tested and merged at `49e8d67246763b83502f58fb4f6628e0801c76fb`. Its compiled ContextCanon root/child artifacts are on `main` and the exact PR head passed Ubuntu/Windows CI. That workflow did **not** run ContextCanon's read-only drift check.
+
+**Scope of this follow-up review:** `PLAN.md`, `STATE.md`, `CHANGELOG.md`, `.github/workflows/validate.yml` and PR #42 status description. No authored Context Source or compiler-generated package modifications, host services, secrets, binary pins or live gateway changes. Do not merge without fresh owner approval.
+
+- [x] Reconcile PR #42 merge, owner acceptance, committed compiled Context and current ordinary CI evidence.
+- [x] Record the approved source/package baseline and the remaining independent verification in PLAN.
+- [ ] Add a pinned, read-only `contextcanon check --all .` job to Ubuntu CI; do not silently regenerate packages.
+- [ ] Update STATE and CHANGELOG to record the actual accepted merge and next focus (#39 before #41).
+- [ ] Obtain the exact-head CI result, inspect generated-drift status and submit this narrow follow-up for owner acceptance. If drift is found, investigate separately with the actual compiler before approval.
+
+---
+
+## Accepted PR #42 — Windows installer staging resilience (#43)
 
 Purpose: under native Windows, temporarily locked prior staging folders must not block re-elevation or RunOnce setup. Reuse the Development Workflow method tracked in [ContextCanon #127](https://github.com/SomeSunlight/context-canon/issues/127), without disabling antivirus or changing Context pins.
 
 - [x] Create [AI Workstation #43](https://github.com/SomeSunlight/ai-workstation/issues/43) and keep implementation inside existing draft PR #42.
 - [x] Use bounded cleanup retry for the old tool-owned stage, fall back to a unique fresh stage when still locked, and verify the copied entry point.
 - [x] Add isolated Windows regression tests for a transient failure, persistent lock, idempotence and refusing foreign directories; wire into Windows CI.
-- [ ] Obtain passing exact-head Windows CI, review generated Context drift already pending on PR #42, and obtain owner acceptance before merging.
+- [x] Exact-head Ubuntu/Windows CI completed successfully ([run #41637116958](https://github.com/SomeSunlight/ai-workstation/actions/runs/41637116958)); owner commented "tested successfully" and merged PR #42 on 2026-11-03. Generated ContextCanon packages were included in the accepted change; read-only compiler verification is tracked below.
 
 
 
@@ -15,17 +29,18 @@ Purpose: under native Windows, temporarily locked prior staging folders must not
 
 **Verified accepted merge:** Owner completed the native Windows **7 → 5 → 9 → 6 (TUI) → 8** harmless Process Compose test successfully, approved [PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37), and squash-merged it to `main` on **2026-11-03** as `da108899518d261a960edae9ff8867a6e57bb459`. The merged code provides opt-in native Process Compose entrypoints for Windows and Linux/WSL plus private named Dispatcher S02 client registration, **not** live production ownership or the Caddy multi-client cutover.
 
-**Current documentation review PR** (issue [#40](https://github.com/SomeSunlight/ai-workstation/issues/40)): close the post-merge accepted baseline, state the general-purpose/English/OS-neutral product scope in **authored** `CONTEXT.src.md` with minimal positive operator-UX guidance, and align README/STATE/CHANGELOG. This does **not** modify any runtime, product binaries, Caddy, Docker, customer-specific secrets or parent ContextCanon package.
+**Accepted documentation PR #42** (issue [#40](https://github.com/SomeSunlight/ai-workstation/issues/40)): close the post-merge accepted baseline, state the general-purpose/English/OS-neutral product scope in **authored** `CONTEXT.src.md` with minimal positive operator-UX guidance, and align README/STATE/CHANGELOG. This does **not** modify any runtime, product binaries, Caddy, Docker, customer-specific secrets or parent ContextCanon package.
 
-**Writable scope:** `PLAN.md`, `STATE.md`, `README.md`, `CHANGELOG.md`, root `CONTEXT.src.md`, plus **generated** root/child ContextCanon outputs **only** through the normal authenticated `contextcanon build --all .` step. The published/pinned inherited Development Workflow package is not silently updated. Additional reusable UX guidance is proposed in upstream [ContextCanon issue #126](https://github.com/SomeSunlight/context-canon/issues/126); do not edit its published package without the separate review/versioning workflow.
+**Original PR scope:** `PLAN.md`, `STATE.md`, `README.md`, `CHANGELOG.md`, root `CONTEXT.src.md`, plus **generated** root/child ContextCanon outputs **only** through the normal authenticated `contextcanon build --all .` step. The published/pinned inherited Development Workflow package is not silently updated. Additional reusable UX guidance is proposed in upstream [ContextCanon issue #126](https://github.com/SomeSunlight/context-canon/issues/126); do not edit its published package without the separate review/versioning workflow.
 
 - [x] Confirm actual PR #37 squash merge and real owner Windows Process Compose/TUI acceptance; distinguish CI smoke from on-host validation.
 - [x] Separate operational next work: [#41](https://github.com/SomeSunlight/ai-workstation/issues/41) generic Caddy installation/process ownership and multi-client gateway trust-boundary migration; [#39](https://github.com/SomeSunlight/ai-workstation/issues/39) containerized agent Workbench; [#38](https://github.com/SomeSunlight/ai-workstation/issues/38) additional Goose workspace directories; [#33](https://github.com/SomeSunlight/ai-workstation/issues/33) real native Ubuntu acceptance.
 - [x] Update accepted PLAN/STATE/README/CHANGELOG and author two concise host-neutral, English-language, low-memory operator rules in `CONTEXT.src.md`; add no new personal machine/domain/password-manager defaults. The generated Context is **not** updated until the separate build/check gate.
-- [ ] Rebuild/check **authored** ContextCanon changes using the actual compiler and verify no generated drift; CI alone is not proof of this. Never hand-edit generated Context.
-- [x] Submit authored accepted-baseline/context changes for review in [draft PR #42](https://github.com/SomeSunlight/ai-workstation/pull/42), with the unavailable ContextCanon compiler and generated-drift gate explicitly disclosed. **Do not merge** before actual build/check, exact-head validation and owner approval.
+- [x] Compiler-generated root and dependent ContextCanon packages were committed in the accepted PR #42, including two new root rules (compiler metadata `0.8.0`).
+- [ ] Verify **read-only** `contextcanon check --all .` on a clean exact-head checkout using a pinned compiler; inspect result rather than inferring success from the ordinary release CI. Never hand-edit generated Context.
+- [x] PR [#42](https://github.com/SomeSunlight/ai-workstation/pull/42) was accepted by the owner ("tested successfully") and merged on 2026-11-03 at `49e8d67246763b83502f58fb4f6628e0801c76fb`; final review head was `a02eb558d333a1695ecdfdec64ae31b76daedadf`. Historical pre-merge verification caveats remain in PR discussion.
 
-**Next operational sequence after documentation acceptance:** review patched Process Compose build + Windows/WSL process semantics; implement AIW-managed native Caddy with identity handoff and rollback (#41) while preserving the current working gateway; implement separately sandboxed Goose/Hermes agent Workbench (#39), then exercise real tasks and distinct Dispatcher audit IDs. The current live gateway does **not** automatically consume the keys created by PR #37.
+**Next operational sequence after post-merge closure:** prioritize a reversible, separately sandboxed Goose/Hermes Docker Workbench (#39), beginning with prerequisite and secret/network review; integrate managed Caddy and per-client S02 gateway routing (#41) only in a separate, approved production trust-boundary change. Preserve the existing working gateway and the Process Compose production hold until verified patched binaries and owner approval. The current live gateway does **not** automatically consume the keys created by PR #37.
 
 ---
 
