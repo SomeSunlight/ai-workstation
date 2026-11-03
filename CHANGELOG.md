@@ -5,7 +5,7 @@
 ### Accepted ContextCanon and Windows installer checkpoint (PR #42; 2026-11-03)
 
 - Owner tested and accepted [PR #42](https://github.com/SomeSunlight/ai-workstation/pull/42), merged as `49e8d67246763b83502f58fb4f6628e0801c76fb`: generic English-language, platform-neutral project rules and concise, discoverable operator guidance.
-- Preserve authored root Context and real compiler-generated ContextCanon official packages/child snapshots (compiler metadata `0.8.0`); the independent read-only generated-drift CI check is a separate issue #40 follow-up.
+- Preserve authored root Context and real compiler-generated ContextCanon official packages/child snapshots (compiler metadata `0.8.0`); matching ContextCanon CLI 0.10.0 (internal compiler 0.8.0) confirmed no drift on all nine Nodes and eight Parent/Child relations; issue #40 adds that read-only verification to ordinary CI.
 - Improve native Windows installer staging on transient/persistent directory locks with guarded cleanup retries and fresh owned staging, without turning off security software or touching foreign files.
 - Keep production service and gateway ownership unchanged. Prioritize the independently isolated agent Workbench (#39), with a separate reviewed Caddy/S02 migration (#41).
 
