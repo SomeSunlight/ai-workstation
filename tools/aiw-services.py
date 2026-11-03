@@ -659,12 +659,30 @@ def windows_supervisor_stopped(folder: Path, pid: int) -> bool:
     return False
 
 
+def native_host_setup(folder: Path, action: str, process: str | None = None) -> None:
+    """Use the repo-owned, separate Windows host renderer without editing Git files."""
+    cmd = [sys.executable, str(Path(__file__).with_name("aiw-native-host.py")),
+           action, "--directory", str(folder)]
+    if process:
+        cmd += ["--service", process]
+    result = subprocess.run(cmd, check=False)
+    if result.returncode:
+        raise ConfigError("Native three-service host " + action + " failed.")
+
+
 def native(folder: Path, action: str, process: str | None) -> None:
     doc = read_settings(folder)
     project = project_path(folder, doc)
     if not project.is_file():
         raise ConfigError("Missing native Process Compose YAML.")
     check_production_security_gate(project, action, process)
+    # Generated three-service projects are explicitly provisioned. Before any
+    # launch, require the private settings to still match the rendered project,
+    # and refuse ports held by the previous unmanaged startup script.
+    if (os.name == "nt" and action in {"up", "start"} and
+            project.read_text(encoding="utf-8").startswith(
+                "# AIW native-host project")):
+        native_host_setup(folder, "preflight", process if action == "start" else None)
     binary = native_binary(folder)
     port = doc["process_compose"]["port"]
     api_token = folder / "secrets" / "process-compose.api-token"
@@ -751,6 +769,9 @@ def run(argv: list[str] | None = None) -> None:
             p.add_argument("--archive", type=Path, help="Official local archive; SHA-256 verified")
     for k in ("start", "stop", "restart"):
         sub.add_parser(k).add_argument("name")
+    host = sub.add_parser("host", help="Prepare native Windows Caddy/Dispatcher/Strata project")
+    host.add_argument("action", choices=("init", "render", "preflight"))
+    host.add_argument("--service", choices=("strata", "dispatcher", "caddy"))
     clients = sub.add_parser("client")
     group = clients.add_subparsers(dest="client_cmd", required=True)
     add = group.add_parser("add")
@@ -775,6 +796,8 @@ def run(argv: list[str] | None = None) -> None:
         init(folder)
     elif args.cmd == "install":
         install_process_compose(folder, args.archive)
+    elif args.cmd == "host":
+        native_host_setup(folder, args.action, args.service)
     elif args.cmd == "where":
         doc = read_settings(folder)
         print("Configuration:", settings_path(folder))
