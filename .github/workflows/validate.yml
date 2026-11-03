@@ -26,7 +26,7 @@ jobs:
       - name: Synchronize locked environment
         run: uv sync --frozen
       # Check the committed Official Context packages without regenerating them.
-      # Pin the compiler to the accepted 0.8.0 revision used by this package generation;
+      # Pin CLI 0.10.0 (internal compiler 0.8.0) to the exact verified source revision;
       # do not silently import newer ContextCanon or Development Workflow semantics.
       - name: Verify ContextCanon generated packages (read-only)
         run: |
