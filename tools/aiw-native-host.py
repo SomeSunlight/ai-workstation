@@ -106,8 +106,18 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
             raise ConfigurationError(name + ": required_paths must be an array of paths.")
         if os.name == "nt":
             for path in required:
-                if not Path(path).is_absolute() or (verify_paths and not Path(path).exists()):
+                target = Path(path)
+                if not target.is_absolute() or (verify_paths and not target.exists()):
                     raise ConfigurationError(name + ": missing or relative required path.")
+                if verify_paths and target.is_file() and target.suffix.lower() == ".json":
+                    try:
+                        control = json.loads(target.read_text(encoding="utf-8-sig"))
+                    except (OSError, ValueError):
+                        raise ConfigurationError(name + ": required JSON control file is invalid.") from None
+                    if name == "strata" and not (
+                            isinstance(control, dict) and {"exe", "args"} <= set(control)
+                    ):
+                        raise ConfigurationError(name + ": Strata JSON is missing exe/args.")
         ports = service["listen_ports"]
         if not isinstance(ports, list) or not ports:
             raise ConfigurationError(name + ": declare listening ports for collision checks.")
@@ -125,6 +135,10 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
                 raise ConfigurationError(name + ": credential-like names must use secret_environment.")
             if not isinstance(value, str):
                 raise ConfigurationError(name + ": environment values must be strings.")
+        if name == "open-webui" and service["enabled"] and os.name == "nt" and verify_paths:
+            data_root = environment.get("DATA_DIR")
+            if not data_root or not Path(data_root).is_absolute() or not Path(data_root).is_dir():
+                raise ConfigurationError("open-webui: original DATA_DIR missing; refusing fresh database.")
         for key, value in secret_environment.items():
             if not isinstance(key, str) or not ENV_NAME.fullmatch(key):
                 raise ConfigurationError(name + ": invalid secret environment variable name.")
