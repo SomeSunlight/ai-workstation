@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import subprocess
 import sys
 from urllib.parse import urlsplit
 
@@ -234,13 +235,38 @@ def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = 
         if not config["services"][name]["enabled"]:
             continue
         for port in config["services"][name]["listen_ports"]:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(0.3)
-                if s.connect_ex(("127.0.0.1", port)) == 0:
+            if os.name == "nt":
+                # Also catches IPv6-only and non-loopback Windows listeners.
+                # Fail closed if port ownership cannot be checked.
+                ps_command = (
+                    "$ErrorActionPreference='Stop'; "
+                    "if (@(Get-NetTCPConnection -State Listen -LocalPort " +
+                    str(port) + " -ErrorAction SilentlyContinue).Count -gt 0) "
+                    "{ exit 42 }; exit 0"
+                )
+                try:
+                    probe = subprocess.run(
+                        ["pwsh", "-NoProfile", "-NonInteractive", "-Command", ps_command],
+                        check=False, stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL, timeout=8,
+                    )
+                except (OSError, subprocess.TimeoutExpired):
+                    raise ConfigurationError("Cannot verify Windows TCP port ownership.") from None
+                if probe.returncode == 42:
                     raise ConfigurationError(
                         name + ": port " + str(port) +
                         " is already listening. Refusing duplicate service startup."
                     )
+                if probe.returncode:
+                    raise ConfigurationError("Windows TCP port preflight unavailable.")
+            else:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.3)
+                    if s.connect_ex(("127.0.0.1", port)) == 0:
+                        raise ConfigurationError(
+                            name + ": port " + str(port) +
+                            " is already listening. Refusing duplicate service startup."
+                        )
     print("[OK] Config paths and declared loopback ports validated; no service started.")
     print("Note: final Windows port/PID ownership and endpoint readiness require real-host verification.")
 
