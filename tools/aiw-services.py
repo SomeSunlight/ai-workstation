@@ -676,7 +676,7 @@ def native(folder: Path, action: str, process: str | None) -> None:
     if not project.is_file():
         raise ConfigError("Missing native Process Compose YAML.")
     check_production_security_gate(project, action, process)
-    # Generated three-service projects are explicitly provisioned. Before any
+    # Generated native-host projects are explicitly provisioned. Before any
     # launch, require the private settings to still match the rendered project,
     # and refuse ports held by the previous unmanaged startup script.
     if (os.name == "nt" and action in {"up", "start"} and
@@ -770,8 +770,8 @@ def run(argv: list[str] | None = None) -> None:
     for k in ("start", "stop", "restart"):
         sub.add_parser(k).add_argument("name")
     host = sub.add_parser("host", help="Prepare native Windows Caddy/Dispatcher/Strata project")
-    host.add_argument("action", choices=("init", "render", "preflight"))
-    host.add_argument("--service", choices=("strata", "dispatcher", "caddy"))
+    host.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight"))
+    host.add_argument("--service", choices=("strata", "dispatcher", "caddy", "open-webui"))
     clients = sub.add_parser("client")
     group = clients.add_subparsers(dest="client_cmd", required=True)
     add = group.add_parser("add")
