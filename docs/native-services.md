@@ -23,14 +23,11 @@ For the three independent remote/local applications (Goose in WSL, Open WebUI in
 
 | Host | Entry point | Native supervisor |
 | --- | --- | --- |
-| Windows | `pwsh -File .\bootstrap\windows\Services.ps1` | Process Compose for Windows |
+| Windows | `aiw` (after user-level registration), or `.\aiw` in checkout | Process Compose for Windows |
 | WSL | `aiw` → Native services, or `aiw services ...` | Process Compose for Linux *inside WSL* |
 | Linux | `aiw` → Native services, or `aiw services ...` | Process Compose for Linux |
 
-The Windows menu is printed **once**. Subsequent actions have clear
-`--- Action N ---` and `--- End of action N ---` boundaries, so the
-console keeps a readable history without continually repeating the menu.
-Enter **`?`** whenever you want to see it again; **`q`** exits.
+The native Windows workbench is organized into **Run and monitor**, **Set up or change this computer**, **Manage application access keys**, and **Help and explanations**. Select a task first; options are printed once per submenu and the log of the last operation stays visible. Use **`?`** to redisplay the current options, **`0`** to go back, and **`q`** to exit from the main menu.
 
 Process Compose owns only **native host processes**. Docker Compose remains
 the independent manager for containerized applications, including agents.
@@ -63,8 +60,9 @@ The first initialization creates a **private, host-local directory**:
 
 | File | Purpose |
 | --- | --- |
-| `services.yaml` | Editable client IDs and policies; points to the native project |
-| `process-compose.yaml` | **Sole definition** of native processes, commands and dependencies |
+| `services.yaml` | Editable client IDs and policies; points to the native Process Compose project |
+| `native-host.json` (Windows) | **Human-edited** native service programs, start arguments, data paths and health checks |
+| `process-compose.yaml` | Process Compose's **sole runtime process inventory**; on the Windows native host it is generated from `native-host.json` by **Apply edited settings** |
 | `secrets/ID.dpapi` or `secrets/ID.token` | Encrypted/protected **original** client credentials |
 | `clients.json` | Generated S02 client list containing **hashes only** |
 | `secrets/process-compose.api-token` | Private local supervisor management credential |
@@ -74,39 +72,38 @@ a password manager does not let you recover client secrets.
 
 ### Register a client and save the original key
 
-1. Use **menu 10**, enter a name of your choice. A new independent key
+1. Select **Manage application access keys → Create a separate API key for an application**, then enter a name of your choice. A new independent key
    is generated automatically and protected locally; it is **not printed**.
-2. Use **menu 11** to see the registered names and their purposes.
-3. Use **menu 14** to select the correct client **by number**, not by
+2. Choose **List applications** to see registered names without secret values.
+3. Choose **Copy an application API key to the clipboard**, then select the correct client **by number**, not by
    remembering or retyping a byte-exact name. Confirm clipboard access.
 4. Paste the key into the **password/secret field of your preferred
    password manager** as a separate credential entry with the client ID
    as its title. Repeat once for each independent client. Afterwards,
    clear the clipboard and its history if enabled; Windows clipboard
    history and synchronization are potential secret exposure paths.
-5. Use **menu 12** to generate `clients.json`. This is the file the
+5. Choose **Prepare the Dispatcher key-verification file** to generate `clients.json`. This is the file the
    Dispatcher will later load on explicit activation; it is not deployed
    automatically. Configure each application with **its own original
    key** retrieved from your password manager.
 
-For Windows, menu **16** renames an identity after **numbered selection**
-and preserves the encrypted original key; regenerate `clients.json` with
-12 afterwards. For Linux/WSL, the corresponding CLI is
+In the Windows **Manage application access keys** section, **Rename an application identity** renames an identity after **numbered selection**
+and preserves the encrypted original key; regenerate `clients.json` through **Prepare the Dispatcher key-verification file** afterwards. For Linux/WSL, the corresponding CLI is
 `aiw services client rename OLD NEW`.
 
 ### Existing/shared credentials: why are they listed?
 
-**Menu 13** imports an existing DPAPI credential under an operator-chosen
+**Manage application access keys → Import an OLD shared gateway key** imports an existing DPAPI credential under an operator-chosen
 ID. It is retained **only to keep existing application access working
 during an authentication migration**. It is **not** a newly generated
 individual key, and it should **not** be distributed to additional apps.
-Menu 11 distinguishes imported shared keys from fresh client keys.
+The **List applications** view distinguishes imported shared keys from fresh client keys.
 
 Earlier registrations made before this distinction was introduced
 show **`older key / origin unknown`** rather than being guessed.
-Menu 14 warns before copying such a key: confirm it is truly an
+The **Copy an application API key** operation warns before copying such a key: confirm it is truly an
 individual client credential. Newly imported keys are not offered for
-transfer; create new independent clients via menu 10 instead.
+transfer; create new independent clients via **Create a separate API key** instead.
 
 Importing or creating a key, renaming an ID, and generating hashes
 **does not change the running Dispatcher or reverse proxy**.
@@ -131,10 +128,7 @@ to control unknown/replaced Windows processes. A occupied management port
 without a matching owned instance is **not adopted**.
 
 Under WSL/native Linux, Process Compose's own `up --detached` mode is
-used. Both platforms keep the same YAML, port and commands. Menu **6
-(TUI)** connects to the *existing* supervisor with `attach`; it never
-starts a second supervisor. Menu **8 (Stop)** shuts down only the
-AI Workstation-owned test project on Windows.
+used. Both platforms keep the same YAML, port and commands. **Run and monitor → Open live service monitor** connects to the *existing* supervisor with `attach`; it never starts a second supervisor. **Stop all AIW-managed services** shuts down only the AI Workstation-owned native process project on Windows.
 
 The isolated `aiw-smoke` fixture ends quickly, so `--keep-project`
 keeps the management API running until you explicitly choose Stop.
@@ -146,28 +140,20 @@ misleading debug messages about missing global config directories.
 
 ## Quick operator test (no production takeover)
 
-In your Windows **review-branch checkout**, run the native menu; an
-existing checkout can be refreshed with `git pull --ff-only`.
-The menu is not itself the Process Compose project; selecting numbers
-operates the native CLI.
+The native Windows UI has a guided, non-destructive test procedure in
+[Native Windows host operations](native-host-operations.md#exactly-what-can-you-test-now-without-stopping-existing-services).
 
-| Step | Menu | Expected result |
-| --- | --- | --- |
-| Prepare | 2 | Initializes only if not already initialized; refuses overwrites |
-| Install | 3 | Installs pinned, SHA-256-verified native Process Compose |
-| Verify | 4 | Prints `Validated 1 configured processes from 2 files` and clear success confirmation |
-| Inspect | 1 | Reports the actual private host-local paths |
-| Register | 10, 11, 14, 12 | Add one test identity, select by **number**, save original key, render hash list |
+1. Open **Set up or change this computer → View service configuration summary**.
+2. Choose **Edit service startup settings** to review the private JSON. Leave already-prepared service entries enabled when they are intended to be managed.
+3. Choose **Check the edited settings**, then **Apply edited settings for the next startup**. This runs Process Compose's real dry-run and **does not** start an application.
+4. Choose **Check whether old services still occupy the ports**. The old launcher may still own the ports; refusal proves double-start protection works. Do not stop unknown processes.
+5. Under **Run and monitor**, review Start/Status/Logs/Monitor/Stop. **Do not start production services** until the Process Compose security hold is resolved and the owner explicitly approves the process handoff.
 
-**Optional isolated process smoke:** The initial
-`process-compose.yaml` has a harmless `aiw-smoke` command initially
-set to `disabled: true`. Change **only that setting** to `false`,
-then choose **4 (validate) → 7 (start) → 5 (status) → 9 (logs) →
-8 (stop)**. The command is a short `echo`; a completed process is expected
-but the **supervisor remains available** for status and logs until Stop.
-Look for `aiw-process-compose-smoke` in the logs. Restore
-`disabled: true` afterwards. The existing processes on the host
-are **never** adopted or stopped by this test.
+**Existing harmless smoke fixture:** the native CLI still supports the isolated
+`aiw-smoke` fixture, permitted by the production gate. It is a separate advanced
+regression scenario, **not** the new-user onboarding workflow. Use it only with
+an isolated disposable service directory; never replace a real host's managed
+project with the fixture.
 
 The published v1.124.0 Linux binary reports a Go 1.27.0 build, below
 the Go 1.27.2 patch level for October 2026 `html/template` issues.
@@ -197,7 +183,7 @@ aiw services client add agent-project --policy passthrough
 aiw services check
 ```
 
-Windows menu 14 is preferred for transferring individual keys; the
+**Manage application access keys → Copy an application API key** is preferred for transferring individual keys; the
 direct `client reveal ID` CLI displays a raw secret in the terminal,
 so use it only with deliberate safeguards.
 
