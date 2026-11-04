@@ -268,33 +268,39 @@ the existing owners/ports are known and the operator explicitly authorizes
 the takeover. The isolated Windows CI test supports this pilot but the
 **real-host tree-shutdown behavior remains unverified** until the stop test:
 
-1. **Complete the S02/Caddy/Dispatcher staging described above**, and
-   keep all live application and original gateway keys private. Test S02
-   during the first Start before directing the client applications to it.
-2. Stop the old script-owned processes using their known, verified
-   owner procedure. Confirm none of their listed ports is occupied.
-   Do not stop a process just because its port is 8080, 8001, 443 or 3000.
-8. In AIW, choose **Setup → Check edited settings → Apply settings →
-   Check occupied ports**. All these steps must pass.
-3. Choose **Run and monitor → Start all enabled services**. The workbench
-   asks **before starting** whether you want the live monitor open
-   immediately afterward (default: Yes). Inspect all four processes
-   as they pass their individual HTTP readiness checks.
-4. In **Run and monitor → Show current status** and **Read service logs**,
-   check all four and their startup order. Verify unauthorized 401,
-   authorized model discovery 200, one tiny inference request, streaming,
-   the protected direct-Strata fallback, the WebUI health endpoint,
-   persistent WebUI data and the existing gateway routes.
-5. Choose **Stop all AIW-managed services**, then verify that every
-   **owned** child process stopped and its ports are released. Windows
-   process-tree termination must be proven; a surviving child prevents
-   restarting the old launcher until that child is safely resolved.
-6. Reboot Windows normally. Open AI Workstation and choose
-   **Start all enabled services** again; the old starter must not be
-   necessary. Automatic boot startup is not part of this test.
-7. After separately validating the gateway and client registry, migrate
-   the three distinct application identities as described in
-   [gateway-client-migration.md](gateway-client-migration.md).
+1. **Complete the S02/Caddy/Dispatcher staging described above.**
+   All three new original keys should be generated and stored safely before
+   starting. No client should be switched to the new gateway yet.
+2. If the old starter is still running, stop only its known processes using
+   the existing verified procedure. If the machine has just rebooted and
+   no old services are running, **do not start the old script**.
+   Verify the required ports have no unrelated owners.
+3. In AIW, select **Set up or change this computer → Check the edited
+   settings → Apply edited settings for the next startup → Check whether
+   old services still occupy the ports**. Require a successful dry-run
+   and free declared service ports.
+4. Choose **Run and monitor AI services → Start all enabled services**
+   and opt in to the live status/logs monitor. Inspect each service's
+   HTTP readiness as Strata, Dispatcher, Caddy and native WebUI start.
+5. Before adding the new provider connections, verify S02 with private
+   token-backed HTTP requests: missing and invalid keys get **401**,
+   each generated key gets **200** on its intended Dispatcher/Caddy
+   route, and the independent old-key Strata fallback still requires its
+   existing credential. Do not include secrets in reports/URLs.
+6. Configure the two existing Open WebUI instances through their
+   **Admin → Connections** screens, and Goose through
+   `aiw goose configure`, with three different original credentials.
+   Execute model discovery, a tiny completion and an optional short
+   stream in each. Confirm three distinct client IDs in the active
+   Dispatcher SQLite audit data.
+7. Choose **Stop all AIW-managed services** and verify each owned
+   child process exits and relinquishes its port. A surviving child
+   blocks rollback and any second launch until ownership is resolved.
+8. Reboot Windows, reopen AIW and choose **Start all enabled services**.
+   Verify the same individual keys and persistent WebUI data still work.
+   Automatic startup at login is not assumed.
+9. Retain the old shared identity until all prior clients and routes
+   pass. Its removal is an independent, explicitly approved operation.
 
 **Rollback:** stop only AIW-owned processes, verify that the entire
 native process tree is gone, then use the preserved private old starter.
