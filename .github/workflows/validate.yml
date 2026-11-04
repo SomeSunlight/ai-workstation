@@ -117,7 +117,7 @@ jobs:
       - name: Parse native Windows Process Compose and DPAPI helper
         shell: pwsh
         run: |
-          foreach ($path in @('bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1', 'tools/aiw-native-child.ps1', 'tools/aiw-native-health.ps1', 'bootstrap/windows/Register-AiwCommand.ps1', 'tests/windows/native-host.ps1', 'tests/windows/native-aiw-command.ps1')) {
+          foreach ($path in @('bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1', 'tools/aiw-native-child.ps1', 'tools/aiw-native-health.ps1', 'bootstrap/windows/Register-AiwCommand.ps1', 'tests/windows/native-host.ps1', 'tests/windows/native-aiw-command.ps1', 'tests/windows/s02-three-clients.ps1')) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
@@ -137,6 +137,9 @@ jobs:
       - name: Verify short native Windows aiw command and optional user registration
         shell: pwsh
         run: ./tests/windows/native-aiw-command.ps1
+      - name: Validate three individual DPAPI client keys and transitional legacy digest
+        shell: pwsh
+        run: ./tests/windows/s02-three-clients.ps1
       - name: Validate private four-service Windows host setup (no processes started)
         shell: pwsh
         run: ./tests/windows/native-host.ps1
