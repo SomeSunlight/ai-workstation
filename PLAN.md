@@ -18,6 +18,14 @@
 
 **Owner first-test gate (2026-11-03):** The first useful Speedy acceptance test must be an end-to-end AIW/Process Compose service host, **not** a mixture that still needs the private Caddy-folder PowerShell starter. After one-time guarded import of the existing program paths/configuration, AIW must independently start **Strata → attached Dispatcher → Caddy**, show readiness/status/logs/TUI and stop/restart owned processes; on Windows reboot the operator can open AIW and start the whole stack again. Preserve the original script only for rollback, never start both. Native Open WebUI continues as an existing separate application and authenticates to Dispatcher with its own client key. This does **not** imply automatic OS boot start, which is an opt-in separate feature.
 
+**Windows CLI usability checkpoint (2026-11-04):** Introduce a root native
+`aiw.cmd` so `.\aiw` from a Windows checkout opens the existing native
+services menu or forwards commands. Opt-in `.\aiw register` creates an
+AIW-owned, per-user PATH shim so a new Windows shell can run `aiw` from
+any directory, as WSL/Linux shells already do. No admin, Windows installer,
+PowerShell-profile modification, WSL routing, or production process change.
+Windows CI must verify registration/unregistration and passthrough.
+
 **Review block B — concrete reversible three-service host configuration:**
 
 - [x] Document first operational acceptance: no former script during the test, operator-selected Start after reboot, and safe rollback in [native host guide](docs/native-host-operations.md).
