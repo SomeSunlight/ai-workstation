@@ -67,8 +67,11 @@ In a **native Windows PowerShell** opened in this checkout:
 .\aiw
 ```
 
-This opens the native **AI Workstation | Native services** menu, including
-Process Compose and host-side inference configuration. For the same short
+This opens the **task-oriented native Windows workbench** with four areas:
+**Run and monitor AI services**, **Set up or change this computer**, **Manage
+application access keys**, and **Help and explanations**. The setup workflow
+opens the private JSON file, checks it and prepares the Process Compose
+configuration without starting live processes. For the same short
 `aiw` command from **any** Windows directory, register a user-scoped command
 once (no administrator rights or Windows service change):
 
@@ -89,7 +92,7 @@ host's Process Compose security gate. **WSL/Linux `aiw` is unchanged**.
 [PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37)
 introduced owner-tested, **opt-in** native Process Compose CLI/TUI
 entrypoints: `aiw services` on WSL/Linux and
-`bootstrap/windows/Services.ps1` on native Windows. The owner
+`aiw` (or `.\aiw` in a checkout) on native Windows. The owner
 successfully tested Windows installation, client identity setup, a
 harmless managed process and the native TUI. Distinct client identities
 are user-chosen labels; original credentials remain protected locally
