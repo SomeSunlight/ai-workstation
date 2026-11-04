@@ -11,6 +11,8 @@ on:
       - tests/windows/process-compose-child-tree.ps1
       - tests/windows/tree-fixture-parent.ps1
       - tests/windows/tree-fixture-child.ps1
+      - tools/aiw-services.py
+      - config/versions.json
   workflow_dispatch:
 
 permissions:
