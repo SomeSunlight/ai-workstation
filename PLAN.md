@@ -44,7 +44,8 @@ Windows CI must verify registration/unregistration and passthrough.
 
 
 - [ ] Read-only inventory and diff for Caddy/Dispatcher/Strata process ownership and existing protected routes/config/secrets; never import private host data into Git.
-- [ ] Verify patched checksum-pinned Process Compose release and Windows child-process termination; keep `production_adoption_blocked` until verified.
+- [ ] Qualify and pin a production-usable Process Compose binary: upstream latest remains v1.124.0, which is not yet a verified patched release. On the review branch, `qualify-process-compose-windows.yml` builds its immutable source commit `f471d83a...` with Go 1.27.3 (Go template and TLS/security fixes) and runs an **isolated Windows Process Compose → PowerShell parent → TCP child shutdown test**. Review the exact SHA-256/Go build metadata and test results, then agree on installation/provenance before enabling a guarded pilot. `production_adoption_blocked` stays true.
+- [ ] Verify production-host child-tree shutdown on Speedy after guarded pilot; keep a rollback and do not stop or duplicate existing native services without operator control.
 - [ ] Implement generic Caddy component / owned service definitions and a staged, reversible migration, retaining direct-Strata fallback and no-double-owner preflight.
 - [ ] After separate owner approval activate each client's S02 key, verify Goose/WebUI requests + SQLite attribution and controlled gateway/restart rollback; then explicitly approve production process handoff.
 
