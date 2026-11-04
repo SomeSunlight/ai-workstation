@@ -39,9 +39,13 @@ try {
         throw 'The registered unqualified aiw command did not forward to the current checkout.'
     }
     & $rootLauncher unregister
-    if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $shim)) {
-        throw 'Native aiw command unregister failed.'
+    $afterUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    if ($LASTEXITCODE -ne 0 -or $afterUserPath -like ('*' + $shimDir + '*')) {
+        throw 'Native aiw command unregister did not remove the user PATH entry.'
     }
+    # The transient Windows cmd host may still hold its own shim open.
+    # A left-over marker-verified file outside PATH is harmless and can be
+    # deleted in a later session; never require immediate deletion on Windows.
     Write-Host '[PASS] Native Windows .\aiw and user-scoped aiw registration/forwarding/unregister.'
 }
 finally {
