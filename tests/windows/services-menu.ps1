@@ -1,21 +1,34 @@
 #Requires -Version 7.4
-# Real PowerShell menu regression: a one-element switch result must remain
-# an argv array under StrictMode, and 'q' must exit the menu cleanly.
+# Real user-facing Windows workbench regression: task-based navigation,
+# first-time private setup, S02 key actions, back/help and no surprise starts.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $testFolder = Join-Path $env:RUNNER_TEMP ('aiw-menu-' + [guid]::NewGuid().ToString('N'))
 $env:AIW_SERVICES_DIR = $testFolder
-$global:aiwMenuAnswers = @('2', '10', 'goose-research', '11', '12', '15', '16', '1', 'goose-core', '11', '12', '14', '1', 'y', '1', '?', 'q')
+$global:aiwMenuAnswers = @(
+    '2',                  # Set up or change this computer
+    '1', 'y', 'n', 'n',     # First time; allow init; decline download and opening editor
+    '2',                  # Friendly private configuration summary
+    '0',                  # Back to main menu
+    '3',                  # Application access keys
+    '1', 'goose-research', # Create individual key
+    '2',                  # List
+    '3', '1', 'y',         # Copy original key for selected client to clipboard
+    '4', 'y',              # Prepare hash-only registry
+    '6', '1', 'goose-core',# Rename the same key (keep ciphertext)
+    '2',                  # Verify renamed
+    '4', 'y',              # Re-render hash-only registry after rename
+    '0',                  # Back
+    '4', '1', '2', '0',    # Help: services, identity explanations; back
+    '?', 'q'              # Redisplay root once, then quit
+)
 $global:aiwMenuIndex = 0
-
-# Using a real child script here (instead of a parser-only check) reproduces
-# exactly the original failure at menu selection 2.
 function Read-Host {
     param([string]$Prompt)
     if ($global:aiwMenuIndex -ge $global:aiwMenuAnswers.Length) {
-        throw 'Menu did not exit after q; unexpected extra prompt.'
+        throw 'Workbench did not exit cleanly; unexpected extra question.'
     }
     $answer = $global:aiwMenuAnswers[$global:aiwMenuIndex]
     $global:aiwMenuIndex++
@@ -23,48 +36,50 @@ function Read-Host {
 }
 
 try {
-    $menuOutput = (& (Join-Path $root 'bootstrap/windows/Services.ps1') 6>&1) -join "`n"
-    # One initial menu and one explicit '?' redisplay, NOT a full menu
-    # after each action; action delimiters preserve scrollback orientation.
-    $headers = ([regex]::Matches($menuOutput, '=== AI Workstation \| Native services ===')).Count
-    if ($headers -ne 2) {
-        throw "Menu showed $headers times; expected once + explicit ?."
-    }
-    if ($menuOutput -notmatch '--- End of action 14') {
-        throw 'Menu action boundaries missing from historical output.'
+    $menuOutput = (& (Join-Path $root 'bootstrap/windows/Services.ps1') 6>&1) -join [Environment]::NewLine
+    $headerCount = ([regex]::Matches($menuOutput, '=== AI Workstation \| Windows inference host ===')).Count
+    if ($headerCount -ne 5) {
+        throw "Main menu appeared $headerCount times; expected initial/back/explicit-help pattern."
     }
     if ($global:aiwMenuIndex -ne $global:aiwMenuAnswers.Length) {
-        throw "Menu skipped an action or did not read q: $global:aiwMenuIndex"
+        throw "Unexpected unused menu answers: $global:aiwMenuIndex / $($global:aiwMenuAnswers.Length)"
     }
-    $config = Join-Path $testFolder 'services.yaml'
-    $clientsFile = Join-Path $testFolder 'clients.json'
-    $clientSecret = Join-Path $testFolder 'secrets/goose-core.dpapi'
-    if (-not (Test-Path $config) -or -not (Test-Path $clientsFile) -or -not (Test-Path $clientSecret)) {
-        throw 'Menu failed to initialize private YAML or generate named S02 client.'
+    foreach ($needle in @(
+        'First-time setup', 'View service configuration summary', 'Edit service startup settings',
+        'Start all enabled services', 'Open the live status', 'Copy an application API key',
+        'Strata: local model inference', 'Dispatcher digest registry'
+    )) {
+        if ($menuOutput -notmatch [regex]::Escape($needle)) {
+            throw "Missing task-oriented explanation: $needle"
+        }
     }
-    $doc = Get-Content $clientsFile -Raw | ConvertFrom-Json
-    if ($doc.clients.Count -ne 1 -or $doc.clients[0].id -ne 'goose-core' -or
-        $doc.clients[0].token_sha256 -cnotmatch '^[0-9a-f]{64}$') {
-        throw 'Menu did not generate the correct one-client S02 hash-only JSON.'
+    $registryFile = Join-Path $testFolder 'clients.json'
+    $key = Join-Path $testFolder 'secrets/goose-core.dpapi'
+    if (-not (Test-Path -LiteralPath $registryFile) -or -not (Test-Path -LiteralPath $key)) {
+        throw 'Workbench did not prepare a private client key and digest registry.'
     }
-    # Clipboard transfer runs in real PowerShell without printing the plaintext.
-    $clipboardValue = Get-Clipboard -Raw
-    if ([string]::IsNullOrEmpty($clipboardValue)) {
-        throw 'No original key copied to clipboard by menu option 14.'
+    $cfg = Get-Content -LiteralPath $registryFile -Raw | ConvertFrom-Json
+    if ($cfg.clients.Count -ne 1 -or $cfg.clients[0].id -cne 'goose-core' -or
+        $cfg.clients[0].token_sha256 -cnotmatch '^[0-9a-f]{64}$') {
+        throw 'Workbench did not rename client and render a correct one-way token hash.'
     }
-    $clipboardHash = [Convert]::ToHexString(
-        [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($clipboardValue))
+    $original = Get-Clipboard -Raw
+    if (-not $original) { throw 'Workbench did not copy original client key to clipboard.' }
+    $digest = [Convert]::ToHexString(
+        [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($original))
     ).ToLowerInvariant()
-    if ($doc.clients[0].token_sha256 -cne $clipboardHash) {
-        throw 'KeePass clipboard key does not match generated S02 digest.'
+    if ($cfg.clients[0].token_sha256 -cne $digest) {
+        throw 'Original clipboard key does not match the rendered client digest.'
     }
-    Write-Host '[PASS] Menu init/add/list/render/help/rename/clipboard/where/quit under StrictMode.'
+    if (Test-Path -LiteralPath (Join-Path $testFolder 'runtime/process-compose-windows.json')) {
+        throw 'Merely visiting setup/access menus started a supervisor unexpectedly.'
+    }
+    Write-Host '[PASS] Windows workbench setup, keys, clipboard, nested navigation and concise menu behavior.'
 }
 finally {
-    # Clear the temporary clipboard secret on ephemeral CI runners.
     Set-Clipboard -Value '' -ErrorAction SilentlyContinue
     Remove-Variable aiwMenuAnswers -Scope Global -ErrorAction SilentlyContinue
     Remove-Variable aiwMenuIndex -Scope Global -ErrorAction SilentlyContinue
     Remove-Item Env:AIW_SERVICES_DIR -ErrorAction SilentlyContinue
-    Remove-Item -Path $testFolder -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $testFolder -Recurse -Force -ErrorAction SilentlyContinue
 }
