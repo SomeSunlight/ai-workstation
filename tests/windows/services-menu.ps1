@@ -12,6 +12,7 @@ $global:aiwMenuAnswers = @(
     '1', 'y', 'n', 'n',     # First time; allow init; decline download and opening editor
     '2',                  # Friendly private configuration summary
     '0',                  # Back to main menu
+    '1', '?', '0',         # Visit service operations, no real Start
     '3',                  # Application access keys
     '1', 'goose-research', # Create individual key
     '2',                  # List
@@ -38,7 +39,7 @@ function Read-Host {
 try {
     $menuOutput = (& (Join-Path $root 'bootstrap/windows/Services.ps1') 6>&1) -join [Environment]::NewLine
     $headerCount = ([regex]::Matches($menuOutput, '=== AI Workstation \| Windows inference host ===')).Count
-    if ($headerCount -ne 5) {
+    if ($headerCount -ne 6) {
         throw "Main menu appeared $headerCount times; expected initial/back/explicit-help pattern."
     }
     if ($global:aiwMenuIndex -ne $global:aiwMenuAnswers.Length) {
