@@ -26,6 +26,9 @@ jobs:
         with:
           sparse-checkout: |
             tests/windows
+            tools/aiw-services.py
+            tools/aiw-secret-windows.ps1
+            config/versions.json
       - name: Check out immutable upstream Process Compose v1.124.0 source
         uses: actions/checkout@v7
         with:
@@ -64,6 +67,50 @@ jobs:
       - name: Isolated Process Compose parent/child stop test
         shell: pwsh
         run: ./tests/windows/process-compose-child-tree.ps1 -Binary "$PWD/review-bin/process-compose.exe"
+      - name: Install pinned Python runner for private pilot import test
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: '0.11.26'
+      - name: Verify exact-hash private pilot install, ownership and uninstall
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:AIW_SERVICES_DIR = Join-Path $env:RUNNER_TEMP ('aiw-pilot-' + [guid]::NewGuid().ToString('N'))
+          $args = @('run','--no-project','--with','PyYAML==6.0.3','python','tools/aiw-services.py')
+          $archive = Join-Path $env:RUNNER_TEMP 'reviewed-pilot.zip'
+          Compress-Archive -LiteralPath './review-bin/process-compose.exe' -DestinationPath $archive
+          & uv @args init
+          if ($LASTEXITCODE -ne 0) { throw 'Pilot services init failed.' }
+          & uv @args pilot install --archive $archive
+          if ($LASTEXITCODE -ne 0) { throw 'Expected reviewed pilot install failed.' }
+          & uv @args pilot status
+          if ($LASTEXITCODE -ne 0) { throw 'Pilot status failed.' }
+          $pilot = Join-Path $env:AIW_SERVICES_DIR 'bin/process-compose-pilot.exe'
+          $hash = (Get-FileHash -LiteralPath $pilot -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -cne '7b966884a41987173ab6d342947376b799ea633492122f624f18f5328475b701') {
+            throw 'Wrong installed pilot binary SHA-256.'
+          }
+          # Only the isolated, harmless smoke process can be started here.
+          $project = Join-Path $env:AIW_SERVICES_DIR 'process-compose.yaml'
+          (Get-Content -LiteralPath $project -Raw).Replace('disabled: true','disabled: false') |
+            Set-Content -LiteralPath $project -Encoding utf8
+          try {
+            & uv @args up
+            if ($LASTEXITCODE -ne 0) { throw 'Smoke supervisor did not start.' }
+            $record = Get-Content (Join-Path $env:AIW_SERVICES_DIR 'runtime/process-compose-windows.json') -Raw | ConvertFrom-Json
+            if (-not $record.identity.exe.EndsWith('process-compose-pilot.exe')) {
+              throw 'Smoke supervisor did not use the reviewed pilot binary.'
+            }
+          }
+          finally {
+            & uv @args down
+            if ($LASTEXITCODE -ne 0) { throw 'Smoke supervisor did not stop.' }
+          }
+          & uv @args pilot remove
+          if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $pilot)) {
+            throw 'Pilot was not unregistered cleanly after shutdown.'
+          }
+          Write-Host '[PASS] Reviewed Windows supervisor binary hash, user opt-in, owned smoke lifecycle and reversible removal.'
       - name: Upload review-only binary and provenance (not trusted for host installation)
         uses: actions/upload-artifact@v4
         with:
