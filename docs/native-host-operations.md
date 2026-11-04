@@ -14,9 +14,14 @@ The central version manifest currently has **production_adoption_blocked: true**
 
 ## One-time native Windows host setup
 
-From the Windows checkout, open the existing menu in PowerShell 7.4+:
+From the Windows checkout, open the **native** menu in PowerShell 7.4+:
 
-    pwsh -File .\bootstrap\windows\Services.ps1
+    .\aiw
+
+To enable just `aiw` from any native Windows directory, run
+`.\aiw register` once, then open a **new PowerShell session**. This
+user-scoped command is unrelated to the WSL/Linux `aiw` executable.
+Registration does not start, stop or reconfigure any service.
 
 1. Choose **2 Initialize**, and **3 Install** if Process Compose is not installed. This initializes the private service directory and installs the currently pinned verified Process Compose executable; it does not install the four applications yet.
 2. Choose **17 Host setup**. This creates a private, initially disabled four-service JSON template under %LOCALAPPDATA%\AIWorkstation\services\native-host.json, refusing overwrite. The JSON is the private input for rendering a Process Compose project.
