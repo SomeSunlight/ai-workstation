@@ -60,7 +60,7 @@ try {
     # through to pwsh -File; this disposable CI checkout has no spaces.
     # Production AIW uses UTF-16LE -EncodedCommand for arbitrary host paths.
     foreach ($path in @($parent,$child,$parentPidFile,$childPidFile)){
-        if($path -match '\\s'){throw 'Fixture requires a space-free temporary CI path.'}
+        if($path.Contains(' ')){throw 'Fixture requires a space-free temporary CI path.'}
     }
     $cmd = 'pwsh -NoProfile -NonInteractive -File ' + $parent +
         ' -Child ' + $child + ' -Port ' + $port +
