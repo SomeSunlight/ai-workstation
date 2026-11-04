@@ -94,7 +94,7 @@ switch ($Action) {
         $body = Make-ShimText
         $staging = Join-Path $shimDirectory ('.aiw-' + [Guid]::NewGuid().ToString('N') + '.tmp')
         try {
-            [IO.File]::WriteAllText($staging, ($body.TrimEnd([char]13, [char]10) + [Environment]::NewLine),
+            [IO.File]::WriteAllText($staging, ($body.TrimEnd([char[]]@([char]13, [char]10)) + [Environment]::NewLine),
                 [Text.UTF8Encoding]::new($false))
             Move-Item -LiteralPath $staging -Destination $shimFile -Force
         }
