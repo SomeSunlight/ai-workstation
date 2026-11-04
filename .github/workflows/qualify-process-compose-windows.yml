@@ -1,0 +1,73 @@
+# Isolated pilot qualification, NOT an installable production release.
+# Fixed upstream source commit + patched Go toolchain + Windows child-tree test.
+name: Qualify patched Process Compose (Windows)
+
+on:
+  push:
+    branches:
+      - feature/41-gateway-client-cutover-runbook
+    paths:
+      - .github/workflows/qualify-process-compose-windows.yml
+      - tests/windows/process-compose-child-tree.ps1
+      - tests/windows/tree-fixture-parent.ps1
+      - tests/windows/tree-fixture-child.ps1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-windows:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - name: Check out AIW process-tree test code
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            tests/windows
+      - name: Check out immutable upstream Process Compose v1.124.0 source
+        uses: actions/checkout@v7
+        with:
+          repository: F1bonacc1/process-compose
+          ref: f471d83a5dfa4779d589d0a73182b6d6e22736b2
+          path: upstream-process-compose
+          persist-credentials: false
+      - name: Set up patched Go toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.3'
+          check-latest: false
+          cache: false
+      - name: Build pinned source with patched Go (no production install)
+        shell: pwsh
+        env:
+          GOTOOLCHAIN: local
+          CGO_ENABLED: '0'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (& go version) -join ''
+          Write-Host "[SOURCE] process-compose v1.124.0 commit f471d83a5dfa4779d589d0a73182b6d6e22736b2"
+          Write-Host "[BUILD] $version"
+          if ($version -notmatch 'go1\.27\.3') { throw 'Unexpected Go toolchain.' }
+          New-Item -ItemType Directory -Path './review-bin' -Force | Out-Null
+          Push-Location './upstream-process-compose'
+          try {
+            & go build -trimpath -buildvcs=false -ldflags '-X github.com/f1bonacc1/process-compose/src/config.Version=v1.124.0' -o '../review-bin/process-compose.exe' .
+            if ($LASTEXITCODE -ne 0) { throw 'Process Compose source build failed.' }
+          }
+          finally { Pop-Location }
+          $meta = (& go version -m './review-bin/process-compose.exe') -join [Environment]::NewLine
+          Write-Host $meta
+          if ($meta -notmatch 'go1\.27\.3') { throw 'Binary lacks patched toolchain provenance.' }
+          Get-FileHash -LiteralPath './review-bin/process-compose.exe' -Algorithm SHA256 | Format-List
+      - name: Isolated Process Compose parent/child stop test
+        shell: pwsh
+        run: ./tests/windows/process-compose-child-tree.ps1 -Binary "$PWD/review-bin/process-compose.exe"
+      - name: Upload review-only binary and provenance (not trusted for host installation)
+        uses: actions/upload-artifact@v4
+        with:
+          name: process-compose-windows-review-go1273
+          path: review-bin/process-compose.exe
+          retention-days: 7
+          if-no-files-found: error
