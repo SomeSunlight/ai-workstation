@@ -129,7 +129,7 @@ function Show-SetupMenu {
     Write-Host '     Generate the managed process definition, then validate it.'
     Write-Host '  6  Check whether old services still occupy the ports'
     Write-Host '  7  Show the private file locations'
-    Write-Host '  8  Install the verified Process Compose program (if missing)'
+    Write-Host '  8  Install official Process Compose (smoke tests only; not approved for live host)'
     Write-Host '  9  Open the step-by-step setup guide'
     Write-Host ' 10  Install the independently reviewed Windows supervisor (pilot)'
     Write-Host '     Requires the matching GitHub Actions artifact ZIP; the old binary stays intact.'
@@ -196,7 +196,7 @@ function Start-FirstTimeSetup {
 function Start-EnabledServices {
     Write-Host 'Starts the configured native AI services under one Process Compose supervisor.'
     Write-Host 'If the previous startup script still owns any ports, STOP here and plan a controlled handover.'
-    Write-Host 'The configured Process Compose production security restriction is never bypassed.'
+    Write-Host 'Only the separately opted-in, exact-checksum Windows pilot may start a real native-host project.'
     if (-not (Confirm-Aiw 'Start all enabled services?')) { return }
     $openMonitor = Confirm-Aiw 'Open the live status/logs monitor after starting?' $true
     Invoke-Aiw @('up')
