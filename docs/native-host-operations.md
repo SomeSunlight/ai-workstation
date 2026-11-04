@@ -1,49 +1,245 @@
-# Native Windows AI service host — Strata + Dispatcher + Caddy + Open WebUI (#41)
+# Native Windows AI service host: setup, operation and first test (#41)
 
-**Review candidate; live adoption is blocked until the security/owner gates below pass.**
+AI Workstation is the entry point for native Windows inference services. You should
+not have to know PowerShell script names, Process Compose syntax or internal
+configuration-generator commands to use it.
 
-The **first useful host acceptance test** must run all four native services under **AI Workstation + one Process Compose supervisor**. After a Windows restart, opening AI Workstation and selecting **Start** must restore Caddy → Dispatcher → Strata, without executing the previous Caddy-folder PowerShell starter or manually launching any of those services. This is **operator-initiated after reboot**, not automatic Windows boot startup. The old script stays as a rollback only and must never start a second copy of the same processes.
+**Current status:** This is a review candidate. Preparing, inspecting and
+validating settings is supported. **The real four-service startup is still
+blocked** by the Process Compose production-security gate until the patched
+binary and Windows child-process shutdown are approved. Never disable that gate
+merely to make a test pass.
 
-AI Workstation installs/configures and presents the menu; Process Compose is the only live native process supervisor. The WSL Goose/Open WebUI containers remain Docker Compose-owned. The existing native-host Open WebUI instance is **also supervised by Process Compose**, using its existing executable and DATA_DIR without copying, resetting or duplicating its database. It receives a separate Dispatcher client key as described in the [identity runbook](gateway-client-migration.md).
+## What does this installation run?
 
-## Before changing anything
+| Service | Role | Typical private listening port |
+| --- | --- | --- |
+| Strata | Loads the local model and answers inference requests | 8080 |
+| Llama Dispatcher | Attaches to Strata; provides model aliases and application attribution | 8001 |
+| Caddy | HTTPS gateway and access rules | 443 (possibly also 80) |
+| Open WebUI | Existing native Windows chat web app, preserving its own data | 3000 |
 
-Keep private backups of the working PowerShell script, Caddyfile, Strata and Dispatcher config, model locations, encrypted keys and the existing Open WebUI data. Privately inventory the exact executable paths, start argument arrays, working directories, ports and DPAPI credential references. **Do not copy personal details or tokens into GitHub**.
+Under AI Workstation, one Process Compose supervisor starts them in this order:
+**Strata → Dispatcher → Caddy → Open WebUI**. It tracks status, logs and
+readiness. This does **not** create a second WebUI installation or a new database.
+WSL/Linux Goose and WebUI remain managed separately with Docker Compose.
 
-The central version manifest currently has **production_adoption_blocked: true** because the pinned Process Compose build requires a security/toolchain review. **Never bypass that guard.** A verified patched binary plus real Windows child-process termination tests are mandatory before starting these actual services. AIW can prepare and validate their private configuration before that release gate is cleared.
+The previous native PowerShell launcher stays as a rollback, **not** a second
+concurrent process manager. After Windows reboots, the goal is to open AI
+Workstation and select **Start all enabled services** — no old script required.
+Automatic startup at Windows sign-in/boot is a different, optional feature.
 
-## One-time native Windows host setup
+## Open the Windows workbench
 
-From the Windows checkout, open the **native** menu in PowerShell 7.4+:
+From the AI Workstation checkout, enter `.\aiw`. After one-time
+`.\aiw register` and opening a new terminal, simply enter `aiw` from any
+directory.
 
-    .\aiw
+The workbench is divided into user tasks:
 
-To enable just `aiw` from any native Windows directory, run
-`.\aiw register` once, then open a **new PowerShell session**. This
-user-scoped command is unrelated to the WSL/Linux `aiw` executable.
-Registration does not start, stop or reconfigure any service.
+- **Run and monitor AI services:** start, see status, read logs, attach a
+  full-screen monitor or stop. Start asks *beforehand* if the live monitor
+  should open immediately afterward. The monitor attaches to the existing
+  supervisor, rather than launching a duplicate.
+- **Set up or change this computer:** first-time preparation; inspect,
+  edit, check and apply the machine-local startup settings; check whether the
+  old services still occupy the ports.
+- **Manage application access keys:** create an original per-app key, copy it
+  to the clipboard, list/rename registrations or prepare Dispatcher key hashes.
+  These actions do not automatically activate the new keys in a running
+  Dispatcher.
+- **Help and explanations:** how the services connect, the key terminology,
+  this guide and optional direct CLI commands.
 
-1. Choose **2 Initialize**, and **3 Install** if Process Compose is not installed. This initializes the private service directory and installs the currently pinned verified Process Compose executable; it does not install the four applications yet.
-2. Choose **17 Host setup**. This creates a private, initially disabled four-service JSON template under %LOCALAPPDATA%\AIWorkstation\services\native-host.json, refusing overwrite. The JSON is the private input for rendering a Process Compose project.
-3. Open this private file with an editor. For **strata**, **dispatcher**, **caddy** and optional **open-webui**, fill in the actual *absolute* executable path, working directory, and **arguments array** (one native argument per JSON element, same order as the existing working command). For Dispatcher, the executable may be a local uv.exe with arguments selecting the existing Python checkout and Strata attach config, or a reviewed S03 attach launcher. **Do not assume a Caddy/Strata/WebUI startup script also starts Dispatcher**. A legacy S03 launcher might regenerate only the shared `home-gateway` client identity; individual S02 activation is a separate migration. Use real values from the working startup, not generic guesses.
-4. Declare each service's **listen_ports** (Strata commonly 8080, Dispatcher commonly 8001, Caddy's actual HTTPS and optional HTTP redirect port, native WebUI commonly 3000). Keep secrets out of arguments. The **environment** mapping is for *nonsecret* values such as a path to the S02 client digest file. Use **secret_environment** to map credential environment variable names to existing absolute Windows **.dpapi** encrypted files; they are decrypted only by the native child under the correct Windows user. Optional **required_paths** lists important input files and persistent directories (such as the existing WebUI data root) which must exist before a real start.
-5. Set a **readiness** HTTP(S) URL, expected HTTP status and optional protected bearer reference. Strata and Dispatcher model endpoints normally return **200 with authorized credentials**; a deliberately unauthorized request to protected Caddy may correctly return **401**. AIW never disables certificate checks. A real response check is stronger than PID/port alone.
-6. Keep **enabled: false** until the approved live test. Choose **18 Render host**; AIW generates native Process Compose definitions and guarded PowerShell launch/health adapters with startup dependencies **Strata → Dispatcher → Caddy → Open WebUI**. Nothing is started. After changing JSON, render again while the supervisor is stopped; a source fingerprint blocks stale projects.
-7. Choose **4 Validate** for the native Process Compose configuration dry-run. Choose **19 Host preflight** to check declared loopback ports are free; while the old services run, collision refusal is an *expected* safe result, not a reason to kill unknown processes.
+The commands themselves remain English and host-neutral. No secret or personal
+machine configuration is committed to Git.
 
-The rendered YAML does not contain raw tokens. Only one Process Compose instance can own all four selected services. Direct edits to generated commands are unsupported; change the private host input and render again while stopped. The upstream product's AIW native service CLI remains available for scripting.
+## First-time setup
 
-## Owner-approved first full-stack test and reboot check
+1. In `aiw` choose **Set up or change this computer → First-time preparation**.
+   AI Workstation creates the private user configuration (if missing) and
+   offers to install a checksum-verified Process Compose binary. Existing
+   configuration and secret files are not overwritten.
+2. Choose **View service configuration summary** to see which services are
+   configured and whether they are intended to start.
+3. **Now edit the private `native-host.json` file.** Select **Edit service
+   startup settings**; it opens in Notepad, or open it in your preferred editor
+   from `%LOCALAPPDATA%\AIWorkstation\services\native-host.json`.
 
-1. Review the actual private launch commands and process/port ownership, preserve a tested rollback, and clear the Process Compose release-security gate only after a patched and checksum-verified build plus Windows child-tree tests.
-2. At an explicitly agreed service-cutover moment, stop the *existing owner-controlled* Strata/Dispatcher/Caddy/Open WebUI processes using the verified previous procedure. **Do not blindly stop processes based only on their port numbers.** Never run the previous script concurrently.
-3. In the private native-host JSON set the four **enabled** flags to true, choose **18 Render host**, then **4 Validate** and **19 Host preflight**. All declared ports must be free.
-4. Choose **7 Start**. AI Workstation starts one headless supervisor; Process Compose launches Strata, waits for its authorized HTTP readiness, then Dispatcher, then Caddy, then native Open WebUI. The old script is not invoked. Native Open WebUI must keep its existing data directory and loopback-only port.
-5. Choose **5 Status**, **9 Logs** and **6 TUI** to inspect and monitor the four individually. Verify negative 401 requests, authorized model discovery, one small real inference, streaming, Caddy's direct-Strata protected fallback, and SQLite request/client identity audit.
-6. Choose **8 Stop** and verify all *owned* child processes exited and relinquished their ports. A Windows child that survives Stop is a stop condition: do not start the old script until the orphaned child ownership is safely resolved.
-7. Reboot Windows normally. Open AI Workstation, choose **7 Start** and **5 Status**. The full native inference chain should return with no dependency on the previous script. Automatic boot-time service startup is optional future work, not assumed.
-8. Independently migrate the three application client keys (WSL Goose, WSL Open WebUI, native-host Open WebUI) with the [client identity runbook](gateway-client-migration.md), preserving the old shared identity until all three are proven in Dispatcher SQLite.
+   This file describes **how to start each service**; you edit it once for
+   your machine, not on every start. Inside the `services` object there is
+   one section for Strata, Dispatcher, Caddy and (optionally) native Open WebUI:
 
-## Current limitations
+   - **`executable` and `working_directory`:** full Windows path to the program
+     that must run, and the directory in which it starts. The executable
+     must be a real file, not an unqualified name such as `run-model.bat`.
 
-This review branch can render and dry-run a four-service project but has **not** installed Caddy/Strata/Dispatcher on a clean native host, imported the owner's private existing process commands, qualified the Process Compose patched binary, or passed a real Speedy run/stop/reboot test. **No production service startup is yet authorized.** The original private starter remains the working fallback until the owner explicitly approves the completed migration.
+     - **`.exe`:** executable directly (for example `C:\Apps\caddy\caddy.exe`).
+     - **`.bat` / `.cmd`:** launch through `C:\Windows\System32\cmd.exe`,
+       with `"/d", "/c", "C:\\Apps\\models\\run-model.bat"` in `arguments`.
+       `/c` executes the batch file and waits; it allows supervision to
+       observe when that process exits. Avoid `/k`, which leaves an
+       unrelated interactive command prompt running.
+     - **`.ps1`:** use the full path to `pwsh.exe` (PowerShell 7) as executable,
+       with `-NoProfile`, `-NonInteractive`, `-File` and the script path
+       as **separate items** in `arguments`.
+     - **Python/uv:** use the actual `uv.exe` and an argument array matching
+       the approved working invocation. No shell is necessary to run `uv`.
+   - **`arguments`:** a JSON list of strings; **one argument per element**.
+     There is no need to add shell quoting around each element. Flags and
+     their values are separate entries. Never copy a whole command line
+     into one array item.
+   - **`listen_ports`:** Windows TCP ports the process owns. The preflight
+     rejects occupied listening ports (including non-loopback/IPv6 listeners)
+     before a new supervisor starts. Include every actual Caddy listener.
+   - **`environment`:** ordinary environment variables such as WebUI's
+     existing `DATA_DIR`. **`secret_environment`:** secret environment
+     variables mapped to **existing absolute Windows `.dpapi` files**,
+     rather than plaintext tokens. The native child decrypts these only
+     at launch using the Windows account that originally protected them.
+   - **`required_paths`:** important startup inputs that must already
+     exist — for example the Caddyfile, Strata configuration and existing
+     WebUI data directory. AI Workstation refuses to start an enabled
+     Open WebUI if its original `DATA_DIR` is missing.
+   - **`readiness`:** HTTP(S) endpoint, exact expected status and optionally
+     a local DPAPI-backed authorization token. An authenticated
+     `/v1/models` should typically return **200**. A deliberately
+     unauthenticated request to a protected Caddy path may correctly
+     return **401**. No TLS verification is disabled.
+   - **`enabled`:** choose **`true`** for services AI Workstation should
+     start; `false` only for a service intentionally excluded. The untouched
+     first-time template uses `false` to prevent accidental startup before
+     paths have been configured. For a correctly prepared four-service
+     host, all four entries may be `true`. This setting does **not**
+     override the independent Process Compose production security gate.
+
+   **Windows path rule:** in JSON, a single backslash must be escaped:
+   `"C:\\Apps\\models\\run-model.bat"`. After parsing JSON, Windows receives
+   `C:\Apps\models\run-model.bat`. In an ordinary PowerShell string in
+   single quotes, write that same Windows path with **single** backslashes.
+   Do **not** prefix paths with PowerShell's escape backtick.
+
+   Example of just the startup-related fields for a batch file:
+
+   ```json
+   {
+     "enabled": true,
+     "executable": "C:\\Windows\\System32\\cmd.exe",
+     "working_directory": "C:\\Apps\\models",
+     "arguments": ["/d", "/c", "C:\\Apps\\models\\run-model.bat"],
+     "required_paths": ["C:\\Apps\\models\\run-model.bat"]
+   }
+   ```
+
+   The actual service object contains additional fields; **edit the
+   generated private file**, do not replace it with this partial example.
+
+4. Choose **Check the edited settings (without starting services)**. This
+   checks paths, enabled dependencies, missing WebUI data and readiness
+   URLs. Errors identify the service rather than exposing secrets.
+5. Choose **Apply edited settings for the next startup**. This takes your
+   private JSON and prepares the Process Compose definition, then performs a
+   real **dry-run validation**. The internal *render* step is automatic:
+   there is no YAML to edit and no running process is changed.
+6. Choose **Check whether old services still occupy the ports**. If your
+   original launcher is still running, **conflicts are expected**. This
+   read-only check must refuse the conflicting ports; do not try to kill
+   a foreign PID or run both launchers.
+
+If you later change startup parameters, repeat **Edit → Check → Apply**
+while the AIW supervisor is stopped. Your private JSON stays the source of
+truth; AI Workstation refuses to run a stale generated configuration.
+
+### Choosing the correct Dispatcher
+
+The same Dispatcher source checkout can have **two different configurations**:
+
+- **Existing, model-loading Dispatcher:** a previous command using
+  `serve --ensemble ... --instance ... --model-root ...`. This may load
+  and manage inference itself.
+- **S03 trial Dispatcher:** the reviewed `s03_speedy_gateway.ps1` in the
+  Dispatcher repository. It connects to the **already-running native
+  Strata** and publishes the trial alias. For the gateway acceptance test,
+  **use this S03 configuration**, not the original `--ensemble` command.
+  The legacy S03 helper currently regenerates the transitional
+  `home-gateway` key registry, so independently named Goose/WebUI S02 keys
+  require their own staged migration.
+
+Never start both instances against the same port 8001. Keep the previous
+configuration intact until the test and identity migration are accepted.
+
+## Exactly what can you test now, without stopping existing services?
+
+These actions may be performed while the old launcher still manages the
+working Windows stack:
+
+1. `git pull --ff-only` on your review branch, then `aiw`.
+2. Open **Set up or change this computer → View service configuration
+   summary**. Expect four services listed; their setup and enabled flags
+   should match your private file. No process starts.
+3. Choose **Edit service startup settings** and verify the file. For an
+   S03 trial, check the actual Dispatcher checkout and script path,
+   instance name, Caddyfile, Strata batch/config and existing WebUI data.
+   Keep `enabled: true` for the four services you intend to supervise.
+4. Choose **Check the edited settings**. Expect a validation success if
+   all files, directories, dependencies and health settings exist.
+5. Choose **Apply edited settings for the next startup** and confirm.
+   Expect a successful Process Compose configuration **dry-run** for
+   four processes. This does not start, stop or reload the live stack.
+6. Choose **Check whether old services still occupy the ports**. While
+   the previous starter's Strata/Caddy/WebUI instances run, expect
+   **occupied-port refusal**. This is a successful *safety test*, not
+   a reason to stop unknown processes.
+7. Under **Run and monitor AI services**, inspect the actions and return
+   without starting anything. The menu now explicitly distinguishes
+   Start, Status, Logs, the live monitor and Stop.
+8. Optionally inspect **Manage application access keys → List
+   applications**. Do not issue or activate new client keys as part
+   of a process-manager-only acceptance test.
+
+**Stop here.** Do not choose **Start all enabled services** while the old
+launcher owns the processes or the production security gate remains active.
+
+## First live cutover test — separate owner approval required
+
+Only after the pinned Process Compose binary is security-qualified,
+Windows child-process termination is tested, private configuration is
+backed up and the operator explicitly authorizes the takeover:
+
+1. Stop the old script-owned processes using their known, verified
+   owner procedure. Confirm none of their listed ports is occupied.
+   Do not stop a process just because its port is 8080, 8001, 443 or 3000.
+2. In AIW, choose **Setup → Check edited settings → Apply settings →
+   Check occupied ports**. All these steps must pass.
+3. Choose **Run and monitor → Start all enabled services**. The workbench
+   asks **before starting** whether you want the live monitor open
+   immediately afterward (default: Yes). Inspect all four processes
+   as they pass their individual HTTP readiness checks.
+4. In **Run and monitor → Show current status** and **Read service logs**,
+   check all four and their startup order. Verify unauthorized 401,
+   authorized model discovery 200, one tiny inference request, streaming,
+   the protected direct-Strata fallback, the WebUI health endpoint,
+   persistent WebUI data and the existing gateway routes.
+5. Choose **Stop all AIW-managed services**, then verify that every
+   **owned** child process stopped and its ports are released. Windows
+   process-tree termination must be proven; a surviving child prevents
+   restarting the old launcher until that child is safely resolved.
+6. Reboot Windows normally. Open AI Workstation and choose
+   **Start all enabled services** again; the old starter must not be
+   necessary. Automatic boot startup is not part of this test.
+7. After separately validating the gateway and client registry, migrate
+   the three distinct application identities as described in
+   [gateway-client-migration.md](gateway-client-migration.md).
+
+**Rollback:** stop only AIW-owned processes, verify that the entire
+native process tree is gone, then use the preserved private old starter.
+Never allow both managers to control the same services.
+
+## What this PR does not yet provide
+
+This review branch implements the workbench, private configuration
+generator and safe tests; it does not yet install all four programs on a
+clean native Windows system, clear the Process Compose security hold,
+supply your private launch parameters from Git, or prove real four-child
+Windows startup/shutdown/reboot. Those remain open acceptance criteria
+under issue #41.
