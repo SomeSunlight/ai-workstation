@@ -1,5 +1,16 @@
 # Native services and client identities
 
+**Native Windows entry:** from this repository checkout run `.\aiw` to open
+the menu, or `.\aiw status` / `.\aiw check` for a direct command.
+If you want plain `aiw` in **every Windows directory**, run
+`.\aiw register` once, then open a new PowerShell window. This registers
+only a user-scoped command under LOCALAPPDATA; it neither touches WSL/Linux
+`aiw` nor starts a service. Undo with `aiw unregister` (or
+`.\aiw unregister`). A registered command points at the checkout that
+registered it; re-register if that checkout moves.
+
+
+
 **Audience:** operators of AI Workstation on native Windows, WSL or Linux.
 **Status:** PR #37 accepted (2026-11-03); existing real host services are **not** yet migrated.
 **Key principle:** use the menu for everyday operation, native CLI for automation.
