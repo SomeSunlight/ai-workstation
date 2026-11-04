@@ -34,9 +34,9 @@ or container services.
 
 **Active priority: [issue #41](https://github.com/SomeSunlight/ai-workstation/issues/41).**
 Native Windows host AI Workstation must eventually manage the existing
-Caddy + S02 Dispatcher + native Strata using one approved Process Compose
-supervisor and reversible replacement of the private PowerShell starter.
-Keep the existing native-host Open WebUI instance and give it its **own**
+Caddy + S02 Dispatcher + native Strata **and existing native-host Open WebUI**
+using one approved Process Compose supervisor and a reversible replacement
+of the private PowerShell starter. Keep the native-host Open WebUI instance and give it its **own**
 S02 application credential; laptop/WSL Goose and Open WebUI keep their
 separate Docker Compose setup and **different** S02 credentials. Protected
 home-network Caddy access and the legacy shared key must remain intact
@@ -46,12 +46,18 @@ is proposed in [docs/gateway-client-migration.md](docs/gateway-client-migration.
 **Current #41 draft implementation:** [PR #45](https://github.com/SomeSunlight/ai-workstation/pull/45)
 adds a private Windows host input for Strata/Dispatcher/Caddy plus optional existing native Open WebUI, and a native Process Compose
 renderer, DPAPI-only native child launch and authenticated readiness probes,
-no-double-owner listening-port preflight, menu actions 17/18/19, and the
-[native-host operations guide](docs/native-host-operations.md). The generated
+no-double-owner listening-port preflight, and a task-oriented native
+Windows workbench (**Run and monitor**, **Set up**, **Application keys**, **Help**).
+First-time setup and native-host inspection/validation are read-only; the
+workbench can open the machine-local JSON, apply its edited settings via
+automatic Process Compose rendering + dry-run, check occupied ports and
+offer to open the live monitor/logs when starting. The
+[native-host operations guide](docs/native-host-operations.md) includes
+nested, explicit Windows executable/argument rules and safe host tests. The generated
 project has an explicit Strata → Dispatcher → Caddy → optional native Open WebUI healthy-start dependency. Existing WebUI data roots and Strata JSON configurations are verified before enabling a live start.
 Actual program paths, launch arguments, private credentials and host secrets
 must be configured only on the operator's host. CI verified the real pinned
-Windows native Process Compose **configuration dry-run with three processes**,
+Windows native Process Compose **configuration dry-run with four processes**,
 Windows collision/drift/security-gate refusals and existing Linux release
 checks. **The production hold remains active**: no live native service has
 been adopted or started, no patched supervisor has been qualified, and
@@ -59,6 +65,8 @@ Speedy real child-tree stop/reboot tests are not yet complete. After those
 gates, the required first real acceptance test must Start/Status/Logs/TUI/Stop
 all four configured native services via AIW alone and restore them by AIW Start after reboot;
 the existing private PowerShell starter is rollback only.
+
+**Current Dispatcher distinction:** the staging S03 attach-to-Strata trial uses a separate invocation from the previously model-loading native Dispatcher ensemble; do not replace the accepted existing instance prematurely. Local owner-specific paths and a corrected private JSON are not in public Git. The revised workbench has Windows runner regression coverage for guided setup, task navigation and original-key-to-digest actions. The separate native Windows `aiw` shell command remains available, with no WSL impact.
 
 Additional native-host Goose/Hermes Docker containers [#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
 are deferred: not needed for this deployment. The Process Compose production
