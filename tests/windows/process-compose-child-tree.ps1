@@ -90,7 +90,18 @@ try {
         if($supervisor.HasExited){break}
         Start-Sleep -Milliseconds 160
     }
-    if(-not $ready){throw 'Nested test process never became ready; inspect CI log.'}
+    if(-not $ready){
+        Write-Host "[DIAGNOSTIC] Supervisor exited: $($supervisor.HasExited)"
+        foreach($file in @('supervisor.out','supervisor.err')){
+            $log = Join-Path $folder $file
+            if(Test-Path -LiteralPath $log){
+                Write-Host "[DIAGNOSTIC] $file"
+                Get-Content -LiteralPath $log -Tail 55 | ForEach-Object { Write-Host $_ }
+            }
+        }
+        Write-Host "[DIAGNOSTIC] Parent marker: $(Test-Path $parentPidFile); child marker: $(Test-Path $childPidFile)"
+        throw 'Nested test process never became ready.'
+    }
     $parentPid=[int](Get-Content -LiteralPath $parentPidFile -Raw)
     $childPid=[int](Get-Content -LiteralPath $childPidFile -Raw)
     if(-not (Is-Alive $parentPid) -or -not (Is-Alive $childPid)){
