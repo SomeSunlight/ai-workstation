@@ -8,6 +8,8 @@ $env:AIW_SERVICES_DIR = $temp
 try {
     & (Join-Path $root 'bootstrap/windows/Services.ps1') init
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host init
+    # First-time summary must be readable even before start paths are populated.
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host inspect
     $path = Join-Path $temp 'native-host.json'
     $data = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -AsHashtable
     $exe = (Get-Command pwsh).Source
@@ -26,6 +28,9 @@ try {
         $item.enabled = $true
     }
     $data | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $path -Encoding utf8
+    # New setup flow: check human-edited JSON before generating launch commands.
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host validate
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host inspect
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host render
     # Verify the real pinned Windows Process Compose executable accepts the
     # generated dependency/health schema (dry-run; no child process start).
