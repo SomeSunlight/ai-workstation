@@ -118,7 +118,21 @@ switch ($Action) {
     'Remove' {
         Assert-UnownedShimAbsent
         if (Test-Path -LiteralPath $shimFile) {
-            Remove-Item -LiteralPath $shimFile -Force
+            # Windows briefly retains an open handle to a just-executed .cmd.
+            # Retry only our own marker-verified shim; never kill a process.
+            $removed = $false
+            for ($attempt = 0; $attempt -lt 15; $attempt++) {
+                try {
+                    Remove-Item -LiteralPath $shimFile -Force -ErrorAction Stop
+                    $removed = $true
+                    break
+                }
+                catch [System.IO.IOException] {
+                    if ($attempt -ge 14) { throw }
+                    Start-Sleep -Milliseconds 200
+                }
+            }
+            if (-not $removed) { throw 'Could not unregister locked native aiw shim.' }
         }
         # Remove only our exact shim directory from the user's PATH.
         $oldParts = @((Read-UserPath) -split ';')
