@@ -519,7 +519,7 @@ def install_windows_reviewed_pilot(folder: Path, archive_path: Path) -> None:
     """Deliberate limited Windows host pilot, never replace the official binary."""
     if os.name != "nt" or platform.machine().upper().replace("X86_64", "AMD64") != "AMD64":
         raise ConfigError("Reviewed pilot installation is available only on Windows AMD64.")
-    if windows_supervisor_state_path(folder).exists():
+    if windows_supervisor_state_path(folder).exists() or windows_supervisor_state_path(folder).is_symlink():
         raise ConfigError("An AIW supervisor ownership record exists; stop it before installing a pilot.")
     doc = read_settings(folder)
     if port_accepts_connections(doc["process_compose"]["port"]):
@@ -547,10 +547,16 @@ def install_windows_reviewed_pilot(folder: Path, archive_path: Path) -> None:
             raise ConfigError("Different pilot binary already exists; no automatic replacement.")
     else:
         private_write(dest, contents, replace=False)
-    private_write(pilot_marker(folder), (json.dumps({
+    record = (json.dumps({
         "sha256": pin["binary_sha256"], "source_commit": pin["source_commit"],
         "approval": "operator-opt-in",
-    }) + "\n").encode("utf-8"), replace=False)
+    }) + "\n").encode("utf-8")
+    if pilot_marker(folder).exists():
+        if not windows_reviewed_pilot_active(folder):
+            raise ConfigError("Pilot approval marker exists but does not match the reviewed build.")
+        print("[OK] Reviewed Windows pilot already active for this host.")
+        return
+    private_write(pilot_marker(folder), record, replace=False)
     print("[OK] Reviewed Windows Process Compose pilot installed and opted in.")
     print("Pinned source:", pin["source_commit"], "| Go", pin["go_version"])
     print("Review:", pin["qualification_run"])
@@ -605,7 +611,10 @@ def check_production_security_gate(folder: Path, project: Path, action: str, pro
     # The general production gate stays locked. The exact reviewed, locally
     # opted-in Windows-only Go 1.27.3 binary qualifies for a limited pilot.
     if os.name == "nt" and windows_reviewed_pilot_active(folder):
-        return
+        # Reviewed Windows pilot applies to AIW-generated host projects ONLY,
+        # not to arbitrary Process Compose YAML or unrelated native services.
+        if project.read_text(encoding="utf-8").startswith("# AIW native-host project"):
+            return
     try:
         doc = yaml.safe_load(project.read_text(encoding="utf-8"))
         services = doc["processes"]
