@@ -4,11 +4,15 @@ AI Workstation is the entry point for native Windows inference services. You sho
 not have to know PowerShell script names, Process Compose syntax or internal
 configuration-generator commands to use it.
 
-**Current status:** This is a review candidate. Preparing, inspecting and
-validating settings is supported. **The real four-service startup is still
-blocked** by the Process Compose production-security gate until the patched
-binary and Windows child-process shutdown are approved. Never disable that gate
-merely to make a test pass.
+**Current status:** General production adoption remains **blocked** for
+the official pinned Process Compose build. For the first Windows-only test,
+AI Workstation offers a deliberately enabled **reviewed pilot binary** from
+the immutable upstream source `v1.124.0`, rebuilt with **Go 1.27.3**.
+Windows CI verified both embedded Go version and the real nested
+parent/child `down` behavior on an isolated runner. The operator must
+download and explicitly install the **exact checksum-approved artifact**.
+Other/unverified builds remain blocked. This is NOT a general production release.
+Never change `production_adoption_blocked` manually to make a test pass.
 
 ## What does this installation run?
 
@@ -200,11 +204,50 @@ working Windows stack:
 **Stop here.** Do not choose **Start all enabled services** while the old
 launcher owns the processes or the production security gate remains active.
 
+## Obtain and install the reviewed Windows test supervisor
+
+The official pinned Process Compose version and ordinary production hold
+remain unchanged. For this first controlled native Windows pilot only:
+
+1. Open the successful [Windows qualification run](https://github.com/SomeSunlight/ai-workstation/actions/runs/41833439667).
+   Download its artifact **`process-compose-windows-review-go1273`**
+   from the workflow **Artifacts** section. It is a ZIP containing
+   `process-compose.exe`. This short-lived GitHub Actions artifact is
+   not an official upstream release and may require GitHub sign-in.
+2. In `aiw` select **Set up or change this computer →
+   Install the independently reviewed Windows supervisor (pilot)**.
+   Enter the full path to the **downloaded artifact ZIP** and confirm
+   the one-time opt-in. AI Workstation extracts it *privately* as
+   `process-compose-pilot.exe`, preserving the previously installed
+   official `process-compose.exe`. It verifies the exact reviewed
+   binary SHA-256 before accepting it.
+3. Select **Show reviewed supervisor pilot status**. It must report
+   **enabled**. If the ZIP has the wrong contents or digest, installation
+   fails closed. This installation does **not** start, stop or take over
+   any current host service.
+4. The initial pilot is for a **single owner-approved host validation**,
+   not a general Windows production release. The general pinned
+   security hold remains active for unrelated native projects. After
+   an accepted test, a separately reviewed, permanent pinned release
+   and clean-machine installation path must replace this provisional
+   Actions artifact.
+
+The pilot source is fixed at
+`f471d83a5dfa4779d589d0a73182b6d6e22736b2`,
+Go toolchain `1.27.3`, binary SHA-256
+`7b966884a41987173ab6d342947376b799ea633492122f624f18f5328475b701`.
+For provenance and the isolated nested-process shutdown result, see
+[workflow #41833439667](https://github.com/SomeSunlight/ai-workstation/actions/runs/41833439667).
+No private Windows machine names, model paths or credentials are part
+of this build.
+
 ## First live cutover test — separate owner approval required
 
-Only after the pinned Process Compose binary is security-qualified,
-Windows child-process termination is tested, private configuration is
-backed up and the operator explicitly authorizes the takeover:
+Only after the exact reviewed Windows pilot binary is installed,
+its checksum is accepted, private configuration and data are backed up,
+the existing owners/ports are known and the operator explicitly authorizes
+the takeover. The isolated Windows CI test supports this pilot but the
+**real-host tree-shutdown behavior remains unverified** until the stop test:
 
 1. Stop the old script-owned processes using their known, verified
    owner procedure. Confirm none of their listed ports is occupied.
@@ -238,8 +281,8 @@ Never allow both managers to control the same services.
 ## What this PR does not yet provide
 
 This review branch implements the workbench, private configuration
-generator and safe tests; it does not yet install all four programs on a
-clean native Windows system, clear the Process Compose security hold,
-supply your private launch parameters from Git, or prove real four-child
-Windows startup/shutdown/reboot. Those remain open acceptance criteria
+generator, a specifically reviewed Go 1.27.3 Windows pilot and safe CI tests.
+It does not yet install all four programs on a clean native Windows system,
+remove the general Process Compose security hold, supply private launch
+parameters from Git, or prove actual four-child Speedy startup/shutdown/reboot. Those remain open acceptance criteria
 under issue #41.
