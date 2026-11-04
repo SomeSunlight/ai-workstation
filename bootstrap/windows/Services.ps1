@@ -131,6 +131,10 @@ function Show-SetupMenu {
     Write-Host '  7  Show the private file locations'
     Write-Host '  8  Install the verified Process Compose program (if missing)'
     Write-Host '  9  Open the step-by-step setup guide'
+    Write-Host ' 10  Install the independently reviewed Windows supervisor (pilot)'
+    Write-Host '     Requires the matching GitHub Actions artifact ZIP; the old binary stays intact.'
+    Write-Host ' 11  Show reviewed supervisor pilot status'
+    Write-Host ' 12  Remove reviewed supervisor pilot (only while stopped)'
     Write-Host '  0  Back to main menu          ?  Show these options'
 }
 
@@ -314,6 +318,24 @@ function Setup-Menu {
                     }
                 }
                 '9' { Open-LocalFile (Join-Path $root 'docs\native-host-operations.md') }
+                '10' {
+                    Write-Host 'This installs the checksum-pinned Windows pilot binary in your private AIW directory.'
+                    Write-Host 'It does NOT replace the official binary or start/stop any service.'
+                    Write-Host 'Use only the ZIP artifact from the reviewed Windows qualification workflow.'
+                    $file = (Read-Host 'Full path to downloaded Process Compose review artifact ZIP (Enter cancels)').Trim()
+                    if ($file) {
+                        if (Confirm-Aiw 'Opt in to this reviewed pilot for later explicit Start commands?') {
+                            Invoke-Aiw @('pilot','install','--archive',$file)
+                        }
+                    }
+                }
+                '11' { Invoke-Aiw @('pilot','status') }
+                '12' {
+                    Write-Warning 'Pilot removal is only allowed after its owned supervisor has stopped.'
+                    if (Confirm-Aiw 'Remove reviewed pilot registration and binary?') {
+                        Invoke-Aiw @('pilot','remove')
+                    }
+                }
                 default { Write-Warning 'Unknown operation. Enter ? for the list.' }
             }
         }
