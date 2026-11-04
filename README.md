@@ -59,6 +59,31 @@ q) Exit
 
 The menu evolves as new capabilities are added; the example above is a snapshot and is updated periodically.
 
+### Native Windows `aiw` command
+
+In a **native Windows PowerShell** opened in this checkout:
+
+```powershell
+.\aiw
+```
+
+This opens the native **AI Workstation | Native services** menu, including
+Process Compose and host-side inference configuration. For the same short
+`aiw` command from **any** Windows directory, register a user-scoped command
+once (no administrator rights or Windows service change):
+
+```powershell
+.\aiw register
+```
+
+Open a **new PowerShell terminal**, then simply run `aiw` (with no
+`.\`). You can inspect or remove the registration through
+`aiw command-status` / `aiw unregister`.
+Registration adds an AIW-owned shim directory under
+`%LOCALAPPDATA%\AIWorkstation\bin` to the **user** PATH only. It never modifies
+PowerShell profiles, the machine PATH, WSL, existing AI services, or the native
+host's Process Compose security gate. **WSL/Linux `aiw` is unchanged**.
+
 ### Native services and named inference clients (accepted first slice)
 
 [PR #37](https://github.com/SomeSunlight/ai-workstation/pull/37)
