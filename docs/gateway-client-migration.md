@@ -19,10 +19,13 @@ or database contents.
 
 Every application gets one original random credential; Dispatcher receives the
 **SHA-256 digest**, not the original. The three IDs identify application
-connections — *not human users* of an Open WebUI instance. Native Strata's API
-token is separate from S02: it is still needed by the S03 attached Dispatcher
-and the protected `/strata/v1/*` fallback. **Never replace Strata's existing
-native key with any S02 application key.**
+connections — *not human users* of an Open WebUI instance. The native Strata token is **distinct from the three new S02
+application tokens**. During migration, however, the imported transitional
+`home-gateway` identity deliberately reuses the **old** Strata/Caddy
+shared token, as the previous startup scripts did. Never issue that shared
+token to a new client. The old key remains necessary for S03 attached
+Strata and the protected `/strata/v1/*` fallback until independently
+rotated in a future operation.
 
 ## Phase 1 — generate three independent tokens on the Windows host
 
