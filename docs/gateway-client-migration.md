@@ -1,76 +1,225 @@
-# Gateway and client-identity migration — operator runbook (#41)
+# Gateway and individual application identities — staged migration (#41)
 
-**Status: proposed and unactivated.** This is a review guide, **not** a command to change running services. Follow [native services and client identities](native-services.md) for the current AI Workstation menu. Keep the existing, working gateway and private starter script until every owner acceptance gate passes. No secrets, personal host names, private gateway URLs or real instance paths belong in the public repository.
+**Audience:** Operators of AI Workstation on Windows, WSL and Linux.
+**Goal:** three independent client API keys, one native Strata credential, and a
+reversible transition away from the old shared gateway key — **before the first
+real native service start**. General-purpose examples below are not device
+defaults. Never commit operator paths, domain names, raw API keys, Caddyfiles
+or database contents.
 
-## The small deployment we are building
+## What the keys actually do
 
-| Location | Already-existing application/service | Owner and intended connection |
-| --- | --- | --- |
-| Native service host (Windows) | Caddy HTTPS ingress | Private host configuration now; Process Compose **only after an approved handoff** |
-| Native service host (Windows) | Llama Dispatcher (S02 + S03 attached Strata) | Caddy routes `/v1` to loopback Dispatcher; independent bearer identities |
-| Native service host (Windows) | Strata | Native loopback inference, independently owned until approved; Dispatcher alone supplies Strata's separate native credential |
-| Native service host (Windows) | Open WebUI | **Preserve its executable, venv and data directory**; optionally have the native AIW/Process Compose supervisor start it as a fourth process; point its OpenAI-compatible API connection at Dispatcher with its own S02 key |
-| Laptop/WSL | Goose (Docker Compose) | Existing AIW Goose; connect to **HTTPS Caddy `/v1`**, its own S02 key |
-| Laptop/WSL | Open WebUI (Docker Compose) | Existing AIW Open WebUI; connect to **HTTPS Caddy `/v1`**, another S02 key |
+| Connection | Suggested client ID | Secret goes to | URL |
+| --- | --- | --- | --- |
+| WSL Goose | `goose-wsl` | Goose's native OpenAI-compatible provider key | Existing protected Caddy HTTPS `/v1` |
+| WSL Open WebUI | `webui-wsl` | Existing Open WebUI **Admin → Connections → OpenAI-compatible API Key** | Same protected Caddy HTTPS `/v1` |
+| Native Windows Open WebUI | `webui-host` | Existing native WebUI **Admin → Connections → OpenAI-compatible API Key** | `http://127.0.0.1:8001/v1` (native host only) |
+| Existing gateway token | `home-gateway` | **Transitional only**; preserve for working clients/rollback | Historical routes only |
+| Native Strata API token | Not an S02 client | Dispatcher-to-Strata; existing protected direct fallback | `http://127.0.0.1:8080` only |
 
-No native-host Goose/Hermes containers, no replacement Open WebUI instance and no remote Process Compose control API are required. The existing Windows WebUI may be supervised as a **fourth** native process, with unchanged persistent DATA_DIR. This is a reusable Windows/WSL/Linux product: actual device names, domains, credential-provider choices and paths are private operator settings.
+Every application gets one original random credential; Dispatcher receives the
+**SHA-256 digest**, not the original. The three IDs identify application
+connections — *not human users* of an Open WebUI instance. Native Strata's API
+token is separate from S02: it is still needed by the S03 attached Dispatcher
+and the protected `/strata/v1/*` fallback. **Never replace Strata's existing
+native key with any S02 application key.**
 
-## Important: the keys are distinct
+## Phase 1 — generate three independent tokens on the Windows host
 
-An **S02 original key** is the random token issued to one application/provider connection. The AIW Windows service menu stores it protected with DPAPI. AIW **menu 14 (Copy key)** retrieves that *exact original*, which the application sends in `Authorization: Bearer <original-token>` when calling Dispatcher. **Menu 12 (Render S02)** creates `clients.json` containing only SHA-256 digests: that file is for the Dispatcher, **never** the API Key field in Open WebUI. Do not print, paste into Git, share in tickets, or put the key in a URL or command argument.
+Do this while Caddy, Dispatcher, Strata and native Open WebUI are stopped.
+Open `aiw` → **Manage application access keys**. First choose **List
+applications**. Create only missing IDs; creating an existing name fails
+rather than rotating a working key.
 
-Example operator-chosen client IDs (no defaults are preinstalled):
+Use **Create a separate API key for an application** three times, with
+operator-chosen names for Goose in WSL, WebUI in WSL, and WebUI on the native
+host (suggested names above). Use `passthrough` policy initially so the
+Dispatcher does not silently override Strata's reasoning/model settings.
 
-| Example ID | One connection | Suggested policy |
-| --- | --- | --- |
-| `goose-wsl` | WSL Goose | `passthrough` (the current AIW menu 10 default) |
-| `webui-wsl` | WSL Open WebUI | `passthrough` (the current menu 10 default) |
-| `webui-host` | Native host Open WebUI | `passthrough` (the current menu 10 default) |
-| `home-gateway` | Existing shared legacy key, temporary | Preserve until all real clients and fallback are verified; **do not issue it to new applications** |
+**Import the current shared gateway key for migration only:** use **Import
+an OLD shared gateway key (migration only)**, supply a new registry ID
+such as `home-gateway` and the absolute path to the **existing native
+gateway *.dpapi file**. This imports a protected copy; it does not
+create another independent key or rotate Strata's token. Skip it if that
+registry ID is already present. Never distribute the imported shared key
+to new applications.
 
-A client ID identifies the **application connection**, not the user sitting in front of Open WebUI. Multiple human users of one Open WebUI instance share that instance's Dispatcher client ID; WebUI's own user/audit system is responsible for finer attribution.
+For automation, the equivalent native Windows CLI is:
 
-## Fresh-install contract (versus existing installation adoption)
+```powershell
+aiw client list
+# Execute each add only if this identity does not already exist:
+aiw client add goose-wsl --policy passthrough
+aiw client add webui-wsl --policy passthrough
+aiw client add webui-host --policy passthrough
+# Import legacy only if still absent, using the operator's actual DPAPI path:
+aiw client import-dpapi home-gateway --from-file '<existing-gateway.dpapi>' --policy passthrough
+aiw client render
+```
 
-AI Workstation must ultimately support **both** paths under #41. This draft documents the migration but does **not yet implement** this contract:
+Select **Prepare the Dispatcher key-verification file** (CLI:
+`aiw client render`) after creating/importing. The resulting
+`%LOCALAPPDATA%\AIWorkstation\services\clients.json` contains **only
+one-way token hashes**, without the original credentials.
 
-- **Fresh supported Windows host:** guided, repeatable provisioning of pinned/verified Caddy, native Llama Dispatcher, Strata and Process Compose, plus private configuration, readiness validation and controlled service lifecycle. Verify the actual Strata distribution/install route and any separate licensing or GPU prerequisites before promising automated binary installation.
-- **Existing Windows host:** discover exact installed program/configuration and process ownership, then attach/adopt safely without uninstalling, overwriting private files, changing ports or launching duplicate processes.
-- **Both:** no personal domains, native keys, models or user databases in Git; explain required operator-provided TLS/DNS configuration, model weights, native GPU drivers and secrets. Have a safe rollback and explicit approval before re-owning running processes.
+Use **Copy an application API key to the clipboard** for each *generated*
+client, one at a time, and save each **original** in a separate password
+manager entry or the correct application's protected provider settings. The
+menu deliberately blocks copying imported shared credentials to new apps.
+Do not screenshot or paste keys into chats, tickets, project YAML or shell
+commands. Windows clipboard history/synchronization must be considered;
+clear history if enabled after moving a key. Secrets must be transported
+to other machines through a trusted, private channel; Git/AIW does not
+silently sync DPAPI values to WSL.
 
-Installing AI Workstation should remain the **operator's primary entry point** on a new host; installing Caddy/Dispatcher/Strata by hand must not silently be treated as the generic prerequisite.
-## Phase A — preparation that can be done **without changing live traffic**
+**Stop condition:** the generated file must have the three unique client
+IDs and (if preserving existing access) the transitional legacy ID. If
+one is missing, do not proceed. A hash is never the API key for Goose/WebUI.
 
-1. Confirm the existing native Caddy → Dispatcher → Strata path and the existing WSL Goose/Open WebUI route still work. Record current process owner, executable path, PID + creation time, ports, private Caddy configuration path, Dispatcher instance/config + SQLite location, Strata endpoint, WebUI data directories, old shared credential reference and the direct-Strata fallback. **Keep those details private**; a redacted checklist is sufficient for review. Do not stop, reload or replace any process during inventory.
-2. On the Windows service host, open `pwsh -File .\bootstrap\windows\Services.ps1`. Select **11** to inspect existing registrations; **10** three times to add three uniquely named clients. This changes only the private AIW identity registry; it does **not** configure Caddy, restart Dispatcher or activate a token.
-3. For each individual client, select **14**, choose its **number**, and explicitly confirm copy. Put the *original* key in a protected password manager entry identified by that client's ID; convey only the relevant original to the laptop using a trusted channel. Handle Windows clipboard history/sync appropriately; avoid screenshots and terminal transcripts containing tokens.
-4. Choose **12** to render the private, hash-only `clients.json`. Check the names/policies with **11**. Preserve any imported `home-gateway` key as a **transitional** identity, not as the common key for new clients.
-5. **Stop here if the running Dispatcher does not yet load this exact file**, or if the current Caddy `/v1` route still consumes/replaces the legacy bearer instead of forwarding the client's original bearer to Dispatcher. The new keys must not be installed into active clients prematurely.
+## Phase 2 — stage Dispatcher and Caddy while both are STOPPED
 
-The native service manager is already capable of creating/copying keys. The missing piece is a separately approved **activation** and verified Caddy trust boundary, not another password generator.
+### Dispatcher: prevent replacement of the multi-client digest file
 
-## Phase B — reviewed, reversible S02 gateway activation (not yet performed)
+The normal S03 attached-Strata trial remains a separate instance from any
+earlier managed-llama.cpp `serve --ensemble … --model-root …` setup.
 
-1. Back up the **private configuration sources** and describe their owners and restoration procedure; do not copy sensitive settings into Git. Preserve the current working `home-gateway` credential, native Strata fallback and the running WebUI databases. Coordinate any Dispatcher restart with the operator; do not copy a live SQLite database while ignoring WAL state.
-2. Stage a private Dispatcher S02 client file by referencing the generated `clients.json`, and verify that the **process that launches Dispatcher** supplies `DISPATCHER_CLIENT_CONFIG` pointing to it. Its separate Strata credential still comes from the private Strata attach environment; do not treat S02 client tokens as native Strata credentials.
-3. Privately stage and validate Caddy's `/v1` reverse proxy to the S02-authenticated loopback Dispatcher, retaining the incoming bearer **unchanged**. Do not have Caddy substitute an upstream shared token, accept untrusted `X-Client-Id` headers as identity, or send those application tokens directly to Strata. Keep the independent `/strata/v1` fallback protected by its **own** existing authorization rule. Preserve TLS and the existing Open WebUI route.
-4. Verify configuration diff, process/port ownership, readiness and rollback before a controlled Caddy reload and Dispatcher restart. **Owner approval is required for this traffic-affecting step.** Neither installing AIW nor rendering clients automatically performs the cutover.
-5. Verify the protected route rejects both **missing** and **incorrect** bearer tokens (HTTP 401), and that a valid individual token returns the expected model list and inference. Use private tools or password-manager-backed API client fields instead of secrets in shell history or `curl` arguments.
+The new standalone S03 starter from
+[Dispatcher's S03 multi-client review PR](https://github.com/SomeSunlight/Llama_Dispatcher/pull/30)
+accepts an explicit `-ClientConfig` or inherited
+`DISPATCHER_CLIENT_CONFIG` environment variable. If provided, it
+**validates and preserves** the external S02 digest registry. If it is
+missing or invalid, startup fails; **it will not recreate a one-client
+`home-gateway` file**. The historical one-client generator remains
+only for invocations which specify no external config.
 
-## Phase C — configure each application after Phase B passes
+In native Windows `native-host.json`, edit the **dispatcher** service's
+non-secret `environment` mapping:
 
-**Native host Open WebUI:** in its existing instance, go to **Settings → Admin → Connections → Manage OpenAI API Connections → Add Connection** (or edit the existing connection with a preserved rollback setting). Select **OpenAI-compatible / Chat Completions**, enter the gateway base URL ending in `/v1`, and paste the **original** for `webui-host` into **API Key**. If it truly runs as a **native process on the same Windows host**, `http://127.0.0.1:8001/v1` is also a possible *private* direct-Dispatcher base URL; first verify the actual loopback port and authorization. If Open WebUI is itself in Docker, its `localhost` is not the Windows host: use a verified host-reachable address instead. Keep the original connection available for rollback until the new one passes model discovery and streaming.
+```json
+"environment": {
+  "DISPATCHER_CLIENT_CONFIG": "C:\\Path\\To\\Private\\AIWorkstation\\services\\clients.json"
+}
+```
 
-**Laptop/WSL Open WebUI:** follow the same OpenAI-compatible connection procedure but point to the existing protected HTTPS Caddy `/v1` route and use the **different original** for `webui-wsl`. Docker's `localhost` denotes its own container, so do not point it at the remote Windows service's loopback address.
+Use the actual full filename on **your** computer; no bearer token goes
+into this mapping. Keep the existing S03 starter invocation/Strata
+credential and real working directory. The approved native readiness
+probe may still use the old imported key for the first HTTP 200 check.
 
-**Laptop/WSL Goose:** use the existing `aiw goose configure` native provider/model menu (and optionally `aiw goose check`). Configure its OpenAI-compatible endpoint as the same **protected HTTPS Caddy `/v1`** route, with the **different original** for `goose-wsl`. Do not alter a project workspace mount merely to change the inference endpoint. Goose session and tool traces remain in Goose's own persistent state, not in Dispatcher SQLite.
+**Avoid Windows JSON backslash mistakes:** optional local PowerShell
+to update this property without manually escaping any path. Back up
+your private file first and run only after verifying which AIW
+installation/Windows account owns it:
 
-The Open WebUI *provider* API key is different from a WebUI **user** API key (the latter grants API access *to* Open WebUI and is not used for Dispatcher).
+```powershell
+$dir = Join-Path $env:LOCALAPPDATA 'AIWorkstation\services'
+$path = Join-Path $dir 'native-host.json'
+$backup = Join-Path $dir 'native-host.before-S02.json'
+if (Test-Path -LiteralPath $backup) { throw 'Backup already exists; inspect it first.' }
+Copy-Item -LiteralPath $path -Destination $backup -ErrorAction Stop
+$hostConfig = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -AsHashtable
+$hostConfig.services.dispatcher.environment.DISPATCHER_CLIENT_CONFIG =
+    (Join-Path $dir 'clients.json')
+$hostConfig | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $path -Encoding utf8
+```
 
-## Phase D — prove the separation and preserve rollback
+Under native AIW **Set up or change this computer**, use **View service
+configuration summary → Check edited settings → Apply edited settings
+for the next startup**. No application is started by those operations.
+Do not run the old standalone S03 launcher concurrently with Process Compose.
 
-1. From **each** of the three application connections, request model discovery, make one tiny actual chat completion, and test streaming. With Goose, test a small approved tool call and inspect the real Goose session. Keep the model/Strata load small and do not force simultaneous model loading.
-2. In **the active Dispatcher instance's SQLite database** (a read-only connection), inspect:
+### Caddy: let S02 authenticate /v1, preserve Strata's independent key
+
+**Critical:** the *old* Caddy authentication matcher checks a single
+gateway token for both `/v1/*` and `/strata/v1/*`. It would reject the
+new Goose/WebUI keys before Dispatcher ever sees them. Simply adding
+entries to `clients.json` does **not** fix this.
+
+The new
+[offline Caddy staging helper in Dispatcher PR #30](https://github.com/SomeSunlight/Llama_Dispatcher/pull/30)
+strictly recognizes the reviewed S03 Caddy topology. It changes **only**:
+
+- the old Caddy bearer matcher so it still protects `/strata/v1/*`,
+  **not** Dispatcher `/v1/*`;
+- the Dispatcher reverse proxy so it forwards the client's original
+  `Authorization` header to Dispatcher S02 rather than stripping it.
+
+Dispatcher must **independently return 401** to missing/invalid S02 keys;
+this must be confirmed after the first Start. The direct-Strata fallback
+retains the old Caddy bearer check. TLS, domain, WebUI routes, other
+Caddy handlers and native Strata credential are not intentionally changed.
+
+From the **reviewed Dispatcher checkout** on Windows, perform a
+read-only preview first:
+
+```powershell
+./scripts/s03_caddy_s02_stage.ps1 -Caddyfile '<private-Caddyfile>'
+```
+
+If it recognizes your topology, stage while Caddy is stopped:
+
+```powershell
+./scripts/s03_caddy_s02_stage.ps1 -Caddyfile '<private-Caddyfile>' `
+  -CaddyExe '<actual-caddy.exe>' -DpapiKeyFile '<existing-gateway.dpapi>' -Stage
+```
+
+This saves the untouched original as
+`<private-Caddyfile>.s02-before-multiclient`, invokes the real Caddy
+**offline config validator**, and **does not reload or start Caddy**.
+On a failed validation the old file is restored. If it reports an
+unknown topology, **do not bypass it or improvise an authorization
+rule**: review that private Caddyfile first.
+
+When still stopped, a reviewed rollback is:
+
+```powershell
+./scripts/s03_caddy_s02_stage.ps1 -Caddyfile '<private-Caddyfile>' `
+  -CaddyExe '<actual-caddy.exe>' -DpapiKeyFile '<existing-gateway.dpapi>' `
+  -Revert -Stage
+```
+
+This refuses to overwrite later operator edits that differ from the
+exact expected staging result.
+
+## Phase 3 — Start once, then configure and verify the actual applications
+
+Some Open WebUI connections are saved **in their existing databases** and
+take precedence over environment settings on subsequent starts. Therefore
+there is no safe claim that setting a native `OPENAI_API_KEY` environment
+variable alone will migrate an existing WebUI. **Do not reset persistent
+configuration or edit the WebUI SQLite databases directly.**
+
+1. With old script **not** running, verify native ports are free.
+   In AIW **Run and monitor AI services → Start all enabled services**,
+   request the live status/log monitor, and require Strata → S03 Dispatcher
+   → Caddy → existing native Open WebUI readiness. If startup fails,
+   inspect the owned logs; never run a second launcher.
+2. Verify **locally** that Dispatcher `/v1/models` returns HTTP **401**
+   without an S02 token and HTTP **200** with one of the new original
+   keys. On Caddy HTTPS `/v1/models`, separately verify no key/invalid
+   key receive **401**, and at least one new key receives **200**.
+   The direct `/strata/v1/models` must still require the *old
+   independent* bearer credential. Do not put tokens in URLs or scripts.
+3. Open **existing native Windows Open WebUI**: **Admin → Connections
+   → OpenAI-compatible**. Edit the existing provider rather than
+   recreating the database. Use native loopback
+   `http://127.0.0.1:8001/v1` and the **original** `webui-host` key.
+   Save, discover the model alias, test one tiny completion. The key
+   is an **OpenAI provider credential**, not a WebUI user API key.
+4. In **existing WSL Open WebUI**, configure the OpenAI-compatible
+   connection through its **Admin → Connections** settings using the
+   Caddy **HTTPS /v1** endpoint and the different `webui-wsl`
+   original key. Inside Docker, `localhost` does **not** mean the
+   Windows native host. Preserve the WSL WebUI data volume.
+5. On WSL, run `aiw goose configure` (native Goose configure
+   inside its existing persistent volume). Select the same
+   OpenAI-compatible Caddy HTTPS `/v1` endpoint and the separate
+   `goose-wsl` original key; select a real Dispatcher model alias.
+   Use `aiw goose check` and then an approved small Goose tool request.
+   Do not overwrite a saved provider with unrelated cloud defaults.
+6. For all three, request model discovery, one short chat completion,
+   and verify streaming as appropriate. The active S03 Dispatcher
+   SQLite database should record each separately:
 
    ```sql
    SELECT client_id, policy_mode, COUNT(*) AS requests
@@ -80,11 +229,25 @@ The Open WebUI *provider* API key is different from a WebUI **user** API key (th
    ORDER BY client_id, policy_mode;
    ```
 
-   Expect separately named requests from **all three clients**. Verify appropriate 401 responses for an unknown or absent key. The Dispatcher records client identity and safe request telemetry, **not** Goose's file-by-file actions or a WebUI user's personal identity.
-3. If any application fails, restore **its previous connection** and the existing gateway configuration/old key while investigating; do not revoke `home-gateway` until the entire old path and new clients have passed. Dispatcher configuration is read at startup: changes to digests take effect only after a controlled restart.
-4. Only in a **separate owner-approved service-management step**, after checking patched Process Compose artifact checksums/security and real Windows process-tree shutdown, hand ownership of Caddy, Dispatcher, Strata and optional existing native Open WebUI from the old private start script to a **single** AIW/Process Compose supervisor. Never let two managers start or stop the same process. Retain the old private script as documented rollback; supervisor commands must refuse unknown PIDs/port owners.
-5. When owner verification is complete, explicitly decide whether to retire `home-gateway`. Do not silently revoke existing access or expose management/Strata endpoints publicly.
+   You should see three different IDs once requests from all
+   three applications have arrived. No false attribution from
+   headers, URL, User-Agent or Open WebUI human usernames.
+7. Keep `home-gateway` until the old path and all new clients pass.
+   Only remove a client or rotate a key in a separate deliberate
+   step followed by a controlled Dispatcher restart. To roll back:
+   stop only AIW-owned processes, verify all child ports/PIDs are
+   released; restore the Caddyfile with the reviewed helper, restore
+   previous WebUI/Goose connections, and then start the old launcher
+   only when AIW no longer owns any process.
 
-## Stop conditions
+## Related: what this does not do automatically
 
-**Do not proceed with live cutover** if Caddy's current behavior is unknown; if the active Dispatcher does not read the S02 digest file; if the legacy shared key or fallback would fail; if a process/port owner cannot be identified; or if the Process Compose production guard is still active. Registry preparation and writing this runbook do not count as activation.
+- It **does not** transmit Windows DPAPI secrets to WSL/Linux, install
+  or configure applications on an unavailable other computer, or modify
+  a user's password manager; transfer the individual original keys
+  securely and intentionally.
+- It **does not** substitute application tokens for Strata's native API
+  key, or remove the protected Caddy direct-Strata fallback.
+- It **does not** make a globally approved production Process Compose
+  release. The reviewed Windows-only pilot and full process-tree stop,
+  reboot and rollback tests remain separately owner-gated under #41.
