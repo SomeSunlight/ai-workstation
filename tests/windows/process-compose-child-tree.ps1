@@ -56,10 +56,16 @@ try {
 
     # The fixture only starts temporary PowerShell processes and a loopback TCP
     # listener. Paths come from the CI checkout, never from the user host.
-    $cmd = 'pwsh -NoProfile -NonInteractive -File "' + $parent +
-        '" -Child "' + $child + '" -Port ' + $port +
-        ' -ParentPidFile "' + $parentPidFile +
-        '" -ChildPidFile "' + $childPidFile + '"'
+    # Upstream Windows command tokenization passes literal quote characters
+    # through to pwsh -File; this disposable CI checkout has no spaces.
+    # Production AIW uses UTF-16LE -EncodedCommand for arbitrary host paths.
+    foreach ($path in @($parent,$child,$parentPidFile,$childPidFile)){
+        if($path -match '\\s'){throw 'Fixture requires a space-free temporary CI path.'}
+    }
+    $cmd = 'pwsh -NoProfile -NonInteractive -File ' + $parent +
+        ' -Child ' + $child + ' -Port ' + $port +
+        ' -ParentPidFile ' + $parentPidFile +
+        ' -ChildPidFile ' + $childPidFile
     $yaml = @(
         'version: "0.5"'
         'processes:'
