@@ -117,23 +117,10 @@ switch ($Action) {
     }
     'Remove' {
         Assert-UnownedShimAbsent
-        if (Test-Path -LiteralPath $shimFile) {
-            # Windows briefly retains an open handle to a just-executed .cmd.
-            # Retry only our own marker-verified shim; never kill a process.
-            $removed = $false
-            for ($attempt = 0; $attempt -lt 15; $attempt++) {
-                try {
-                    Remove-Item -LiteralPath $shimFile -Force -ErrorAction Stop
-                    $removed = $true
-                    break
-                }
-                catch [System.IO.IOException] {
-                    if ($attempt -ge 14) { throw }
-                    Start-Sleep -Milliseconds 200
-                }
-            }
-            if (-not $removed) { throw 'Could not unregister locked native aiw shim.' }
-        }
+        # Unregister PATH first. A .cmd invoked as 'aiw unregister' is still
+        # open inside cmd.exe and Windows cannot always delete it immediately.
+        # The left-over owned shim cannot be resolved from a new shell once
+        # its directory has been removed from the per-user PATH.
         # Remove only our exact shim directory from the user's PATH.
         $oldParts = @((Read-UserPath) -split ';')
         $newParts = @($oldParts | Where-Object {
@@ -142,6 +129,14 @@ switch ($Action) {
         })
         if ($newParts.Count -ne $oldParts.Count) {
             [Environment]::SetEnvironmentVariable('Path', ($newParts -join ';'), 'User')
+        }
+        if (Test-Path -LiteralPath $shimFile) {
+            try {
+                Remove-Item -LiteralPath $shimFile -Force -ErrorAction Stop
+            }
+            catch [System.IO.IOException] {
+                Write-Warning 'AIW command shim is still in use by Windows. User PATH was removed; retry removal from a fresh shell later.'
+            }
         }
         Write-Host "[OK] Native Windows 'aiw' command unregistered for this user."
         Write-Host 'Open a new PowerShell window to refresh PATH. Existing services are untouched.'
