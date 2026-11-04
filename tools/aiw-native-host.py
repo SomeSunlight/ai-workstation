@@ -183,6 +183,62 @@ def load(folder: Path, *, verify_paths: bool = True) -> dict:
     return config
 
 
+def inspect(folder: Path) -> None:
+    """Friendly read-only onboarding summary; never reveal secret contents."""
+    file = native_config_path(folder)
+    print("Windows native AI service configuration")
+    print("Settings:", file)
+    if not file.is_file() or file.is_symlink():
+        print("[SETUP NEEDED] No private native-host.json exists.")
+        print("Choose First-time preparation, then Edit service startup settings.")
+        return
+    try:
+        config = json.loads(file.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        raise ConfigurationError("The private native-host.json is not valid JSON.") from None
+    if not isinstance(config, dict) or config.get("schema_version") != 1:
+        raise ConfigurationError("Unsupported native host configuration version.")
+    services = config.get("services")
+    if not isinstance(services, dict):
+        raise ConfigurationError("Missing native host services mapping.")
+    for name in NAMES:
+        if name not in services:
+            if name in REQUIRED_NAMES:
+                print("[INCOMPLETE]", name, "- missing service definition")
+            else:
+                print("[OPTIONAL]", name, "- not configured")
+            continue
+        service = services[name]
+        if not isinstance(service, dict):
+            print("[INVALID]", name, "- expected a service object")
+            continue
+        enabled = service.get("enabled")
+        executable = service.get("executable")
+        directory = service.get("working_directory")
+        ready = service.get("readiness")
+        url = ready.get("url") if isinstance(ready, dict) else None
+        complete = bool(executable and directory and url)
+        if os.name == "nt" and complete:
+            complete = Path(executable).is_file() and Path(directory).is_dir()
+        status = "configured" if complete else "needs program/path/health settings"
+        mode = "start enabled" if enabled is True else "not selected for startup"
+        ports = service.get("listen_ports")
+        ports_label = ", ".join(str(x) for x in ports) if isinstance(ports, list) else "not set"
+        print(name + ":", mode, "|", status, "| TCP", ports_label)
+    print("This summary has not started or stopped any application.")
+    print("When ready, use Check edited settings, then Apply settings for next startup.")
+
+
+def validate_only(folder: Path) -> None:
+    config = load(folder)
+    print("[OK] Private Windows service startup settings are structurally valid.")
+    for name, service in config["services"].items():
+        print(" -", name, "|", "enabled" if service["enabled"] else "disabled",
+              "| TCP", ", ".join(str(p) for p in service["listen_ports"]))
+    print("No processes started or stopped; no network requests sent.")
+    print("Next: apply edited settings for the next startup, then inspect port collisions.")
+
+
 def encoded_command(script: Path, config_path: Path, name: str) -> str:
     # Windows PowerShell -EncodedCommand uses UTF-16LE. Only paths and a fixed
     # service name are encoded; credentials never enter command lines or YAML.
@@ -309,7 +365,7 @@ def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Prepare native Windows inference host.")
-    parser.add_argument("action", choices=("init", "render", "preflight"))
+    parser.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight"))
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--service", choices=NAMES)
     args = parser.parse_args()
@@ -326,6 +382,10 @@ def main() -> None:
         print("[OK] Private native host template:", config_path)
         print("Set paths, argv, DPAPI references, health URLs and explicit enabled flags.")
         print("Nothing was installed, started or stopped.")
+    elif args.action == "inspect":
+        inspect(folder)
+    elif args.action == "validate":
+        validate_only(folder)
     elif args.action == "render":
         if os.name != "nt":
             raise ConfigurationError("Native Windows host adapter only; use Windows PowerShell.")
