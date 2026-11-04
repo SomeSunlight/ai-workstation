@@ -461,7 +461,122 @@ def install_process_compose(folder: Path, archive_path: Path | None = None) -> N
     print("Installed checksum-verified", version, "to", dest)
     print("No host services or startup tasks were changed.")
 
+def reviewed_windows_pilot_pin() -> dict:
+    """Return the centrally reviewed Windows pilot source/build pin."""
+    try:
+        manifest = json.loads(VERSION_FILE.read_text(encoding="utf-8"))
+        cfg = manifest["versions"]["process_compose"]["security"]["reviewed_windows_pilot"]
+        digest = cfg["binary_sha256"]
+        if not re.fullmatch(r"[a-f0-9]{64}", digest):
+            raise ValueError("bad digest")
+        if cfg["go_version"] != "go1.27.3" or cfg["source_commit"] != (
+            "f471d83a5dfa4779d589d0a73182b6d6e22736b2"
+        ):
+            raise ValueError("unreviewed source or Go toolchain")
+        return cfg
+    except (OSError, KeyError, TypeError, ValueError):
+        raise ConfigError("Missing or invalid pinned Windows pilot approval metadata.") from None
+
+
+def pilot_binary(folder: Path) -> Path:
+    return folder / "bin" / "process-compose-pilot.exe"
+
+
+def pilot_marker(folder: Path) -> Path:
+    return folder / "security" / "reviewed-windows-pilot.json"
+
+
+def windows_reviewed_pilot_active(folder: Path) -> bool:
+    """Private opt-in + exact pinned binary hash; unrelated hosts stay blocked."""
+    marker = pilot_marker(folder)
+    if not marker.exists() and not marker.is_symlink():
+        return False
+    if os.name != "nt" or platform.machine().upper().replace("X86_64", "AMD64") != "AMD64":
+        return False
+    if marker.is_symlink() or not marker.is_file():
+        raise ConfigError("Invalid reviewed Windows pilot marker.")
+    try:
+        state = json.loads(marker.read_text(encoding="utf-8"))
+        pin = reviewed_windows_pilot_pin()
+        if state != {"sha256": pin["binary_sha256"],
+                     "source_commit": pin["source_commit"],
+                     "approval": "operator-opt-in"}:
+            raise ValueError("pilot metadata mismatch")
+    except (OSError, ValueError, TypeError):
+        raise ConfigError("Unrecognized reviewed Windows pilot approval marker.") from None
+    binary = pilot_binary(folder)
+    if not binary.is_file() or binary.is_symlink():
+        raise ConfigError("Reviewed Windows pilot binary missing or linked.")
+    if hashlib.sha256(binary.read_bytes()).hexdigest() != pin["binary_sha256"]:
+        raise ConfigError("Reviewed Windows pilot binary hash changed: refusing startup.")
+    override = os.environ.get("AIW_PROCESS_COMPOSE_BIN")
+    if override and os.path.normcase(os.path.realpath(override)) != os.path.normcase(os.path.realpath(binary)):
+        raise ConfigError("Explicit supervisor binary conflicts with the reviewed Windows pilot.")
+    return True
+
+
+def install_windows_reviewed_pilot(folder: Path, archive_path: Path) -> None:
+    """Deliberate limited Windows host pilot, never replace the official binary."""
+    if os.name != "nt" or platform.machine().upper().replace("X86_64", "AMD64") != "AMD64":
+        raise ConfigError("Reviewed pilot installation is available only on Windows AMD64.")
+    if windows_supervisor_state_path(folder).exists():
+        raise ConfigError("An AIW supervisor ownership record exists; stop it before installing a pilot.")
+    doc = read_settings(folder)
+    if port_accepts_connections(doc["process_compose"]["port"]):
+        raise ConfigError("Native management port is occupied; refusing supervisor installation.")
+    source = archive_path.expanduser().resolve()
+    if source.is_symlink() or not source.is_file() or source.stat().st_size > MAX_ARCHIVE_BYTES:
+        raise ConfigError("Reviewed pilot ZIP must be a local regular file within archive size limit.")
+    pin = reviewed_windows_pilot_pin()
+    try:
+        with zipfile.ZipFile(source) as archive:
+            infos = [item for item in archive.infolist()
+                     if Path(item.filename).name == "process-compose.exe" and not item.is_dir()]
+            if len(infos) != 1 or infos[0].file_size > 160 * 1024 * 1024:
+                raise ConfigError("Expected one size-limited process-compose.exe in the pilot ZIP.")
+            contents = archive.read(infos[0])
+    except (zipfile.BadZipFile, OSError, RuntimeError):
+        raise ConfigError("Invalid reviewed Windows pilot artifact ZIP.") from None
+    if hashlib.sha256(contents).hexdigest() != pin["binary_sha256"]:
+        raise ConfigError("Reviewed Windows pilot binary SHA-256 mismatch: refusing install.")
+    dest = pilot_binary(folder)
+    if dest.is_symlink():
+        raise ConfigError("Refusing pilot installation through a symlink.")
+    if dest.exists():
+        if hashlib.sha256(dest.read_bytes()).hexdigest() != pin["binary_sha256"]:
+            raise ConfigError("Different pilot binary already exists; no automatic replacement.")
+    else:
+        private_write(dest, contents, replace=False)
+    private_write(pilot_marker(folder), (json.dumps({
+        "sha256": pin["binary_sha256"], "source_commit": pin["source_commit"],
+        "approval": "operator-opt-in",
+    }) + "\n").encode("utf-8"), replace=False)
+    print("[OK] Reviewed Windows Process Compose pilot installed and opted in.")
+    print("Pinned source:", pin["source_commit"], "| Go", pin["go_version"])
+    print("Review:", pin["qualification_run"])
+    print("Official binary preserved at", folder / "bin" / "process-compose.exe")
+    print("No process started. Live takeover still needs free ports and explicit operator approval.")
+
+
+def remove_windows_reviewed_pilot(folder: Path) -> None:
+    if os.name != "nt":
+        raise ConfigError("Reviewed pilot removal is Windows-only.")
+    if windows_supervisor_state_path(folder).exists():
+        raise ConfigError("Owned supervisor may still be running; stop and verify before removing pilot.")
+    doc = read_settings(folder)
+    if port_accepts_connections(doc["process_compose"]["port"]):
+        raise ConfigError("Supervisor management port is occupied; refusing removal.")
+    if not windows_reviewed_pilot_active(folder):
+        print("No reviewed pilot currently active for this Windows account.")
+        return
+    pilot_marker(folder).unlink()
+    pilot_binary(folder).unlink()
+    print("[OK] Reviewed Windows pilot unregistered; ordinary production hold remains active.")
+
+
 def native_binary(folder: Path) -> str:
+    if os.name == "nt" and windows_reviewed_pilot_active(folder):
+        return str(pilot_binary(folder))
     explicit = os.environ.get("AIW_PROCESS_COMPOSE_BIN")
     if explicit:
         if not Path(explicit).is_file():
@@ -476,7 +591,7 @@ def native_binary(folder: Path) -> str:
     raise ConfigError("Native Process Compose missing. Run: aiw services install")
 
 
-def check_production_security_gate(project: Path, action: str, process: str | None) -> None:
+def check_production_security_gate(folder: Path, project: Path, action: str, process: str | None) -> None:
     """Known Go 1.27.0 official build: permit only the harmless fixture pilot."""
     if action not in {"up", "tui", "start", "restart"}:
         return
@@ -486,6 +601,10 @@ def check_production_security_gate(project: Path, action: str, process: str | No
     except (OSError, KeyError, ValueError, TypeError):
         raise ConfigError("Missing Process Compose production security gate.") from None
     if not blocked:
+        return
+    # The general production gate stays locked. The exact reviewed, locally
+    # opted-in Windows-only Go 1.27.3 binary qualifies for a limited pilot.
+    if os.name == "nt" and windows_reviewed_pilot_active(folder):
         return
     try:
         doc = yaml.safe_load(project.read_text(encoding="utf-8"))
@@ -675,7 +794,7 @@ def native(folder: Path, action: str, process: str | None) -> None:
     project = project_path(folder, doc)
     if not project.is_file():
         raise ConfigError("Missing native Process Compose YAML.")
-    check_production_security_gate(project, action, process)
+    check_production_security_gate(folder, project, action, process)
     # Generated native-host projects are explicitly provisioned. Before any
     # launch, require the private settings to still match the rendered project,
     # and refuse ports held by the previous unmanaged startup script.
@@ -772,6 +891,9 @@ def run(argv: list[str] | None = None) -> None:
     host = sub.add_parser("host", help="Prepare native Windows Caddy/Dispatcher/Strata project")
     host.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight"))
     host.add_argument("--service", choices=("strata", "dispatcher", "caddy", "open-webui"))
+    pilot = sub.add_parser("pilot", help="Opt in to a pinned, independently qualified Windows test supervisor")
+    pilot.add_argument("action", choices=("install", "status", "remove"))
+    pilot.add_argument("--archive", type=Path)
     clients = sub.add_parser("client")
     group = clients.add_subparsers(dest="client_cmd", required=True)
     add = group.add_parser("add")
@@ -796,6 +918,20 @@ def run(argv: list[str] | None = None) -> None:
         init(folder)
     elif args.cmd == "install":
         install_process_compose(folder, args.archive)
+    elif args.cmd == "pilot":
+        if args.action == "install":
+            if args.archive is None:
+                raise ConfigError("Pilot installation requires --archive with the downloaded, reviewed ZIP.")
+            install_windows_reviewed_pilot(folder, args.archive)
+        elif args.action == "status":
+            if os.name != "nt":
+                print("Reviewed native-host pilot is Windows-only.")
+            else:
+                state = windows_reviewed_pilot_active(folder)
+                print("Reviewed Windows pilot:", "enabled" if state else "not enabled")
+                print("General Process Compose production hold remains active.")
+        elif args.action == "remove":
+            remove_windows_reviewed_pilot(folder)
     elif args.cmd == "host":
         native_host_setup(folder, args.action, args.service)
     elif args.cmd == "where":
