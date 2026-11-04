@@ -92,8 +92,33 @@ jobs:
           if ($hash -cne '7b966884a41987173ab6d342947376b799ea633492122f624f18f5328475b701') {
             throw 'Wrong installed pilot binary SHA-256.'
           }
-          # Only the isolated, harmless smoke process can be started here.
+          # Provenance tampering must immediately fail closed.
+          Add-Content -LiteralPath $pilot -Value 'corrupted-review-only' -Encoding utf8
+          & uv @args pilot status
+          if ($LASTEXITCODE -eq 0) { throw 'Modified pilot executable was wrongly accepted.' }
+          Copy-Item -LiteralPath './review-bin/process-compose.exe' -Destination $pilot -Force
+          & uv @args pilot status
+          if ($LASTEXITCODE -ne 0) { throw 'Restored reviewed executable was rejected.' }
+
+          # Pilot opt-in MUST NOT permit unreviewed custom Process Compose YAML.
           $project = Join-Path $env:AIW_SERVICES_DIR 'process-compose.yaml'
+          $originalYaml = Get-Content -LiteralPath $project -Raw
+          Set-Content -LiteralPath $project -Encoding utf8 -Value @(
+            'version: "0.5"'
+            'processes:'
+            '  unreviewed:'
+            '    command: echo unreviewed'
+            '    disabled: false'
+          )
+          & uv @args up
+          if ($LASTEXITCODE -eq 0) { throw 'Reviewed pilot was allowed to run arbitrary native YAML.' }
+          if (Test-Path -LiteralPath (Join-Path $env:AIW_SERVICES_DIR 'runtime/process-compose-windows.json')) {
+            throw 'Forbidden native project produced supervisor ownership record.'
+          }
+          Set-Content -LiteralPath $project -Encoding utf8 -Value $originalYaml
+
+          # Only the isolated, harmless smoke process can be started here.
+
           (Get-Content -LiteralPath $project -Raw).Replace('disabled: true','disabled: false') |
             Set-Content -LiteralPath $project -Encoding utf8
           try {
