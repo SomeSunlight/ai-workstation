@@ -209,7 +209,7 @@ launcher owns the processes or the production security gate remains active.
 The official pinned Process Compose version and ordinary production hold
 remain unchanged. For this first controlled native Windows pilot only:
 
-1. Open the successful [Windows qualification run](https://github.com/SomeSunlight/ai-workstation/actions/runs/41833439667).
+1. Open the successful [Windows qualification run](https://github.com/SomeSunlight/ai-workstation/actions/runs/41834867823).
    Download its artifact **`process-compose-windows-review-go1273`**
    from the workflow **Artifacts** section. It is a ZIP containing
    `process-compose.exe`. This short-lived GitHub Actions artifact is
@@ -237,7 +237,7 @@ The pilot source is fixed at
 Go toolchain `1.27.3`, binary SHA-256
 `7b966884a41987173ab6d342947376b799ea633492122f624f18f5328475b701`.
 For provenance and the isolated nested-process shutdown result, see
-[workflow #41833439667](https://github.com/SomeSunlight/ai-workstation/actions/runs/41833439667).
+[workflow #41833439667](https://github.com/SomeSunlight/ai-workstation/actions/runs/41834867823).
 No private Windows machine names, model paths or credentials are part
 of this build.
 
