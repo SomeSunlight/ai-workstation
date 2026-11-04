@@ -241,6 +241,25 @@ For provenance and the isolated nested-process shutdown result, see
 No private Windows machine names, model paths or credentials are part
 of this build.
 
+## Before the first real Start: three S02 application keys
+
+**Do not start the native stack with the old single-key configuration.**
+The [individual gateway client migration guide](gateway-client-migration.md)
+now covers the exact offline work: generate three separate originals with
+AI Workstation, import the original key as a transitional fourth identity,
+render the hash-only `clients.json`, ensure the S03 Dispatcher uses that
+file **without regenerating a shared-only registry**, and stage the Caddy
+`/v1/*` forwarding change while preserving the old `/strata/v1/*`
+authentication rule. The S03 starter and offline Caddy stage helper are in
+[Dispatcher draft PR #30](https://github.com/SomeSunlight/Llama_Dispatcher/pull/30).
+
+Both Open WebUI installations **persist provider connections**. They must
+be configured with their different original keys in the **existing
+Admin → Connections** screens after WebUI has started; setting one
+environment variable is not proof that an existing saved connection
+changed. Goose in WSL uses its existing `aiw goose configure` operation.
+Do not touch the WebUI databases or clear their persistent volumes.
+
 ## First live cutover test — separate owner approval required
 
 Only after the exact reviewed Windows pilot binary is installed,
@@ -249,10 +268,13 @@ the existing owners/ports are known and the operator explicitly authorizes
 the takeover. The isolated Windows CI test supports this pilot but the
 **real-host tree-shutdown behavior remains unverified** until the stop test:
 
-1. Stop the old script-owned processes using their known, verified
+1. **Complete the S02/Caddy/Dispatcher staging described above**, and
+   keep all live application and original gateway keys private. Test S02
+   during the first Start before directing the client applications to it.
+2. Stop the old script-owned processes using their known, verified
    owner procedure. Confirm none of their listed ports is occupied.
    Do not stop a process just because its port is 8080, 8001, 443 or 3000.
-2. In AIW, choose **Setup → Check edited settings → Apply settings →
+8. In AIW, choose **Setup → Check edited settings → Apply settings →
    Check occupied ports**. All these steps must pass.
 3. Choose **Run and monitor → Start all enabled services**. The workbench
    asks **before starting** whether you want the live monitor open
