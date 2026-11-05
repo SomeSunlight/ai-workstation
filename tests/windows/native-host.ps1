@@ -23,8 +23,12 @@ try {
         $item.required_paths = @($cwd)
         if ($name -eq 'open-webui') { $item.environment.DATA_DIR = $cwd }
         $item.listen_ports = @($ports[$name])
-        $item.readiness.url = 'http://127.0.0.1:' + $ports[$name] + '/'
+        $item.readiness.url = 'http://127.0.0.1:' + $ports[$name] + '/v1/models'
         $item.readiness.expected_status = 200
+        if ($name -eq 'caddy') {
+            $item.readiness.url = 'https://example.test/v1/models'
+            $item.readiness.expected_status = 401
+        }
         $item.enabled = $true
     }
     $data | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $path -Encoding utf8
@@ -126,8 +130,45 @@ try {
     # A deliberately rejected native CLI leaves LASTEXITCODE=1. The expected
     # negative test passed; do not make the CI PowerShell step fail as a result.
     $global:LASTEXITCODE = 0
+    # Preview is read-only, then an explicit offline opt-in stages only three
+    # readiness changes and backs up the byte-identical original JSON.
+    $before = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host quiet-probes
+    $afterPreview = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+    if ($before -cne $afterPreview) { throw 'Quiet-probe preview mutated the private JSON.' }
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host quiet-probes --apply
+    $quiet = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -AsHashtable
+    if ($quiet.services.strata.readiness.url -notmatch '/health
+}
+finally {
+    Remove-Item Env:AIW_SERVICES_DIR -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
+}
+ -or
+        $quiet.services.dispatcher.readiness.url -notmatch '/health
+}
+finally {
+    Remove-Item Env:AIW_SERVICES_DIR -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
+}
+ -or
+        $quiet.services.dispatcher.readiness.bearer_dpapi -ne '' -or
+        $quiet.services.caddy.readiness.probe_mode -ne 'tls' -or
+        $quiet.services.caddy.readiness.url -ne 'https://example.test/v1/models') {
+        throw 'Quiet-probe migration altered wrong private service settings.'
+    }
+    $originalBackup = Join-Path $temp 'native-host.before-quiet-probes.json'
+    if (-not (Test-Path -LiteralPath $originalBackup) -or
+        (Get-FileHash -LiteralPath $originalBackup -Algorithm SHA256).Hash -cne $before) {
+        throw 'Original private native JSON was not backed up byte-for-byte.'
+    }
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host quiet-probes --apply
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host validate
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host render
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') check
+    $global:LASTEXITCODE = 0
     # No real service start is permitted by the production security gate.
-    Write-Host '[PASS] Native host init, render, preflight, dependency and drift refusal.'
+    Write-Host '[PASS] Native host setup, slow readiness, silent probe migration, TLS mode and rollback backup.'
 }
 finally {
     Remove-Item Env:AIW_SERVICES_DIR -ErrorAction SilentlyContinue
