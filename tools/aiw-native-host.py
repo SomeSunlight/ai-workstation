@@ -15,7 +15,7 @@ from pathlib import Path
 import socket
 import subprocess
 import sys
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 import yaml
 
@@ -159,7 +159,7 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
         if not isinstance(readiness, dict) or not {
             "url", "expected_status", "bearer_dpapi"
         } <= set(readiness) or not set(readiness) <= {
-            "url", "expected_status", "bearer_dpapi", "startup_grace_seconds"
+            "url", "expected_status", "bearer_dpapi", "startup_grace_seconds", "probe_mode"
         }:
             raise ConfigurationError(name + ": invalid readiness settings.")
         startup_grace = readiness.get(
@@ -175,6 +175,14 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
             raise ConfigurationError(name + ": readiness requires an HTTP(S) URL without credentials.")
         if type(readiness["expected_status"]) is not int or not 100 <= readiness["expected_status"] <= 599:
             raise ConfigurationError(name + ": invalid readiness status.")
+        probe_mode = readiness.get("probe_mode", "http")
+        if probe_mode not in ("http", "tls"):
+            raise ConfigurationError(name + ": unsupported readiness probe_mode.")
+        if probe_mode == "tls" and (name != "caddy" or parsed.scheme != "https"
+                                    or readiness["bearer_dpapi"]):
+            raise ConfigurationError(
+                name + ": TLS-only health requires HTTPS Caddy without a readiness bearer."
+            )
         bearer = readiness["bearer_dpapi"]
         if not isinstance(bearer, str) or bearer and not bearer.lower().endswith(".dpapi"):
             raise ConfigurationError(name + ": readiness bearer must reference a DPAPI file.")
@@ -354,6 +362,80 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
     return project
 
 
+def quiet_probes(folder: Path, *, apply: bool = False) -> None:
+    """Explicit private configuration migration to log-free readiness.
+
+    Uses /health for Strata and Dispatcher, an HTTPS TLS handshake for Caddy.
+    The handshake validates Caddy's certificate but does not make HTTP calls.
+    """
+    config = load(folder)
+    proposed = []
+    for name, old_path, new_path, status in (
+        ("strata", "/v1/models", "/health", 200),
+        ("dispatcher", "/v1/models", "/health", 200),
+        ("caddy", "/v1/models", "/v1/models", 401),
+    ):
+        probe = config["services"][name]["readiness"]
+        uri = urlsplit(probe["url"])
+        if probe["expected_status"] != status:
+            raise ConfigurationError(name + ": unexpected readiness HTTP status; refusing automatic edit.")
+        if name == "caddy":
+            if uri.scheme != "https" or probe["bearer_dpapi"]:
+                raise ConfigurationError("Caddy TLS probe requires existing HTTPS URL without token.")
+            if probe.get("probe_mode", "http") == "tls":
+                continue
+            if probe.get("probe_mode", "http") != "http":
+                raise ConfigurationError("Unknown Caddy readiness mode.")
+            proposed.append((name, "HTTP GET /v1/models", "certificate-validated TLS handshake"))
+            probe["probe_mode"] = "tls"
+            continue
+        if uri.hostname not in ("localhost", "127.0.0.1", "::1"):
+            raise ConfigurationError(name + ": quiet health URL must use local loopback.")
+        if uri.path == new_path:
+            if name == "dispatcher" and probe["bearer_dpapi"]:
+                raise ConfigurationError("Dispatcher /health must not carry a bearer token.")
+            continue
+        if uri.path != old_path:
+            raise ConfigurationError(name + ": custom readiness URL; refusing automatic edit.")
+        proposed.append((name, old_path, new_path))
+        probe["url"] = urlunsplit(uri._replace(path=new_path))
+        if name == "dispatcher":
+            probe["bearer_dpapi"] = ""
+    if not proposed:
+        print("[OK] Native readiness is already configured without routine model-list requests.")
+        return
+    for name, old, new in proposed:
+        print("[REVIEW]", name, old, "->", new)
+    print("Original client credentials and native program commands are unchanged.")
+    if not apply:
+        print("Preview only; once stopped run: aiw host quiet-probes --apply")
+        return
+    owned = folder / "runtime" / "process-compose-windows.json"
+    if owned.exists() or owned.is_symlink():
+        raise ConfigurationError("Supervisor ownership record still exists; stop AIW before changing its JSON.")
+    path = native_config_path(folder)
+    backup = folder / "native-host.before-quiet-probes.json"
+    if backup.exists() or backup.is_symlink():
+        raise ConfigurationError("Quiet-probes backup already exists; refusing overwrite.")
+    validate(config)
+    original = path.read_bytes()
+    # The original private file stays byte-for-byte available for rollback.
+    with backup.open("xb") as out:
+        out.write(original)
+    import tempfile
+    fd, temp = tempfile.mkstemp(prefix=".aiw-quiet-probes-", dir=folder)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as out:
+            json.dump(config, out, indent=2, ensure_ascii=False)
+            out.write("\n")
+        os.replace(temp, path)
+    finally:
+        if os.path.exists(temp):
+            os.unlink(temp)
+    print("[OK] Quiet probe config staged, local original backed up:", backup)
+    print("No process started. Next: aiw host render ; aiw check")
+
+
 def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = True) -> None:
     config = load(folder, verify_paths=verify_paths)
     project = folder / "process-compose.yaml"
@@ -410,9 +492,10 @@ def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Prepare native Windows inference host.")
-    parser.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight"))
+    parser.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight", "quiet-probes"))
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--service", choices=NAMES)
+    parser.add_argument("--apply", action="store_true")
     args = parser.parse_args()
     folder = args.directory.expanduser().resolve()
     config_path = native_config_path(folder)
@@ -435,6 +518,10 @@ def main() -> None:
         if os.name != "nt":
             raise ConfigurationError("Native Windows host adapter only; use Windows PowerShell.")
         render(folder)
+    elif args.action == "quiet-probes":
+        if os.name != "nt":
+            raise ConfigurationError("Native Windows quiet health only.")
+        quiet_probes(folder, apply=args.apply)
     else:
         preflight(folder, args.service)
 
