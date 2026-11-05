@@ -348,6 +348,56 @@ the takeover. The isolated Windows CI test supports this pilot but the
 native process tree is gone, then use the preserved private old starter.
 Never allow both managers to control the same services.
 
+## Quiet readiness: monitoring without fictitious user activity
+
+The native supervisor still checks service health on its five-second interval,
+but **normal checks should not appear as Dispatcher user activity or repeated
+401/200 access logs**. Real client requests, invalid keys and failed health
+checks remain observable.
+
+The reviewed implementation uses three independent lightweight checks:
+
+| Service | Normal health check | Audit/log behavior |
+| --- | --- | --- |
+| Strata | Authenticated local `GET /health` | No repeated model discovery |
+| Dispatcher | Local `GET /health` (no client credential) | Only successful exact-path health access lines are omitted from Uvicorn access logs; real `/v1/*`, 401s and 503s remain visible |
+| Caddy | Certificate-validated TLS handshake to existing configured HTTPS host | **No HTTP request** is sent through Caddy, so no synthetic 401 gets proxied to Dispatcher; TLS failure still fails readiness |
+| Open WebUI | Existing `GET /health` | Existing behavior unchanged |
+
+The TLS handshake checks the certificate/HTTPS listener, **not application
+routing or individual client authentication**. Those are still covered by the
+explicit S02 acceptance tests: unauthorized 401, each valid client 200, and
+one small inference request from each actual client.
+
+### One-time migration of existing private host settings
+
+This changes only private `readiness` entries, not source credentials, client
+registrations, Caddyfile, process commands or WebUI databases. **Do not run the
+mutation while an AIW-owned supervisor is running.**
+
+1. On the review branch, pull the reviewed changes and first show the preview:
+   `aiw host quiet-probes`. No private file is changed.
+2. When a controlled restart is acceptable, exit the monitor and run
+   `aiw down`. Ensure the AIW supervisor has stopped and no conflicting
+   processes are listening.
+3. Apply explicitly: `aiw host quiet-probes --apply`. A byte-for-byte private
+   backup `native-host.before-quiet-probes.json` is created first; existing
+   backups are never silently replaced.
+4. Prepare the updated supervisor process definition: `aiw host validate`,
+   `aiw host render`, `aiw check`. Inspect success before `aiw up`
+   followed by `aiw tui`.
+5. Verify in the TUI: all four healthy, no recurring 401/200
+   `/v1/models` pairs in Dispatcher logs. Send a real Goose/WSL/WebUI request
+   and verify that **it still appears** under its correct individual
+   client identity. In case of any failed certificate/health check, read
+   `aiw logs-file caddy` and the error on the Process Compose monitor.
+
+The migration refuses custom or unexpected probe URLs instead of guessing.
+If the Caddy URL uses an IP address with a certificate for a DNS hostname,
+use a genuine certificate-valid hostname before opting in; **TLS verification
+is not disabled**. Restoring the original `native-host.json` requires
+stopping AIW, restoring its backup, re-rendering and validating before start.
+
 ## Failure diagnosis and retry — first native host start
 
 If the TUI says `Processes: 0/4`, `strata: Failed` and
