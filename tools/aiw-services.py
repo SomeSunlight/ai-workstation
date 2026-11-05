@@ -735,11 +735,20 @@ def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
     log_path = state.parent / "process-compose-stdout.log"
     if log_path.is_symlink():
         raise ConfigError("Refusing to write supervisor logs through a symlink.")
+    # A detached *console-less* supervisor makes each Windows console child
+    # (cmd/pwsh/batch) create its own terminal window. Give the supervisor its
+    # own HIDDEN console instead; descendants can inherit that same console,
+    # while Process Compose still writes to durable private log files.
+    # A separate console keeps the supervisor independent of the AIW menu
+    # terminal. This is Windows-host behavior, verified by a real-host test.
+    startup_info = subprocess.STARTUPINFO()
+    startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startup_info.wShowWindow = subprocess.SW_HIDE
     with open(log_path, "ab") as log:
         proc = subprocess.Popen(
             cmd, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
             env=env, close_fds=True,
-            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+            startupinfo=startup_info, creationflags=subprocess.CREATE_NEW_CONSOLE,
         )
     identity = None
     for _ in range(8):
@@ -768,7 +777,9 @@ def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
             if result.returncode == 0:
                 print("[OK] Native Windows Process Compose supervisor ready.",
                       "PID:", identity["pid"], "| port:", port)
-                print("Use Status/Logs/Stop. The original host services were not touched.")
+                print("Read service output using Run and monitor -> Read saved service logs.")
+                print("All services are managed together; no extra visible terminal is intended.")
+                print("Use Status/Logs/Stop for the AIW-owned supervisor.")
                 return
         time.sleep(0.2)
     raise ConfigError(
