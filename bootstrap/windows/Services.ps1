@@ -108,7 +108,7 @@ function Show-RunMenu {
     Write-Host '  1  Start all enabled services'
     Write-Host '     Optionally open the live status and logs monitor.'
     Write-Host '  2  Show current status of managed services'
-    Write-Host '  3  Read service logs'
+    Write-Host '  3  Read saved service logs (also after a failed start)'
     Write-Host '  4  Open live service monitor (full-screen; close to return)'
     Write-Host '  5  Stop all AIW-managed services'
     Write-Host '  6  Restart one managed service'
@@ -209,7 +209,7 @@ function Start-EnabledServices {
 
 function Read-ServiceLogs {
     Write-Host ''
-    Write-Host 'Show logs from:'
+    Write-Host 'Read recent persisted output from:'
     Write-Host '  1  All configured services'
     Write-Host '  2  Strata'
     Write-Host '  3  Llama Dispatcher'
@@ -225,8 +225,8 @@ function Read-ServiceLogs {
         '5' { 'open-webui' }
         default { return }
     }
-    if ($null -eq $target) { Invoke-Aiw @('logs') }
-    else { Invoke-Aiw @('logs', $target) }
+    if ($null -eq $target) { Invoke-Aiw @('logs-file') }
+    else { Invoke-Aiw @('logs-file', $target) }
 }
 
 function Restart-ManagedService {
@@ -448,7 +448,7 @@ function Help-Menu {
                     Write-Host '  aiw host validate            # check JSON without starting'
                     Write-Host '  aiw host render              # apply edited file while stopped'
                     Write-Host '  aiw check                    # supervisor config dry-run'
-                    Write-Host '  aiw up / status / logs / tui / down'
+                    Write-Host '  aiw up / status / logs-file / tui / down'
                     Write-Host '  aiw client list / add / copy / render'
                     Write-Host '  aiw command-status / unregister  # Windows command registration'
                 }
