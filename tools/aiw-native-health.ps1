@@ -19,6 +19,30 @@ try {
     $probe = $svc.readiness
     $uri = [Uri]::new([string]$probe.url, [UriKind]::Absolute)
     if ($uri.Scheme -notin @('http', 'https') -or $uri.UserInfo) { exit 1 }
+    # Native Caddy readiness has no HTTP request or access-log entry.
+    # A successful certificate-validated TLS handshake proves the configured
+    # HTTPS listener is reachable; route/auth correctness stays a separate
+    # explicit acceptance test (401/200 for the S02 gateway).
+    if ($Service -eq 'caddy' -and $probe['probe_mode'] -eq 'tls') {
+        if ($uri.Scheme -ne 'https' -or $probe.bearer_dpapi) { exit 1 }
+        $tcp = [Net.Sockets.TcpClient]::new()
+        try {
+            $connect = $tcp.ConnectAsync($uri.DnsSafeHost, $uri.Port)
+            if (-not $connect.Wait(4000)) { exit 1 }
+            $ssl = [Net.Security.SslStream]::new($tcp.GetStream(), $false)
+            try {
+                $options = [Net.Security.SslClientAuthenticationOptions]::new()
+                $options.TargetHost = $uri.DnsSafeHost
+                $options.CertificateRevocationCheckMode = [Security.Cryptography.X509Certificates.X509RevocationMode]::Online
+                $task = $ssl.AuthenticateAsClientAsync($options, [Threading.CancellationToken]::None)
+                if (-not $task.Wait(5000)) { exit 1 }
+                if ($ssl.IsAuthenticated -and $ssl.IsEncrypted) { exit 0 }
+            }
+            finally { $ssl.Dispose() }
+        }
+        finally { $tcp.Dispose() }
+        exit 1
+    }
     $headers = @{}
     $path = [string]$probe.bearer_dpapi
     if ($path) {
