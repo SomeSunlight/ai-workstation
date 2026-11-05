@@ -58,6 +58,48 @@ The workbench is divided into user tasks:
 The commands themselves remain English and host-neutral. No secret or personal
 machine configuration is committed to Git.
 
+### What to expect during a slow first model load
+
+An HTTP readiness probe checks whether an application can **actually serve
+requests**. This is not the same thing as "its executable has started".
+Native Strata may need **one or two minutes or more** to load a large model
+on its first launch. The old 2-second initial delay plus three checks
+five seconds apart incorrectly marked a cold Strata startup failed after
+about 16 seconds and skipped every dependent service.
+
+AI Workstation now uses these **default startup grace windows**:
+
+| Service | Initial load grace |
+| --- | ---: |
+| Strata | approx. 300 seconds |
+| S03 Dispatcher | approx. 120 seconds |
+| Caddy | approx. 90 seconds |
+| Existing native Open WebUI | approx. 180 seconds |
+
+The original HTTP readiness URL and required status still determine actual
+success. A longer grace does **not** turn an unhealthy service into a healthy
+one, inject credentials or restart failed applications automatically.
+If a specific machine legitimately needs longer, add
+`"startup_grace_seconds": 420` **inside that service's `readiness`
+object** in the machine-local `native-host.json` (valid range: 30–1800
+seconds), then validate and apply the source again while stopped.
+
+Process Compose now retains **per-service** startup/STDOUT/STDERR logs under
+`%LOCALAPPDATA%\AIWorkstation\services\runtime\logs\`, with limited
+rotation. In **Run and monitor → Read saved service logs**, select the
+service and inspect the last lines **even after failure**. Direct native
+CLI: `aiw logs-file strata` or `aiw logs-file --lines 200`.
+The live Process Compose monitor provides the real-time view while
+supervision is running; the saved files survive exit and reboot.
+
+**Windows console behavior:** Windows AIW launches the supervisor in an
+independent **hidden console**, so the four foreground child applications
+can inherit one console instead of opening four separate terminal windows.
+This launch mode is exercised in Windows CI but its visual behavior under
+the owner's Windows Terminal settings still needs a real-host check.
+The native AIW menu and attached live Process Compose TUI remain the
+interactive interface.
+
 ## First-time setup
 
 1. In `aiw` choose **Set up or change this computer → First-time preparation**.
@@ -305,6 +347,56 @@ the takeover. The isolated Windows CI test supports this pilot but the
 **Rollback:** stop only AIW-owned processes, verify that the entire
 native process tree is gone, then use the preserved private old starter.
 Never allow both managers to control the same services.
+
+## Failure diagnosis and retry — first native host start
+
+If the TUI says `Processes: 0/4`, `strata: Failed` and
+`dispatcher`, `caddy` and `open-webui` are all `Skipped`, inspect
+the **Strata log first**. Upstream readiness failure can cause a cascade
+of skipped dependencies. Logs such as `loading the vision encoder` and
+`starting the engine: reading the model's weights` immediately before
+`readiness check fail` indicate a likely premature health-check
+deadline; they do **not** by themselves prove that the model is corrupt.
+A separate problem is possible if the configured readiness URL or
+expected response status is incorrect.
+
+For a **controlled retry** after receiving the cold-start fix:
+
+1. Leave the Process Compose TUI. Then use `aiw down` to stop **only
+   the AIW-owned supervisor**; do not kill unknown PIDs. Check its
+   exit result. If the supervisor ownership record does not match, stop
+   and inspect rather than force-removing it.
+2. Use **Set up → Check whether old services still occupy the ports**.
+   If any old/foreign service is listening, investigate ownership.
+   A failed supervisor can leave a child process briefly busy;
+   don't start a second copy of Strata on the same port.
+3. `git pull --ff-only` on the AIW review branch. Run **Set up →
+   Check edited settings → Apply edited settings for the next startup**.
+   The process definition must contain the increased Strata grace
+   and per-service rotated log files. This does not start an application.
+4. Use `aiw check` as an optional dry-run, then **Run and monitor →
+   Start all enabled services**, choosing the live monitor if desired.
+   Watch Strata loading; its readiness is checked regularly for up
+   to roughly five minutes by default. If all four become healthy,
+   carry on with the **S02 client connection** checks.
+5. If Strata still fails, do **not** immediately increase the timeout
+   again. Inspect `aiw logs-file strata` and the configured
+   `readiness.url`/`expected_status` in your private JSON. Also
+   check the separate supervisor log
+   `%LOCALAPPDATA%\AIWorkstation\services\runtime\process-compose-stdout.log`.
+   Share redacted diagnostics, not credentials or private config values.
+
+The separate child windows observed with the previous Process Compose
+`DETACHED_PROCESS` launcher are **not intended**. Their stdout/stderr
+was not persisted by the previous native-host renderer. The corrected
+hidden-console mode plus per-service persistent log files require
+re-rendering **and a new supervisor start**; a currently running
+supervisor cannot adopt those changes in place.
+
+The official guide is the source of truth for the workflow. The Windows
+runner proves the **synthetic** setup and lifecycle contracts; successful
+real Strata loading, actual window behavior and all three distinct
+application connections require the owner's host acceptance test.
 
 ## What this PR does not yet provide
 
