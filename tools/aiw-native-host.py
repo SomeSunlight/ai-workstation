@@ -26,6 +26,14 @@ ENV_NAME = __import__("re").compile(r"^[A-Za-z_][A-Za-z_0-9]*$")
 SECRET_NAME = __import__("re").compile(r"(?:SECRET|TOKEN|KEY|PASS|AUTH|CREDENTIAL)", __import__("re").I)
 DEFAULT_PORTS = {"strata": [8080], "dispatcher": [8001], "caddy": [443],
                  "open-webui": [3000]}
+# Startup checks are *not* liveness checks. A cold Strata model load can take
+# minutes, while a gateway that fails to bind should be reported sooner.
+# These conservative defaults apply to already-existing private JSON files.
+DEFAULT_STARTUP_GRACE_SECONDS = {
+    "strata": 300, "dispatcher": 120, "caddy": 90, "open-webui": 180,
+}
+READINESS_PERIOD_SECONDS = 5
+READINESS_FIRST_CHECK_SECONDS = 5
 
 
 class ConfigurationError(Exception):
@@ -148,10 +156,16 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
                                     or verify_paths and not Path(value).is_file()):
                 raise ConfigurationError(name + ": missing or nonabsolute DPAPI reference.")
         readiness = service["readiness"]
-        if not isinstance(readiness, dict) or set(readiness) != {
+        if not isinstance(readiness, dict) or not {
             "url", "expected_status", "bearer_dpapi"
+        } <= set(readiness) or not set(readiness) <= {
+            "url", "expected_status", "bearer_dpapi", "startup_grace_seconds"
         }:
-            raise ConfigurationError(name + ": missing readiness settings.")
+            raise ConfigurationError(name + ": invalid readiness settings.")
+        startup_grace = readiness.get(
+            "startup_grace_seconds", DEFAULT_STARTUP_GRACE_SECONDS[name])
+        if (type(startup_grace) is not int or not 30 <= startup_grace <= 1800):
+            raise ConfigurationError(name + ": startup_grace_seconds must be an integer 30..1800.")
         url = readiness["url"]
         if not isinstance(url, str):
             raise ConfigurationError(name + ": readiness URL must be a string.")
@@ -224,7 +238,11 @@ def inspect(folder: Path) -> None:
         mode = "start enabled" if enabled is True else "not selected for startup"
         ports = service.get("listen_ports")
         ports_label = ", ".join(str(x) for x in ports) if isinstance(ports, list) else "not set"
-        print(name + ":", mode, "|", status, "| TCP", ports_label)
+        grace = (ready.get("startup_grace_seconds",
+                 DEFAULT_STARTUP_GRACE_SECONDS[name])
+                 if isinstance(ready, dict) else DEFAULT_STARTUP_GRACE_SECONDS[name])
+        print(name + ":", mode, "|", status, "| TCP", ports_label,
+              "| startup grace", str(grace) + "s")
     print("This summary has not started or stopped any application.")
     print("When ready, use Check edited settings, then Apply settings for next startup.")
 
@@ -271,13 +289,21 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
     processes = {}
     for name in config["services"]:
         service = config["services"][name]
+        startup_grace = service["readiness"].get(
+            "startup_grace_seconds", DEFAULT_STARTUP_GRACE_SECONDS[name])
+        failure_threshold = max(
+            1, (startup_grace - READINESS_FIRST_CHECK_SECONDS +
+                READINESS_PERIOD_SECONDS - 1) // READINESS_PERIOD_SECONDS
+        )
         p = {
             "command": encoded_command(launcher, native_config_path(folder), name),
             "disabled": not service["enabled"],
             "readiness_probe": {
                 "exec": {"command": encoded_command(prober, native_config_path(folder), name)},
-                "initial_delay_seconds": 2, "period_seconds": 5,
-                "timeout_seconds": 6, "failure_threshold": 3,
+                "initial_delay_seconds": READINESS_FIRST_CHECK_SECONDS,
+                "period_seconds": READINESS_PERIOD_SECONDS,
+                "timeout_seconds": 6,
+                "failure_threshold": failure_threshold,
             },
             "availability": {"restart": "no"},
         }
@@ -305,7 +331,12 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
         if os.path.exists(temp):
             os.unlink(temp)
     print("[OK] Rendered private Process Compose:", project)
-    print("No processes started. Next: AIW Validate, then supervised start only after security approval.")
+    for name, spec in processes.items():
+        window = spec["readiness_probe"]
+        print(" -", name, "startup grace ~",
+              window["initial_delay_seconds"] +
+              window["period_seconds"] * window["failure_threshold"], "seconds")
+    print("No processes started; the next check is a Process Compose dry-run.")
     return project
 
 
