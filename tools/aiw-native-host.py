@@ -286,6 +286,12 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
             raise ConfigurationError("Existing custom Process Compose project: refusing overwrite.")
     if (folder / "runtime" / "process-compose-windows.json").exists():
         raise ConfigurationError("A Windows supervisor ownership record exists. Stop it before rendering.")
+    log_dir = folder / "runtime" / "logs"
+    if log_dir.is_symlink():
+        raise ConfigurationError("Refusing symlinked private process log directory.")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    if log_dir.is_symlink():
+        raise ConfigurationError("Refusing linked process log directory.")
     processes = {}
     for name in config["services"]:
         service = config["services"][name]
@@ -306,6 +312,13 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
                 "failure_threshold": failure_threshold,
             },
             "availability": {"restart": "no"},
+            "log_location": str(log_dir / (name + ".log")),
+            "log_configuration": {
+                "rotation": {
+                    "max_size_mb": 10, "max_age_days": 14,
+                    "max_backups": 5, "compress": True,
+                },
+            },
         }
         if name == "dispatcher":
             p["depends_on"] = {"strata": {"condition": "process_healthy"}}
@@ -336,6 +349,7 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
         print(" -", name, "startup grace ~",
               window["initial_delay_seconds"] +
               window["period_seconds"] * window["failure_threshold"], "seconds")
+    print("Persistent service logs:", log_dir)
     print("No processes started; the next check is a Process Compose dry-run.")
     return project
 
