@@ -72,6 +72,29 @@ try {
     if ($yaml -notmatch 'condition: process_healthy' -or $yaml -notmatch 'open-webui:') {
         throw 'Native project lacks dependencies or safe disabled defaults.'
     }
+    # Operators can extend the grace window in PRIVATE JSON without editing
+    # generated Process Compose YAML or changing credential settings.
+    $data.services.strata.readiness.startup_grace_seconds = 420
+    $data | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $path -Encoding utf8
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host validate
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host render
+    $customYaml = Get-Content -LiteralPath $project -Raw
+    $customStrata = [regex]::Match($customYaml, '(?s)(?m)^  strata:\s*\r?\n(.*?)(?=^  dispatcher:)').Groups[1].Value
+    if ($customStrata -notmatch 'failure_threshold: 83') {
+        throw 'Custom Strata startup_grace_seconds did not update readiness threshold.'
+    }
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') check
+    # Invalid grace must never be rendered as an implicit 5-minute default.
+    $data.services.strata.readiness.startup_grace_seconds = 20
+    $data | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $path -Encoding utf8
+    $badGraceRejected = $false
+    try { & (Join-Path $root 'bootstrap/windows/Services.ps1') host validate }
+    catch { $badGraceRejected = $true }
+    if (-not $badGraceRejected) { throw 'Invalid cold-start grace was accepted.' }
+    $data.services.strata.readiness.startup_grace_seconds = 420
+    $data | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $path -Encoding utf8
+    $global:LASTEXITCODE = 0
+
     # An independently owned listener must block the full-stack preflight.
     $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, [int]$ports.strata)
     $listener.Start()
