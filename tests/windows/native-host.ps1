@@ -138,20 +138,8 @@ try {
     if ($before -cne $afterPreview) { throw 'Quiet-probe preview mutated the private JSON.' }
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host quiet-probes --apply
     $quiet = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -AsHashtable
-    if ($quiet.services.strata.readiness.url -notmatch '/health
-}
-finally {
-    Remove-Item Env:AIW_SERVICES_DIR -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
-}
- -or
-        $quiet.services.dispatcher.readiness.url -notmatch '/health
-}
-finally {
-    Remove-Item Env:AIW_SERVICES_DIR -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
-}
- -or
+    if ($quiet.services.strata.readiness.url -notmatch '/health$' -or
+        $quiet.services.dispatcher.readiness.url -notmatch '/health$' -or
         $quiet.services.dispatcher.readiness.bearer_dpapi -ne '' -or
         $quiet.services.caddy.readiness.probe_mode -ne 'tls' -or
         $quiet.services.caddy.readiness.url -ne 'https://example.test/v1/models') {
@@ -167,7 +155,6 @@ finally {
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host render
     & (Join-Path $root 'bootstrap/windows/Services.ps1') check
     $global:LASTEXITCODE = 0
-    # No real service start is permitted by the production security gate.
     Write-Host '[PASS] Native host setup, slow readiness, silent probe migration, TLS mode and rollback backup.'
 }
 finally {
