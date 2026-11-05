@@ -799,12 +799,14 @@ def windows_supervisor_stopped(folder: Path, pid: int) -> bool:
     return False
 
 
-def native_host_setup(folder: Path, action: str, process: str | None = None) -> None:
+def native_host_setup(folder: Path, action: str, process: str | None = None, *, apply: bool = False) -> None:
     """Use the repo-owned, separate Windows host renderer without editing Git files."""
     cmd = [sys.executable, str(Path(__file__).with_name("aiw-native-host.py")),
            action, "--directory", str(folder)]
     if process:
         cmd += ["--service", process]
+    if apply:
+        cmd.append("--apply")
     result = subprocess.run(cmd, check=False)
     if result.returncode:
         raise ConfigError("Native Windows host " + action + " failed.")
@@ -942,8 +944,9 @@ def run(argv: list[str] | None = None) -> None:
     for k in ("start", "stop", "restart"):
         sub.add_parser(k).add_argument("name")
     host = sub.add_parser("host", help="Prepare native Windows Caddy/Dispatcher/Strata project")
-    host.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight"))
+    host.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight", "quiet-probes"))
     host.add_argument("--service", choices=("strata", "dispatcher", "caddy", "open-webui"))
+    host.add_argument("--apply", action="store_true")
     pilot = sub.add_parser("pilot", help="Opt in to a pinned, independently qualified Windows test supervisor")
     pilot.add_argument("action", choices=("install", "status", "remove"))
     pilot.add_argument("--archive", type=Path)
@@ -986,7 +989,7 @@ def run(argv: list[str] | None = None) -> None:
         elif args.action == "remove":
             remove_windows_reviewed_pilot(folder)
     elif args.cmd == "host":
-        native_host_setup(folder, args.action, args.service)
+        native_host_setup(folder, args.action, args.service, apply=args.apply)
     elif args.cmd == "logs-file":
         saved_service_logs(folder, args.name, args.lines)
     elif args.cmd == "where":
