@@ -8,6 +8,7 @@ No service is started during init, validation, or client onboarding.
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import socket
 import time
 import hashlib
@@ -809,6 +810,36 @@ def native_host_setup(folder: Path, action: str, process: str | None = None) -> 
         raise ConfigError("Native Windows host " + action + " failed.")
 
 
+NATIVE_LOG_NAMES = ("strata", "dispatcher", "caddy", "open-webui")
+
+
+def saved_service_logs(folder: Path, service: str | None = None, lines: int = 100) -> None:
+    """Inspect persistent native service logs, even after supervisor failure.
+
+    No management API, process restart, or token lookup is performed.
+    Files may contain private application output; display locally only.
+    """
+    if service and service not in NATIVE_LOG_NAMES:
+        raise ConfigError("Unknown native service log name.")
+    if not 1 <= lines <= 1000:
+        raise ConfigError("Log line count must be 1..1000.")
+    log_root = folder / "runtime" / "logs"
+    if log_root.is_symlink():
+        raise ConfigError("Refusing linked private service log directory.")
+    for name in ((service,) if service else NATIVE_LOG_NAMES):
+        path = log_root / (name + ".log")
+        print("\n---", name, "saved startup/service log ---")
+        print("File:", path)
+        if path.is_symlink():
+            raise ConfigError("Refusing linked native service log file.")
+        if not path.is_file():
+            print("No saved output from this service yet.")
+            continue
+        with path.open("r", encoding="utf-8", errors="replace") as stream:
+            for line in deque(stream, maxlen=lines):
+                print(line.rstrip("\r\n"))
+
+
 def native(folder: Path, action: str, process: str | None) -> None:
     doc = read_settings(folder)
     project = project_path(folder, doc)
@@ -900,10 +931,12 @@ def run(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Native host services and S02 client identities")
     parser.add_argument("--directory", type=Path, default=default_dir())
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for k in ("init", "where", "install", "check", "up", "tui", "status", "down", "logs"):
+    for k in ("init", "where", "install", "check", "up", "tui", "status", "down", "logs", "logs-file"):
         p = sub.add_parser(k)
-        if k == "logs":
+        if k in {"logs", "logs-file"}:
             p.add_argument("name", nargs="?")
+        if k == "logs-file":
+            p.add_argument("--lines", type=int, default=100)
         if k == "install":
             p.add_argument("--archive", type=Path, help="Official local archive; SHA-256 verified")
     for k in ("start", "stop", "restart"):
@@ -954,6 +987,8 @@ def run(argv: list[str] | None = None) -> None:
             remove_windows_reviewed_pilot(folder)
     elif args.cmd == "host":
         native_host_setup(folder, args.action, args.service)
+    elif args.cmd == "logs-file":
+        saved_service_logs(folder, args.name, args.lines)
     elif args.cmd == "where":
         doc = read_settings(folder)
         print("Configuration:", settings_path(folder))
