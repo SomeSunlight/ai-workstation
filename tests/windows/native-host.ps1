@@ -39,6 +39,31 @@ try {
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host preflight
     $project = Join-Path $temp 'process-compose.yaml'
     $yaml = Get-Content -LiteralPath $project -Raw
+    # Regression: a cold native Strata model load can last 1-2 minutes,
+    # so a 3x5-second probe must NOT stop it after 16 seconds.
+    $strataConfig = [regex]::Match($yaml, '(?s)(?m)^  strata:\s*\r?\n(.*?)(?=^  dispatcher:)').Groups[1].Value
+    if ($strataConfig -notmatch 'failure_threshold: 59' -or
+        $strataConfig -notmatch 'initial_delay_seconds: 5' -or
+        $strataConfig -notmatch 'period_seconds: 5') {
+        throw 'Native Strata cold-start readiness window regressed below ~300 seconds.'
+    }
+    if ($yaml -notmatch 'log_location:' -or
+        $yaml -notmatch 'max_size_mb: 10' -or
+        $yaml -notmatch 'max_backups: 5') {
+        throw 'Persistent rotated service logs are missing from generated Process Compose.'
+    }
+    foreach ($name in @('strata','dispatcher','caddy','open-webui')) {
+        $logPath = Join-Path $temp ('runtime/logs/' + $name + '.log')
+        if (-not $yaml.Contains($logPath)) {
+            throw "Persistent output path missing for service $name."
+        }
+    }
+    $strataLog = Join-Path $temp 'runtime/logs/strata.log'
+    Set-Content -LiteralPath $strataLog -Value 'synthetic-strata-diagnostic-only'
+    $saved = (& (Join-Path $root 'bootstrap/windows/Services.ps1') logs-file strata) -join [Environment]::NewLine
+    if ($LASTEXITCODE -ne 0 -or $saved -notmatch 'synthetic-strata-diagnostic-only') {
+        throw 'Private saved-log viewer did not recover service output without a running supervisor.'
+    }
     foreach ($name in @('strata', 'dispatcher', 'caddy')) {
         if ($yaml -notmatch "(?m)^\s{2}$($name):") {
             throw "Service $name missing from project."
