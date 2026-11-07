@@ -532,7 +532,8 @@ def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Prepare native Windows inference host.")
-    parser.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight", "quiet-probes"))
+    parser.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight", "quiet-probes",
+                                           "integrity-review", "integrity-approve"))
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--service", choices=NAMES)
     parser.add_argument("--apply", action="store_true")
