@@ -97,6 +97,48 @@ class TestNativeServices(unittest.TestCase):
         self.assertEqual(rendered["clients"][0]["token_sha256"],
                          hashlib.sha256(old_secret.encode()).hexdigest())
 
+    def test_existing_client_policy_change_preserves_secret_and_requires_render(self):
+        module.client_add(self.folder, "laptop-wsl-webui", "passthrough")
+        token = module.read_secret(self.folder, "laptop-wsl-webui")
+        module.client_render(self.folder, self.folder / "clients.json")
+        previous = (self.folder / "clients.json").read_bytes()
+
+        # The CLI changes only the private registration; running Dispatcher
+        # still sees the previous digest registry until explicit render/restart.
+        module.run(["--directory", str(self.folder), "client", "set-policy",
+                    "laptop-wsl-webui", "--policy", "default"])
+        self.assertEqual(module.read_secret(self.folder, "laptop-wsl-webui"), token)
+        self.assertEqual((self.folder / "clients.json").read_bytes(), previous)
+        self.assertEqual(module.read_settings(self.folder)["clients"]["laptop-wsl-webui"],
+                         {"policy": "default", "origin": "generated"})
+
+        # Same policy is read-only; unknown names and invalid values fail closed.
+        with mock.patch.object(module, "save_settings") as writer:
+            module.client_set_policy(self.folder, "laptop-wsl-webui", "default")
+            writer.assert_not_called()
+        for name, policy in (("not-registered", "enforce"),
+                             ("../unsafe", "default"),
+                             ("laptop-wsl-webui", "unsupported")):
+            with self.assertRaises(module.ConfigError):
+                module.client_set_policy(self.folder, name, policy)
+
+        module.client_render(self.folder, self.folder / "clients.json")
+        rendered = json.loads((self.folder / "clients.json").read_text())
+        self.assertEqual(rendered["clients"][0]["policy"], "default")
+        self.assertEqual(rendered["clients"][0]["token_sha256"],
+                         hashlib.sha256(token.encode()).hexdigest())
+        self.assertNotIn(token, (self.folder / "clients.json").read_text())
+
+        # Legacy entries have unknown provenance: do not synthesize or
+        # discard it as a side effect of changing the request policy.
+        legacy = module.read_settings(self.folder)
+        del legacy["clients"]["laptop-wsl-webui"]["origin"]
+        module.save_settings(self.folder, legacy)
+        module.client_set_policy(self.folder, "laptop-wsl-webui", "enforce")
+        self.assertEqual(module.read_settings(self.folder)["clients"]["laptop-wsl-webui"],
+                         {"policy": "enforce"})
+        self.assertEqual(module.read_secret(self.folder, "laptop-wsl-webui"), token)
+
     def test_imported_origin_in_render_does_not_leak_metadata(self):
         module.client_add(self.folder, "existing-service", "passthrough")
         config = module.read_settings(self.folder)
