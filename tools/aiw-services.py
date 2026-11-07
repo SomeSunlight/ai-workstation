@@ -264,6 +264,25 @@ def client_copy(folder: Path, name: str) -> None:
     print("No secret was printed or saved to clients.json.")
 
 
+def client_set_policy(folder: Path, name: str, policy: str) -> None:
+    """Change only a registered client's request policy; never rotate its key."""
+    if not CLIENT_ID.fullmatch(name) or policy not in POLICIES:
+        raise ConfigError("Invalid client ID or policy.")
+    doc = read_settings(folder)
+    if name not in doc["clients"]:
+        raise ConfigError("Unknown registered client ID.")
+    previous = doc["clients"][name]["policy"]
+    if previous == policy:
+        print("Policy already", policy, "for", name, "- no change.")
+        return
+    doc["clients"][name]["policy"] = policy
+    save_settings(folder, doc)
+    print("Updated client policy:", name, "|", previous, "->", policy)
+    print("Original API key and provenance are unchanged.")
+    print("Next: regenerate clients.json with 'client render';")
+    print("then explicitly restart Dispatcher to activate this policy.")
+
+
 def client_rename(folder: Path, old: str, new: str) -> None:
     """Rename logical identity without rotating or revealing the DPAPI secret."""
     if not CLIENT_ID.fullmatch(old) or not CLIENT_ID.fullmatch(new):
@@ -961,6 +980,9 @@ def run(argv: list[str] | None = None) -> None:
     importing.add_argument("--policy", choices=sorted(POLICIES), required=True)
     client_list = group.add_parser("list")
     client_list.add_argument("--format", choices=("text", "json", "tsv"), default="text")
+    policy_edit = group.add_parser("set-policy")
+    policy_edit.add_argument("name")
+    policy_edit.add_argument("--policy", required=True, choices=sorted(POLICIES))
     group.add_parser("render")
     group.add_parser("reveal").add_argument("name")
     group.add_parser("copy").add_argument("name")
@@ -1013,17 +1035,20 @@ def run(argv: list[str] | None = None) -> None:
                 for row in rows:
                     print(row["id"] + "\t" + row["origin"])
             else:
-                print("Registered client identities:")
+                print("Registered client identities (effective after Dispatcher restart):")
                 for row in rows:
-                    role = {"imported": "existing shared key (migration, do not distribute)",
-                            "generated": "individual client key",
-                            "unknown": "older registration (key type not recorded)"}[row["origin"]]
-                    print(" -", row["id"], "|", role)
-                print("Shared or older keys should NOT be distributed as new client keys.")
+                    origin = {"imported": "imported shared key (do not redistribute)",
+                              "generated": "individually generated key",
+                              "unknown": "key origin not recorded (may be active)"}[row["origin"]]
+                    print(" -", row["id"], "| policy:", row["policy"], "|", origin)
+                print("Unknown origin does not mean an unused or expired key.")
+                print("Use Dispatcher request metrics to establish actual client usage.")
         elif args.client_cmd == "copy":
             client_copy(folder, args.name)
         elif args.client_cmd == "rename":
             client_rename(folder, args.old, args.new)
+        elif args.client_cmd == "set-policy":
+            client_set_policy(folder, args.name, args.policy)
         elif args.client_cmd == "render":
             client_render(folder, folder / "clients.json")
         elif args.client_cmd == "reveal":
