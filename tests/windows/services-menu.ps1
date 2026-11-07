@@ -64,7 +64,7 @@ try {
     $cfg = Get-Content -LiteralPath $registryFile -Raw | ConvertFrom-Json
     if ($cfg.clients.Count -ne 1 -or $cfg.clients[0].id -cne 'goose-core' -or
         $cfg.clients[0].policy -cne 'default' -or
-        $cfg.clients[0].token_sha256 -cnotmatch '^[0-9a-f]{64}
+        $cfg.clients[0].token_sha256 -cnotmatch '^[0-9a-f]{64}$') {
         throw 'Workbench did not rename client and render a correct one-way token hash.'
     }
     $original = Get-Clipboard -Raw
