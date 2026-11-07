@@ -63,12 +63,18 @@ try {
     }
     # Shell-free process argv and plainly quoted PowerShell health probes.
     # The temporary host location has both spaces and an apostrophe.
-    if ($yaml -notmatch '(?m)^  shell_command: pwsh$' -or
-        $yaml -notmatch '(?m)^  shell_argument: -Command$' -or
-        $yaml -notmatch '(?m)^    entrypoint:' -or
-        $yaml -match 'EncodedCommand' -or $yaml -match 'cmd[.]exe' -or
-        $yaml -notmatch "''") {
-        throw 'Native Process Compose shell, launch argv or quote-escaping regression.'
+    $nativeChecks = [ordered]@{
+        'pwsh shell' = ($yaml -match '(?m)^  shell_command: pwsh$')
+        'PowerShell -Command argument' = ($yaml -match '(?m)^  shell_argument: -Command$')
+        'native entrypoint' = ($yaml -match '(?m)^    entrypoint:')
+        'no encoded PowerShell' = ($yaml -notmatch 'EncodedCommand')
+        'no cmd.exe' = ($yaml -notmatch 'cmd[.]exe')
+        'escaped apostrophe' = ($yaml -match "''")
+    }
+    foreach ($check in $nativeChecks.GetEnumerator()) {
+        if (-not $check.Value) {
+            throw "Native Process Compose launch assertion failed: $($check.Key)"
+        }
     }
     if ($yaml -notmatch 'aiw-native-child[.]ps1' -or
         $yaml -notmatch 'aiw-native-health[.]ps1') {
