@@ -1,5 +1,22 @@
 # AI Workstation Plan
 
+## Integration checkpoint — live S03 dual roles and native host (2026-11-07)
+
+**Review scope:** [AIW PR #45](https://github.com/SomeSunlight/ai-workstation/pull/45) and [Dispatcher PR #30](https://github.com/SomeSunlight/Llama_Dispatcher/pull/30) together provide an operator-tested *first operational slice*. Owner proposes squash-merging both into `main` to establish a stable baseline, while leaving remaining issue requirements open. The documented current reviews are not an instruction to merge them automatically.
+
+**Verified on the operator's live native Windows + remote WSL clients:**
+- One AIW-owned Process Compose stack successfully starts native Strata, attached Dispatcher, Caddy and the existing native Open WebUI; the existing remote WSL Open WebUI and Goose authenticate through the protected gateway.
+- Separate S02 application keys and stable client identities appear in Dispatcher request metrics. Two public role aliases `sparringpartner` and `agent` target one native Strata model: `default` client policy injects `reasoning_effort=high` for the sparring partner and `reasoning_effort=none` plus sampling defaults for the agent. The operator observed the agent responding without visible reasoning in both Open WebUI deployments. No second inference engine is started.
+- Actual Goose requests already show correct S02 attribution, alias `sparringpartner`, `reasoning_effort=high`, successful tool-call responses and streamed completions. **Delegation from Goose to a separately configured subagent is not yet verified** and belongs to Goose/provider/tool configuration, not an assumed Dispatcher fault.
+
+**Review-branch operational improvements:** client policy editing without key rotation, role-registry generation separated from native Process Compose rendering, persistent TUI/service logs, and Windows shutdown waiting for both the managed supervisor to exit and declared ports to be free. The shutdown code and `ordered_shutdown` project setting have synthetic Windows/Linux CI, but the new full shutdown and reboot behavior still needs real-host acceptance. General pinned-official-Process-Compose production hold remains; the qualified Windows-only pilot stays an explicit opt-in.
+
+**Next priority:** [#53](https://github.com/SomeSunlight/ai-workstation/issues/53), native Strata launch-chain integrity/Kaspersky hardening, **after** the #45 baseline is integrated. [Draft PR #54](https://github.com/SomeSunlight/ai-workstation/pull/54) is currently stacked on an older #45 revision and must be rebased/re-reviewed against the newly accepted `main`, not merged blindly. No antivirus blanket exclusion; no unattended installs/downloads on normal start; local SHA-256 approval and explicit updates. False-positive causation remains plausible, not proven.
+
+**Other open work:** [#41](https://github.com/SomeSunlight/ai-workstation/issues/41) remains open for genuinely reproducible fresh-host provisioning, permanent patched Process Compose release and outstanding real-host lifecycle gates; [#46](https://github.com/SomeSunlight/ai-workstation/issues/46) for consolidated configuration activation UX; [#55](https://github.com/SomeSunlight/ai-workstation/issues/55) for private instance configuration/backup/disaster recovery. Goose subagent/planner/web-search setup can proceed independently. Preserve private host paths, credentials and live metrics; no automatic service mutation on repository updates.
+
+---
+
 ## Active implementation — Issue #41: protected gateway and three auditable clients (2026-11-03)
 
 **Owner-clarified deployment:** Native Windows workstation runs Caddy → authenticated Dispatcher → native Strata and an existing native Open WebUI. A separate AI Workstation in laptop/WSL runs existing Docker Compose Goose and Open WebUI over the protected home gateway. Do **not** deploy additional host-side Goose/Hermes containers (#39 deferred). Each of the three application clients (`Goose` WSL, `Open WebUI` WSL, native-host `Open WebUI`) needs its **own S02 identity**; `home-gateway` remains transitional. Client labels in product documentation are examples, not machine-specific defaults. Native Open WebUI may connect to loopback Dispatcher, while network clients use Caddy.
