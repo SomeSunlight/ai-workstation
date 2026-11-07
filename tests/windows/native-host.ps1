@@ -3,7 +3,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$temp = Join-Path $env:RUNNER_TEMP ('aiw-native-host-' + [guid]::NewGuid().ToString('N'))
+$temp = Join-Path $env:RUNNER_TEMP ("aiw-native-O'Brien space-" + [guid]::NewGuid().ToString('N'))
 $env:AIW_SERVICES_DIR = $temp
 try {
     & (Join-Path $root 'bootstrap/windows/Services.ps1') init
@@ -14,12 +14,23 @@ try {
     $data = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -AsHashtable
     $exe = (Get-Command pwsh).Source
     $cwd = Split-Path -Parent $exe
+    $entry = Join-Path $temp "strata's offline entry.py"
+    $engine = Join-Path $temp "engine native.exe"
+    Set-Content -LiteralPath $entry -Encoding utf8 -Value 'print("synthetic no-service start")'
+    Set-Content -LiteralPath $engine -Encoding utf8 -Value 'synthetic native engine content'
     $ports = @{ strata = 19881; dispatcher = 19882; caddy = 19883; 'open-webui' = 19884 }
     foreach ($name in @('strata', 'dispatcher', 'caddy', 'open-webui')) {
         $item = $data.services[$name]
         $item.executable = $exe
+        if ($name -eq 'strata') {
+            $item.executable = (Get-Command python.exe -ErrorAction Stop).Source
+            $item.integrity_files = @($entry, $engine)
+            $item.arguments = @($entry)
+        }
         $item.working_directory = $cwd
-        $item.arguments = @('-NoProfile', '-NonInteractive', '-Command', 'exit 0')
+        if ($name -ne 'strata') {
+            $item.arguments = @('-NoProfile', '-NonInteractive', '-Command', 'exit 0')
+        }
         $item.required_paths = @($cwd)
         if ($name -eq 'open-webui') { $item.environment.DATA_DIR = $cwd }
         $item.listen_ports = @($ports[$name])
@@ -35,6 +46,10 @@ try {
     # New setup flow: check human-edited JSON before generating launch commands.
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host validate
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host inspect
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host integrity-review
+    if ($LASTEXITCODE -ne 0) { throw 'Synthetic Strata review failed.' }
+    & (Join-Path $root 'bootstrap/windows/Services.ps1') host integrity-approve
+    if ($LASTEXITCODE -ne 0) { throw 'Synthetic Strata approval failed.' }
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host render
     # Verify the real pinned Windows Process Compose executable accepts the
     # generated dependency/health schema (dry-run; no child process start).
@@ -45,6 +60,25 @@ try {
     $yaml = Get-Content -LiteralPath $project -Raw
     if ($yaml -notmatch '(?m)^ordered_shutdown: true\s*$') {
         throw 'Native host must stop dependents first and Strata last before supervisor exit.'
+    }
+    # Shell-free process argv and plainly quoted PowerShell health probes.
+    # The temporary host location has both spaces and an apostrophe.
+    $nativeChecks = [ordered]@{
+        'pwsh shell' = ($yaml -match '(?m)^  shell_command: pwsh\r?$')
+        'PowerShell -Command argument' = ($yaml -match '(?m)^  shell_argument: -Command\r?$')
+        'native entrypoint' = ($yaml -match '(?m)^    entrypoint:')
+        'no encoded PowerShell' = ($yaml -notmatch 'EncodedCommand')
+        'no cmd.exe' = ($yaml -notmatch 'cmd[.]exe')
+        'escaped apostrophe' = ($yaml -match "''")
+    }
+    foreach ($check in $nativeChecks.GetEnumerator()) {
+        if (-not $check.Value) {
+            throw "Native Process Compose launch assertion failed: $($check.Key)"
+        }
+    }
+    if ($yaml -notmatch 'aiw-native-child[.]ps1' -or
+        $yaml -notmatch 'aiw-native-health[.]ps1') {
+        throw 'Native entrypoint or health script missing.'
     }
     # Regression: a cold native Strata model load can last 1-2 minutes,
     # so a 3x5-second probe must NOT stop it after 16 seconds.

@@ -14,7 +14,7 @@ $ErrorActionPreference = 'Stop'
 
 if (-not $env:RUNNER_TEMP) { throw 'Disposable CI runner required.' }
 if (-not (Test-Path -LiteralPath $Binary -PathType Leaf)) { throw 'Missing supervisor binary.' }
-$folder = Join-Path $env:RUNNER_TEMP ('aiw-pc-tree-' + [guid]::NewGuid().ToString('N'))
+$folder = Join-Path $env:RUNNER_TEMP ("aiw-pc-tree-O'Brien space-" + [guid]::NewGuid().ToString('N'))
 New-Item -Path $folder -ItemType Directory -Force | Out-Null
 $project = Join-Path $folder 'process-compose.yaml'
 $parent = (Resolve-Path (Join-Path $PSScriptRoot 'tree-fixture-parent.ps1')).Path
@@ -54,29 +54,63 @@ try {
     for($i=0;$i -lt 4 -and $managementPort -eq $port;$i++){ $managementPort = Pick-FreePort }
     if($managementPort -eq $port){throw 'Unable to allocate distinct disposable ports.'}
 
-    # The fixture only starts temporary PowerShell processes and a loopback TCP
-    # listener. Paths come from the CI checkout, never from the user host.
-    # Upstream Windows command tokenization passes literal quote characters
-    # through to pwsh -File; this disposable CI checkout has no spaces.
-    # Production AIW uses UTF-16LE -EncodedCommand for arbitrary host paths.
-    foreach ($path in @($parent,$child,$parentPidFile,$childPidFile)){
-        if($path.Contains(' ')){throw 'Fixture requires a space-free temporary CI path.'}
+    # Process Compose v1.124.0 supports process entrypoint argv without
+    # shell expansion. The project's explicit pwsh shell is used for exec
+    # readiness probes. Exercise a path with both apostrophes and spaces.
+    function QYaml([string]$text) {
+        return "'" + $text.Replace("'", "''") + "'"
     }
-    $cmd = 'pwsh -NoProfile -NonInteractive -File ' + $parent +
-        ' -Child ' + $child + ' -Port ' + $port +
-        ' -ParentPidFile ' + $parentPidFile +
-        ' -ChildPidFile ' + $childPidFile
-    $yaml = @(
+    function QPowerShell([string]$text) {
+        return "'" + $text.Replace("'", "''") + "'"
+    }
+    $probe = Join-Path $folder "health O'Brien.ps1"
+    $probeMarker = Join-Path $folder 'probe-called.txt'
+    Set-Content -LiteralPath $probe -Encoding utf8 -Value @'
+param([string]$ParentPidFile, [string]$ChildPidFile, [string]$Marker)
+if ((Test-Path -LiteralPath $ParentPidFile -PathType Leaf) -and
+    (Test-Path -LiteralPath $ChildPidFile -PathType Leaf)) {
+    Set-Content -LiteralPath $Marker -Value 'ok'
+    exit 0
+}
+exit 1
+'@
+    $entry = @('pwsh','-NoProfile','-NonInteractive','-File',$parent,
+        '-Child',$child,'-Port',[string]$port,
+        '-ParentPidFile',$parentPidFile,'-ChildPidFile',$childPidFile)
+    $probeCommand = '& ' + (QPowerShell $probe) +
+        ' -ParentPidFile ' + (QPowerShell $parentPidFile) +
+        ' -ChildPidFile ' + (QPowerShell $childPidFile) +
+        ' -Marker ' + (QPowerShell $probeMarker) +
+        '; if (-not $?) { exit 1 }'
+    $yamlLines = @(
         'version: "0.5"'
+        'shell:'
+        '  shell_command: pwsh'
+        '  shell_argument: -Command'
         'processes:'
         '  nested-child-tree:'
-        "    command: '$cmd'"
+        '    entrypoint:'
+    )
+    $yamlLines += @($entry | ForEach-Object { '      - ' + (QYaml $_) })
+    $yamlLines += @(
+        '    readiness_probe:'
+        '      exec:'
+        '        command: ' + (QYaml $probeCommand)
+        '      initial_delay_seconds: 1'
+        '      period_seconds: 1'
+        '      timeout_seconds: 4'
+        '      failure_threshold: 15'
         '    availability:'
         '      restart: "no"'
-    ) -join [Environment]::NewLine
+    )
+    $yaml = $yamlLines -join [Environment]::NewLine
     [IO.File]::WriteAllText($project,$yaml)
     $common = @('--address','127.0.0.1','--port',[string]$managementPort)
-    $startArgs = $common + @('--disable-dotenv','--config',$project,
+    # Start-Process flattens ArgumentList into a Windows command-line string.
+    # Quote this single config-path argument explicitly, including spaces and
+    # apostrophes. PowerShell's native call operator below remains unchanged.
+    $quotedProject = '"' + $project.Replace('"', '\\"') + '"'
+    $startArgs = $common + @('--disable-dotenv','--config',$quotedProject,
                              'up','--keep-project','--tui=false')
     $startParams = @{
         FilePath=$Binary
@@ -107,6 +141,20 @@ try {
         }
         Write-Host "[DIAGNOSTIC] Parent marker: $(Test-Path $parentPidFile); child marker: $(Test-Path $childPidFile)"
         throw 'Nested test process never became ready.'
+    }
+    # Readiness must be executed through the specified pwsh shell.
+    $probed = $false
+    for ($i=0; $i -lt 60; $i++) {
+        if (Test-Path -LiteralPath $probeMarker -PathType Leaf) {
+            $probed = $true; break
+        }
+        Start-Sleep -Milliseconds 150
+    }
+    if (-not $probed) { throw 'The plain PowerShell health probe never executed.' }
+    $unexpectedCmd = @(Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" |
+        Where-Object { $_.ParentProcessId -eq $supervisor.Id })
+    if ($unexpectedCmd.Count -gt 0) {
+        throw 'Process Compose spawned cmd.exe despite native entrypoint/pwsh shell.'
     }
     $parentPid=[int](Get-Content -LiteralPath $parentPidFile -Raw)
     $childPid=[int](Get-Content -LiteralPath $childPidFile -Raw)

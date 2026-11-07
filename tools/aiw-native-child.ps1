@@ -37,6 +37,16 @@ try {
     if (-not [IO.File]::Exists($exe) -or -not [IO.Directory]::Exists($cwd)) {
         throw 'Configured executable or working directory is unavailable.'
     }
+    if ($Service -eq 'strata') {
+        $guard = Join-Path $PSScriptRoot 'aiw-native-integrity.ps1'
+        if (-not (Test-Path -LiteralPath $guard -PathType Leaf)) {
+            throw 'Required Strata integrity verifier is missing.'
+        }
+        & $guard -Config $Config -Service strata
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Strata launch is not locally approved; native process was not created.'
+        }
+    }
     foreach ($item in $svc.environment.GetEnumerator()) {
         [Environment]::SetEnvironmentVariable([string]$item.Key, [string]$item.Value, 'Process')
     }

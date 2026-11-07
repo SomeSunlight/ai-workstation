@@ -1111,7 +1111,8 @@ def run(argv: list[str] | None = None) -> None:
     for k in ("start", "stop", "restart"):
         sub.add_parser(k).add_argument("name")
     host = sub.add_parser("host", help="Prepare native Windows Caddy/Dispatcher/Strata project")
-    host.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight", "quiet-probes"))
+    host.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight", "quiet-probes",
+                                         "integrity-review", "integrity-approve"))
     host.add_argument("--service", choices=("strata", "dispatcher", "caddy", "open-webui"))
     host.add_argument("--apply", action="store_true")
     pilot = sub.add_parser("pilot", help="Opt in to a pinned, independently qualified Windows test supervisor")

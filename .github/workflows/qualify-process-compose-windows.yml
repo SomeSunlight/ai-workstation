@@ -3,9 +3,7 @@
 name: Qualify patched Process Compose (Windows)
 
 on:
-  push:
-    branches:
-      - feature/41-gateway-client-cutover-runbook
+  pull_request:
     paths:
       - .github/workflows/qualify-process-compose-windows.yml
       - tests/windows/process-compose-child-tree.ps1
