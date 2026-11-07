@@ -1,5 +1,21 @@
 # AI Workstation Plan
 
+## Active review — Issue #53: offline Strata integrity and shell-free native startup (2026-11-07)
+
+**Review base:** current accepted `main` after squash-merging the native S03 and Goose dual-role work. Rebuild existing [Draft PR #54](https://github.com/SomeSunlight/ai-workstation/pull/54) from `main`; discard its obsolete stacked commit ancestry. No live Speedy change or merge is authorized by this review.
+
+- [x] Reconfirm accepted baseline and exact parent process of Kaspersky-associated `cmd /C pwsh -EncodedCommand` activity: live CIM showed `process-compose-pilot.exe` as the parent.
+- [ ] Preserve original #53 offline, private, explicit hash approval/rollback gate, only for enabled native Strata.
+- [ ] Replace encoded/indirect native start with Process Compose argv `entrypoint`; run native readiness probes under a defined PowerShell shell with plain, safely quoted commands.
+- [ ] Add isolated Windows tests: shell-free service start + recurring probe with paths containing spaces/apostrophes; preserve DPAPI/no plaintext credentials and deterministic child-tree stop.
+- [ ] Document exact operator stop, review/approve, apply, restart, observe-Kaspersky and rollback path; do not mutate existing client keys, role aliases or metrics databases.
+- [ ] Review relevant Windows + Ubuntu CI and any nonsecret limitations; obtain explicit owner acceptance before merging.
+
+The normal runtime performs no installation/download or automatic trust approval. The initial Strata Python command is known from the operator's private configuration, but only the operator can confirm the live, code-bearing file inventory before explicit approval. This work does not claim the Kaspersky heuristic is a proven false positive or remove the independent Process Compose pilot-production hold.
+
+---
+
+
 ## Integration checkpoint — live S03 dual roles and native host (2026-11-07)
 
 **Review scope:** [AIW PR #45](https://github.com/SomeSunlight/ai-workstation/pull/45) and [Dispatcher PR #30](https://github.com/SomeSunlight/Llama_Dispatcher/pull/30) together provide an operator-tested *first operational slice*. Owner proposes squash-merging both into `main` to establish a stable baseline, while leaving remaining issue requirements open. The documented current reviews are not an instruction to merge them automatically.
