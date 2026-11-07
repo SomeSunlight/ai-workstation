@@ -562,6 +562,23 @@ def main() -> None:
         if os.name != "nt":
             raise ConfigurationError("Native Windows quiet health only.")
         quiet_probes(folder, apply=args.apply)
+    elif args.action in ("integrity-review", "integrity-approve"):
+        if os.name != "nt":
+            raise ConfigurationError("Strata launch approval is Windows-only.")
+        verifier = Path(__file__).with_name("aiw-native-integrity.ps1")
+        if not verifier.is_file():
+            raise ConfigurationError("Strata launch integrity helper is missing.")
+        mode = "-Review" if args.action == "integrity-review" else "-Approve"
+        try:
+            result = subprocess.run(
+                ["pwsh", "-NoProfile", "-NonInteractive", "-File", str(verifier),
+                 "-Config", str(config_path), "-Service", "strata", mode],
+                check=False, timeout=60,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            raise ConfigurationError("Strata launch approval helper is unavailable.") from None
+        if result.returncode:
+            raise ConfigurationError("Strata " + args.action + " failed; no service started.")
     else:
         preflight(folder, args.service)
 
