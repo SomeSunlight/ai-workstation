@@ -64,8 +64,8 @@ try {
     # Shell-free process argv and plainly quoted PowerShell health probes.
     # The temporary host location has both spaces and an apostrophe.
     $nativeChecks = [ordered]@{
-        'pwsh shell' = ($yaml -match '(?m)^  shell_command: pwsh$')
-        'PowerShell -Command argument' = ($yaml -match '(?m)^  shell_argument: -Command$')
+        'pwsh shell' = ($yaml -match '(?m)^  shell_command: pwsh\r?$')
+        'PowerShell -Command argument' = ($yaml -match '(?m)^  shell_argument: -Command\r?$')
         'native entrypoint' = ($yaml -match '(?m)^    entrypoint:')
         'no encoded PowerShell' = ($yaml -notmatch 'EncodedCommand')
         'no cmd.exe' = ($yaml -notmatch 'cmd[.]exe')
