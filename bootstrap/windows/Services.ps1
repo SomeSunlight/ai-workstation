@@ -380,7 +380,7 @@ function Keys-Menu {
         try {
             switch ($choice) {
                 '1' {
-                    Write-Host 'Choose an ID identifying ONE application, e.g. goose-wsl or webui-host.'
+                    Write-Host 'Choose an application ID, e.g. node-a-wsl-goose or node-b-win-webui.'
                     $name = (Read-Host 'New application ID (Enter cancels)').Trim()
                     if ($name -match '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$') {
                         Invoke-Aiw @('client','add',$name,'--policy','passthrough')
