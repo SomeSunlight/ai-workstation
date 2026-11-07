@@ -5,11 +5,12 @@
 **Review base:** current accepted `main` after squash-merging the native S03 and Goose dual-role work. Rebuild existing [Draft PR #54](https://github.com/SomeSunlight/ai-workstation/pull/54) from `main`; discard its obsolete stacked commit ancestry. No live Speedy change or merge is authorized by this review.
 
 - [x] Reconfirm accepted baseline and exact parent process of Kaspersky-associated `cmd /C pwsh -EncodedCommand` activity: live CIM showed `process-compose-pilot.exe` as the parent.
-- [x] Preserve the original #53 private hash approval/rollback gate for enabled native Strata, with CLI and explicit stopped-host menu operations (review candidate; CI pending).
-- [x] Replace encoded/indirect service start with Process Compose argv `entrypoint`, and configure plain PowerShell readiness probes (code implemented; CI/real-host acceptance still pending).
-- [ ] Add isolated Windows tests: shell-free service start + recurring probe with paths containing spaces/apostrophes; preserve DPAPI/no plaintext credentials and deterministic child-tree stop.
-- [ ] Document exact operator stop, review/approve, apply, restart, observe-Kaspersky and rollback path; do not mutate existing client keys, role aliases or metrics databases.
-- [ ] Review relevant Windows + Ubuntu CI and any nonsecret limitations; obtain explicit owner acceptance before merging.
+- [x] Preserve the original #53 private hash approval/rollback gate for enabled native Strata, with stopped-host Review/Approve menu actions; synthetic Windows verification completed.
+- [x] Replace encoded/indirect service start with Process Compose argv `entrypoint`, and configure plain PowerShell readiness probes (Windows CI and isolated Process Compose qualification successful; live-host test pending).
+- [x] Add synthetic Windows tests for approved direct execution, tampering, offline reapproval/rollback, shell-free service start and recurring probe under spaces/apostrophes, and deterministic Process Compose child-tree stop.
+- [x] Document the exact stopped-host operator flow, plain PowerShell probe caveat, explicit approval and rollback; existing keys, role aliases and metrics databases remain untouched.
+- [x] Review Ubuntu + Windows Validate on code head `969c0ad` ([run #42399442762](https://github.com/SomeSunlight/ai-workstation/actions/runs/42399442762)) and real patched-Windows-supervisor qualification on code head `9494879` ([run #42399688070](https://github.com/SomeSunlight/ai-workstation/actions/runs/42399688070)); all successful. A PLAN-only documentation checkpoint follows these tested code commits.
+- [ ] Obtain explicit owner acceptance after a controlled Speedy dry-run/start/Goose/stop/Kaspersky observation before any merge.
 
 The normal runtime performs no installation/download or automatic trust approval. The initial Strata Python command is known from the operator's private configuration, but only the operator can confirm the live, code-bearing file inventory before explicit approval. This work does not claim the Kaspersky heuristic is a proven false positive or remove the independent Process Compose pilot-production hold.
 
