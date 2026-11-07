@@ -1076,7 +1076,16 @@ def native(folder: Path, action: str, process: str | None) -> None:
     if action == "up":
         print("Starting ONLY configured native processes under Process Compose.")
         print("Management: 127.0.0.1:", port, "| config:", project)
-    result = subprocess.run(cmd, check=False, env=env)
+    try:
+        result = subprocess.run(
+            cmd, check=False, env=env,
+            timeout=240 if os.name == "nt" and action == "down" else None,
+        )
+    except subprocess.TimeoutExpired:
+        raise ConfigError(
+            "Native Process Compose shutdown timed out. Ownership record retained; "
+            "do not launch a duplicate supervisor."
+        ) from None
     if result.returncode:
         raise ConfigError("Native Process Compose " + action + " failed (exit " +
                           str(result.returncode) + ").")
