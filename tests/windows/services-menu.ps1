@@ -87,26 +87,3 @@ finally {
     Remove-Item Env:AIW_SERVICES_DIR -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $testFolder -Recurse -Force -ErrorAction SilentlyContinue
 }
-) {
-        throw 'Workbench did not rename client and render a correct one-way token hash.'
-    }
-    $original = Get-Clipboard -Raw
-    if (-not $original) { throw 'Workbench did not copy original client key to clipboard.' }
-    $digest = [Convert]::ToHexString(
-        [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($original))
-    ).ToLowerInvariant()
-    if ($cfg.clients[0].token_sha256 -cne $digest) {
-        throw 'Original clipboard key does not match the rendered client digest.'
-    }
-    if (Test-Path -LiteralPath (Join-Path $testFolder 'runtime/process-compose-windows.json')) {
-        throw 'Merely visiting setup/access menus started a supervisor unexpectedly.'
-    }
-    Write-Host '[PASS] Windows workbench setup, keys, clipboard, nested navigation and concise menu behavior.'
-}
-finally {
-    Set-Clipboard -Value '' -ErrorAction SilentlyContinue
-    Remove-Variable aiwMenuAnswers -Scope Global -ErrorAction SilentlyContinue
-    Remove-Variable aiwMenuIndex -Scope Global -ErrorAction SilentlyContinue
-    Remove-Item Env:AIW_SERVICES_DIR -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath $testFolder -Recurse -Force -ErrorAction SilentlyContinue
-}
