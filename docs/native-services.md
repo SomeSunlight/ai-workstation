@@ -88,8 +88,28 @@ a password manager does not let you recover client secrets.
    key** retrieved from your password manager.
 
 In the Windows **Manage application access keys** section, **Rename an application identity** renames an identity after **numbered selection**
-and preserves the encrypted original key; regenerate `clients.json` through **Prepare the Dispatcher key-verification file** afterwards. For Linux/WSL, the corresponding CLI is
-`aiw services client rename OLD NEW`.
+and preserves the encrypted original key. A useful, optional client-name convention is
+`<host>-<runtime>-<application>` (e.g. `laptop-wsl-webui`, `speedy-win-webui`).
+Host labels are chosen by the operator; AIW does not assume a particular machine layout.
+
+**Change model parameter policy for an existing application** lets you choose an
+existing identity and set `default`, `enforce` or `passthrough` **without changing its API key**:
+- `passthrough`: only alias/model remapping; no alias parameter injection.
+- `default`: alias parameter defaults apply unless the application supplies its own value.
+- `enforce`: alias policy parameters override matching application-supplied values.
+
+**List applications** displays both each client's policy and its key-provenance
+metadata. `key origin not recorded` only means the historical configuration
+lacks provenance; it does **not** mean the credential is expired or unused.
+Use authenticated request metrics to establish actual client usage before any
+cleanup. For non-Windows or scripts, use `aiw services client set-policy ID --policy default`
+and `aiw services client rename OLD NEW`.
+
+After **all** rename/policy edits, choose **Prepare the Dispatcher key-verification file**
+**once** to regenerate the local hash-only `clients.json`. The running Dispatcher
+does **not** reload it automatically: explicitly restart **only Dispatcher**
+when appropriate, and verify the effective policy/client identity in request
+metrics. No key rotation or model restart is required.
 
 ### Existing/shared credentials: why are they listed?
 
@@ -100,7 +120,7 @@ individual key, and it should **not** be distributed to additional apps.
 The **List applications** view distinguishes imported shared keys from fresh client keys.
 
 Earlier registrations made before this distinction was introduced
-show **`older key / origin unknown`** rather than being guessed.
+show **`key origin not recorded (may be active)`** rather than being guessed.
 The **Copy an application API key** operation warns before copying such a key: confirm it is truly an
 individual client credential. Newly imported keys are not offered for
 transfer; create new independent clients via **Create a separate API key** instead.
