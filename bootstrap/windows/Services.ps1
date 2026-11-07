@@ -53,7 +53,7 @@ function Get-ClientRegistry {
     return ConvertFrom-Json -InputObject $raw -Depth 5
 }
 
-function Select-Client([string]$Purpose, [bool]$ForCopy = $false) {
+function Select-Client([string]$Purpose, [bool]$ForCopy = $false, [bool]$ReturnEntry = $false) {
     $list = @((Get-ClientRegistry).clients)
     if ($list.Count -eq 0) {
         Write-Host 'No registered applications yet. Choose Create a new application key.'
@@ -84,6 +84,7 @@ function Select-Client([string]$Purpose, [bool]$ForCopy = $false) {
     if ($ForCopy -and $entry.origin -ne 'generated') {
         if (-not (Confirm-Aiw 'Confirm this credential is not shared by other applications?')) { return $null }
     }
+    if ($ReturnEntry) { return $entry }
     return [string]$entry.id
 }
 
@@ -349,7 +350,7 @@ function Change-ClientPolicy {
     Write-Host 'default: apply role defaults; client-requested values take priority.'
     Write-Host 'enforce: role policy takes priority over client-requested values.'
     Write-Host 'passthrough: forward client parameters; do not inject role defaults.'
-    $entry = Select-Client 'change the request policy for'
+    $entry = Select-Client 'change the request policy for' $false $true
     if (-not $entry) { return }
     $old = [string]$entry.policy
     $new = (Read-Host 'New policy [default/enforce/passthrough] (Enter cancels)').Trim().ToLowerInvariant()
