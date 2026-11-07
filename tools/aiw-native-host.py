@@ -337,7 +337,7 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
         processes[name] = p
     source_digest = hashlib.sha256(native_config_path(folder).read_bytes()).hexdigest()
     body = MARKER + "\n# aiw-config-sha256: " + source_digest + "\n" + yaml.safe_dump(
-        {"version": "0.5", "processes": processes}, sort_keys=False
+        {"version": "0.5", "ordered_shutdown": True, "processes": processes}, sort_keys=False
     )
     # Same-directory temp + atomic replacement, never clobber a custom project.
     import tempfile
