@@ -19,8 +19,9 @@ $global:aiwMenuAnswers = @(
     '3', '1', 'y',         # Copy original key for selected client to clipboard
     '4', 'y',              # Prepare hash-only registry
     '6', '1', 'goose-core',# Rename the same key (keep ciphertext)
-    '2',                  # Verify renamed
-    '4', 'y',              # Re-render hash-only registry after rename
+    '8', '1', 'default', 'y', # Set existing client's role-default policy
+    '2',                  # Verify renamed and newly selected policy
+    '4', 'y',              # Re-render hash-only registry after rename/policy edit
     '0',                  # Back
     '4', '1', '2', '0',    # Help: services, identity explanations; back
     '?', 'q'              # Redisplay root once, then quit
@@ -48,6 +49,7 @@ try {
     foreach ($needle in @(
         'First-time setup', 'View service configuration summary', 'Edit service startup settings',
         'Start all enabled services', 'Open the live status', 'Copy an application API key',
+        'Change model parameter policy', 'Updated client policy:',
         'Strata: local model inference', 'Dispatcher digest registry'
     )) {
         if ($menuOutput -notmatch [regex]::Escape($needle)) {
@@ -61,7 +63,31 @@ try {
     }
     $cfg = Get-Content -LiteralPath $registryFile -Raw | ConvertFrom-Json
     if ($cfg.clients.Count -ne 1 -or $cfg.clients[0].id -cne 'goose-core' -or
-        $cfg.clients[0].token_sha256 -cnotmatch '^[0-9a-f]{64}$') {
+        $cfg.clients[0].policy -cne 'default' -or
+        $cfg.clients[0].token_sha256 -cnotmatch '^[0-9a-f]{64}
+        throw 'Workbench did not rename client and render a correct one-way token hash.'
+    }
+    $original = Get-Clipboard -Raw
+    if (-not $original) { throw 'Workbench did not copy original client key to clipboard.' }
+    $digest = [Convert]::ToHexString(
+        [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($original))
+    ).ToLowerInvariant()
+    if ($cfg.clients[0].token_sha256 -cne $digest) {
+        throw 'Original clipboard key does not match the rendered client digest.'
+    }
+    if (Test-Path -LiteralPath (Join-Path $testFolder 'runtime/process-compose-windows.json')) {
+        throw 'Merely visiting setup/access menus started a supervisor unexpectedly.'
+    }
+    Write-Host '[PASS] Windows workbench setup, keys, clipboard, nested navigation and concise menu behavior.'
+}
+finally {
+    Set-Clipboard -Value '' -ErrorAction SilentlyContinue
+    Remove-Variable aiwMenuAnswers -Scope Global -ErrorAction SilentlyContinue
+    Remove-Variable aiwMenuIndex -Scope Global -ErrorAction SilentlyContinue
+    Remove-Item Env:AIW_SERVICES_DIR -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $testFolder -Recurse -Force -ErrorAction SilentlyContinue
+}
+) {
         throw 'Workbench did not rename client and render a correct one-way token hash.'
     }
     $original = Get-Clipboard -Raw
