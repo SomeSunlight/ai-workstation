@@ -12,7 +12,7 @@
 - [x] Review Ubuntu + Windows Validate on code head `969c0ad` ([run #42399442762](https://github.com/SomeSunlight/ai-workstation/actions/runs/42399442762)) and real patched-Windows-supervisor qualification on code head `9494879` ([run #42399688070](https://github.com/SomeSunlight/ai-workstation/actions/runs/42399688070)); all successful. A PLAN-only documentation checkpoint follows these tested code commits.
 - [ ] Obtain explicit owner acceptance after a controlled Speedy dry-run/start/Goose/stop/Kaspersky observation before any merge.
 
-The normal runtime performs no installation/download or automatic trust approval. The initial Strata Python command is known from the operator's private configuration, but only the operator can confirm the live, code-bearing file inventory before explicit approval. This work does not claim the Kaspersky heuristic is a proven false positive or remove the independent Process Compose pilot-production hold.
+The native Strata launch and approval gate perform no installation/download or automatic trust approval. Independent dependency bootstrapping by other services is outside this Strata-specific review. The initial Strata Python command is known from the operator's private configuration, but only the operator can confirm the live, code-bearing file inventory before explicit approval. This work does not claim the Kaspersky heuristic is a proven false positive or remove the independent Process Compose pilot-production hold.
 
 ---
 

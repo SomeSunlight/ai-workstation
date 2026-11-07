@@ -475,9 +475,12 @@ under issue #41.
 ## Review-only #53: locally approved Strata and direct Process Compose launch
 
 **Existing working installations are not migrated by a repository update.**
-AIW renders the private Process Compose project only while stopped. No download,
-installation, hash reapproval or service restart occurs merely by reading this
-document, performing Check or running a normal managed service start.
+AIW renders the private Process Compose project only while stopped.
+The Strata launch and integrity verifier never download, install or approve
+code as a side effect of the normal start. Other independently managed
+services or AIW's existing uv dependency bootstrap may still need a
+pre-provisioned environment for a **fully offline whole-stack restart**;
+that broader requirement is not silently claimed by this #53 gate.
 
 ### Why the launcher changes
 
@@ -552,7 +555,7 @@ array and each declared launch-chain code file. A missing manifest,
 changed file or path, shell/batch/package-manager wrapper or unapproved
 arguments **blocks Strata before process creation**. The other three
 services and existing S02 client registry/metrics are not modified.
-No automatic installation, downloads or approval is performed on `up`.
+This Strata verifier never downloads, installs or auto-approves code on `up`.
 
 For an explicit Strata update, stop services, stage verified new code
 outside the normal launcher, review it, approve the new local hashes,
