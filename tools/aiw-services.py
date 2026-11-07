@@ -734,7 +734,8 @@ def port_accepts_connections(port: int) -> bool:
 
 
 def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
-                              status_command: list[str], port: int, env: dict) -> None:
+                              status_command: list[str], port: int, env: dict,
+                              service_ports: list[int] | None = None) -> None:
     """Start Windows Process Compose headless with an independent lifetime.
 
     Upstream v1.124.0 does NOT support --detached on Windows. Python is
@@ -782,7 +783,8 @@ def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
             "captured. See the private runtime/process-compose-stdout.log."
         )
     private_write(state, (json.dumps({"identity": identity,
-                                      "port": port}) + "\n").encode("utf-8"),
+                                      "port": port,
+                                      "service_ports": service_ports or []}) + "\n").encode("utf-8"),
                   replace=False)
     for _ in range(30):
         if proc.poll() is not None:
@@ -808,14 +810,149 @@ def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
     )
 
 
-def windows_supervisor_stopped(folder: Path, pid: int) -> bool:
-    state = windows_supervisor_state_path(folder)
-    for _ in range(30):
-        if windows_process_identity(pid) is None:
-            state.unlink(missing_ok=True)
-            return True
-        time.sleep(0.2)
-    return False
+def windows_native_service_ports(folder: Path) -> list[int]:
+    """Read declared native service ports; a smoke-only project has no host JSON."""
+    path = folder / "native-host.json"
+    if not path.exists():
+        return []
+    if not path.is_file() or path.is_symlink():
+        raise ConfigError("Invalid native host configuration for shutdown verification.")
+    try:
+        services = json.loads(path.read_text(encoding="utf-8"))["services"]
+        if not isinstance(services, dict) or not services:
+            raise ValueError("No native services")
+        ports = []
+        for service in services.values():
+            if not isinstance(service, dict) or type(service.get("enabled")) is not bool:
+                raise ValueError("Invalid native service configuration")
+            if not service["enabled"]:
+                continue
+            listed = service["listen_ports"]
+            if not isinstance(listed, list) or not listed:
+                raise ValueError("Missing service ports")
+            ports.extend(listed)
+        if (any(type(p) is not int or not 1 <= p <= 65535 for p in ports)
+                or len(ports) != len(set(ports))):
+            raise ValueError("Invalid service port")
+        return sorted(ports)
+    except (OSError, ValueError, KeyError, TypeError):
+        raise ConfigError("Cannot read native service ports for shutdown verification.") from None
+
+
+def windows_shutdown_ports(folder: Path, identity: dict) -> list[int]:
+    """Prefer the startup snapshot, but support existing Windows ownership records."""
+    path = windows_supervisor_state_path(folder)
+    if not path.is_file() or path.is_symlink():
+        raise ConfigError("Missing or linked supervisor ownership record.")
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if record.get("identity") != identity:
+            raise ValueError("Ownership changed")
+        management = record["port"]
+        if type(management) is not int or not 1 <= management <= 65535:
+            raise ValueError("Invalid management port")
+        declared = record.get("service_ports")
+        if declared is None:  # Backward compatible with pre-change live supervisors.
+            declared = windows_native_service_ports(folder)
+        if not isinstance(declared, list) or any(
+                type(p) is not int or not 1 <= p <= 65535 for p in declared):
+            raise ValueError("Invalid saved service port list")
+        return sorted(set(declared + [management]))
+    except (OSError, KeyError, ValueError, TypeError):
+        raise ConfigError("Cannot verify Windows supervisor shutdown port inventory.") from None
+
+
+def windows_loopback_listeners(ports: list[int]) -> set[int]:
+    """Cheap repeated check: no subprocess or command shell in the polling loop."""
+    busy = set()
+    for port in ports:
+        if port_accepts_connections(port):
+            busy.add(port)
+            continue
+        try:
+            with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as conn:
+                conn.settimeout(0.25)
+                if conn.connect_ex(("::1", port)) == 0:
+                    busy.add(port)
+        except OSError:  # IPv6 loopback may not be configured.
+            pass
+    return busy
+
+
+def windows_all_listeners(ports: list[int]) -> set[int]:
+    """Final authoritative Windows listener check covers all IPv4/IPv6 bindings."""
+    if not ports:
+        return set()
+    command = (
+        "$ErrorActionPreference='Stop'; "
+        "$wanted=@(" + ",".join(map(str, ports)) + "); "
+        "@(Get-NetTCPConnection -State Listen -ErrorAction Stop | "
+        "Where-Object { $wanted -contains [int]$_.LocalPort } | "
+        "Select-Object -ExpandProperty LocalPort -Unique) -join ','"
+    )
+    try:
+        result = subprocess.run(
+            ["pwsh", "-NoProfile", "-NonInteractive", "-Command", command],
+            capture_output=True, text=True, check=False, timeout=12,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise ConfigError("Cannot inspect all Windows TCP listeners after shutdown.") from None
+    if result.returncode:
+        raise ConfigError("Windows TCP listener verification failed after shutdown.")
+    try:
+        busy = {int(item.strip()) for item in result.stdout.strip().split(",")
+                if item.strip()}
+    except ValueError:
+        raise ConfigError("Unexpected Windows TCP listener verification output.") from None
+    if not busy.issubset(set(ports)):
+        raise ConfigError("Unexpected ports in Windows TCP listener verification.")
+    return busy
+
+
+def windows_wait_for_shutdown(folder: Path, identity: dict, ports: list[int],
+                              timeout_seconds: float = 180) -> None:
+    """Finish Stop only after supervisor exit AND all service listeners close."""
+    path = windows_supervisor_state_path(folder)
+    deadline = time.monotonic() + timeout_seconds
+    next_report = time.monotonic() + 5
+    print("Waiting for native services and supervisor to stop...", flush=True)
+    while True:
+        alive = windows_process_identity(identity["pid"]) == identity
+        busy = windows_loopback_listeners(ports)
+        if not alive and not busy:
+            busy = windows_all_listeners(ports)
+        if not alive and not busy:
+            if not path.is_file() or path.is_symlink():
+                raise ConfigError("Shutdown ownership record missing or linked; inspect manually.")
+            try:
+                record = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                raise ConfigError("Shutdown ownership record is unreadable.") from None
+            if record.get("identity") != identity:
+                raise ConfigError("Shutdown ownership changed; refusing to clear it.")
+            path.unlink()
+            print("[OK] Windows services stopped, all configured TCP ports free; "
+                  "supervisor ownership released.")
+            return
+        now = time.monotonic()
+        if now >= deadline:
+            problems = []
+            if alive:
+                problems.append("supervisor still running")
+            if busy:
+                problems.append("TCP ports still listening: " +
+                                ", ".join(map(str, sorted(busy))))
+            raise ConfigError(
+                "Shutdown incomplete (" + "; ".join(problems) +
+                "). Ownership record retained; do not start a second instance."
+            )
+        if now >= next_report:
+            print("[WAIT] Shutdown in progress: " +
+                  ("supervisor still active; " if alive else "") +
+                  ("busy TCP ports " + ", ".join(map(str, sorted(busy)))
+                   if busy else "waiting for supervisor exit"), flush=True)
+            next_report = now + 5
+        time.sleep(1)
 
 
 def native_host_setup(folder: Path, action: str, process: str | None = None, *, apply: bool = False) -> None:
@@ -923,10 +1060,16 @@ def native(folder: Path, action: str, process: str | None) -> None:
         if action == "up":
             print("Starting ONLY configured native processes under Process Compose.")
             print("Management: 127.0.0.1:", port, "| config:", project)
+            service_ports = (windows_native_service_ports(folder)
+                             if project.read_text(encoding="utf-8").startswith(
+                                 "# AIW native-host project") else [])
             return windows_launch_supervisor(folder, binary, cmd,
-                                             basic + ["process", "list"], port, env)
+                                             basic + ["process", "list"], port, env,
+                                             service_ports)
         if action in {"tui", "start", "stop", "restart", "down"}:
             record = windows_ensure_owned(folder, binary)
+            if action == "down":
+                shutdown_ports = windows_shutdown_ports(folder, record)
         if action in {"status", "logs"} and port_accepts_connections(port):
             # Read-only operations still must not talk to unknown listeners.
             windows_ensure_owned(folder, binary)
@@ -938,12 +1081,8 @@ def native(folder: Path, action: str, process: str | None) -> None:
         raise ConfigError("Native Process Compose " + action + " failed (exit " +
                           str(result.returncode) + ").")
     if action == "down" and os.name == "nt":
-        if not windows_supervisor_stopped(folder, record["pid"]):
-            raise ConfigError(
-                "Shutdown was requested but supervisor has not exited. "
-                "Ownership record retained; inspect before trying again."
-            )
-        print("[OK] Native Windows Process Compose stopped; ownership record removed.")
+        windows_wait_for_shutdown(folder, record, shutdown_ports)
+
     elif action == "check":
         print("[OK] Explicit private Process Compose project validated. Nothing started.")
 
