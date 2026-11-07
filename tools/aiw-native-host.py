@@ -7,7 +7,6 @@ runtime remains the only process owner. All host paths and credentials stay loca
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
 import json
 import os
@@ -89,7 +88,8 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
             "environment", "secret_environment", "readiness"
         } <= set(service) or not set(service) <= {
             "enabled", "executable", "working_directory", "arguments", "required_paths",
-            "listen_ports", "environment", "secret_environment", "readiness"
+            "listen_ports", "environment", "secret_environment", "readiness",
+            "integrity_files"
         }:
             raise ConfigurationError(name + ": invalid service fields.")
         if type(service["enabled"]) is not bool:
@@ -109,6 +109,21 @@ def validate(config: dict, *, verify_paths: bool = True) -> None:
         args = service["arguments"]
         if not isinstance(args, list) or not all(isinstance(x, str) for x in args):
             raise ConfigurationError(name + ": arguments must be an array of strings.")
+        if name == "strata" and service["enabled"]:
+            files = service.get("integrity_files")
+            if (not isinstance(files, list) or not files or
+                    not all(isinstance(path, str) and path for path in files)):
+                raise ConfigurationError(
+                    "strata: list code-bearing launch-chain paths in integrity_files before enabling."
+                )
+            if os.name == "nt":
+                for path in files:
+                    file = Path(path)
+                    if not file.is_absolute() or (verify_paths and
+                            (not file.is_file() or file.is_symlink())):
+                        raise ConfigurationError(
+                            "strata: integrity file must exist as a non-linked absolute file."
+                        )
         required = service.get("required_paths", [])
         if not isinstance(required, list) or not all(isinstance(x, str) and x for x in required):
             raise ConfigurationError(name + ": required_paths must be an array of paths.")
@@ -265,16 +280,19 @@ def validate_only(folder: Path) -> None:
     print("Next: apply edited settings for the next startup, then inspect port collisions.")
 
 
-def encoded_command(script: Path, config_path: Path, name: str) -> str:
-    # Windows PowerShell -EncodedCommand uses UTF-16LE. Only paths and a fixed
-    # service name are encoded; credentials never enter command lines or YAML.
-    def psquote(value: str) -> str:
+def native_entrypoint(script: Path, config_path: Path, name: str) -> list[str]:
+    """Native argv; Process Compose does not launch cmd.exe for this process."""
+    return ["pwsh", "-NoProfile", "-NonInteractive", "-File",
+            str(script), "-Config", str(config_path), "-Service", name]
+
+
+def probe_command(script: Path, config_path: Path, name: str) -> str:
+    """A plain PowerShell command for Process Compose's explicit pwsh shell."""
+    def literal(value: str) -> str:
         return "'" + value.replace("'", "''") + "'"
-    body = ("& " + psquote(str(script)) + " -Config " +
-            psquote(str(config_path)) + " -Service " + psquote(name) +
+    return ("& " + literal(str(script)) + " -Config " +
+            literal(str(config_path)) + " -Service " + literal(name) +
             "; if (-not $?) { exit 1 }")
-    payload = base64.b64encode(body.encode("utf-16le")).decode("ascii")
-    return "pwsh -NoProfile -NonInteractive -EncodedCommand " + payload
 
 
 def render(folder: Path, *, verify_paths: bool = True) -> Path:
@@ -310,10 +328,10 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
                 READINESS_PERIOD_SECONDS - 1) // READINESS_PERIOD_SECONDS
         )
         p = {
-            "command": encoded_command(launcher, native_config_path(folder), name),
+            "entrypoint": native_entrypoint(launcher, native_config_path(folder), name),
             "disabled": not service["enabled"],
             "readiness_probe": {
-                "exec": {"command": encoded_command(prober, native_config_path(folder), name)},
+                "exec": {"command": probe_command(prober, native_config_path(folder), name)},
                 "initial_delay_seconds": READINESS_FIRST_CHECK_SECONDS,
                 "period_seconds": READINESS_PERIOD_SECONDS,
                 "timeout_seconds": 6,
@@ -337,7 +355,9 @@ def render(folder: Path, *, verify_paths: bool = True) -> Path:
         processes[name] = p
     source_digest = hashlib.sha256(native_config_path(folder).read_bytes()).hexdigest()
     body = MARKER + "\n# aiw-config-sha256: " + source_digest + "\n" + yaml.safe_dump(
-        {"version": "0.5", "ordered_shutdown": True, "processes": processes}, sort_keys=False
+        {"version": "0.5", "ordered_shutdown": True, "shell": {
+            "shell_command": "pwsh", "shell_argument": "-Command"
+        }, "processes": processes}, sort_keys=False
     )
     # Same-directory temp + atomic replacement, never clobber a custom project.
     import tempfile
@@ -447,6 +467,26 @@ def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = 
         if (not contents.startswith(MARKER + "\n") or
                 "\n# aiw-config-sha256: " + source_digest + "\n" not in contents[:200]):
             raise ConfigurationError("Private host configuration differs from rendered project; render again while stopped.")
+    # A stopped-host read-only check must reject changed Strata code before
+    # supervisor creation, independently of the second gate in the child.
+    if (process in (None, "strata") and config["services"]["strata"]["enabled"]
+            and os.name == "nt" and verify_paths):
+        verifier = Path(__file__).with_name("aiw-native-integrity.ps1")
+        if not verifier.is_file():
+            raise ConfigurationError("Strata integrity verifier is missing.")
+        try:
+            check = subprocess.run(
+                ["pwsh", "-NoProfile", "-NonInteractive", "-File", str(verifier),
+                 "-Config", str(native_config_path(folder)), "-Service", "strata"],
+                check=False, capture_output=True, text=True, timeout=60,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            raise ConfigurationError("Strata integrity verification is unavailable.") from None
+        if check.returncode:
+            raise ConfigurationError(
+                "Strata is not locally approved; inspect file hashes and explicitly "
+                "approve the stopped host before starting."
+            )
     names = [process] if process else list(config["services"])
     for name in names:
         if name not in config["services"]:
