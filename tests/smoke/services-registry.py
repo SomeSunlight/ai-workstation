@@ -139,6 +139,59 @@ class TestNativeServices(unittest.TestCase):
                          {"policy": "enforce"})
         self.assertEqual(module.read_secret(self.folder, "laptop-wsl-webui"), token)
 
+    def test_windows_shutdown_waits_for_process_and_ports_before_success(self):
+        state = module.windows_supervisor_state_path(self.folder)
+        state.parent.mkdir(parents=True, exist_ok=True)
+        ident = {"pid": 1234, "exe": "synthetic.exe", "created": "test"}
+        state.write_text(json.dumps({"identity": ident, "port": 19011,
+                                     "service_ports": [8080, 8001]}))
+        ports = module.windows_shutdown_ports(self.folder, ident)
+        self.assertEqual(ports, [8001, 8080, 19011])
+        with (mock.patch.object(module, "windows_process_identity",
+                                side_effect=[ident, None, None]) as process,
+              mock.patch.object(module, "windows_loopback_listeners",
+                                side_effect=[{8080}, {8080}, set()]) as loopback,
+              mock.patch.object(module, "windows_all_listeners",
+                                return_value=set()) as all_bindings,
+              mock.patch.object(module.time, "sleep")):
+            module.windows_wait_for_shutdown(self.folder, ident, ports, timeout_seconds=20)
+        self.assertEqual(process.call_count, 3)
+        self.assertEqual(loopback.call_count, 3)
+        all_bindings.assert_called_once_with(ports)
+        self.assertFalse(state.exists())
+
+    def test_windows_shutdown_incomplete_retains_ownership_and_blocks_success(self):
+        state = module.windows_supervisor_state_path(self.folder)
+        state.parent.mkdir(parents=True, exist_ok=True)
+        ident = {"pid": 777, "exe": "synthetic.exe", "created": "test"}
+        state.write_text(json.dumps({"identity": ident, "port": 19011,
+                                     "service_ports": [8080]}))
+        ports = module.windows_shutdown_ports(self.folder, ident)
+        with (mock.patch.object(module, "windows_process_identity", return_value=None),
+              mock.patch.object(module, "windows_loopback_listeners", return_value={8080}),
+              mock.patch.object(module.time, "monotonic", side_effect=[10, 10, 11]),
+              mock.patch.object(module.time, "sleep")):
+            with self.assertRaisesRegex(module.ConfigError, "Shutdown incomplete"):
+                module.windows_wait_for_shutdown(self.folder, ident, ports,
+                                                 timeout_seconds=0)
+        self.assertTrue(state.exists())
+
+    def test_windows_shutdown_legacy_ownership_record_uses_native_config(self):
+        state = module.windows_supervisor_state_path(self.folder)
+        state.parent.mkdir(parents=True, exist_ok=True)
+        ident = {"pid": 1234, "exe": "synthetic.exe", "created": "test"}
+        state.write_text(json.dumps({"identity": ident, "port": 19011}))
+        host = self.folder / "native-host.json"
+        host.write_text(json.dumps({"services": {
+            "strata": {"enabled": True, "listen_ports": [8080]},
+            "dispatcher": {"enabled": True, "listen_ports": [8001]},
+            "caddy": {"enabled": False, "listen_ports": [443]},
+        }}))
+        self.assertEqual(module.windows_shutdown_ports(self.folder, ident),
+                         [8001, 8080, 19011])
+        with self.assertRaises(module.ConfigError):
+            module.windows_shutdown_ports(self.folder, {"pid": 999})
+
     def test_imported_origin_in_render_does_not_leak_metadata(self):
         module.client_add(self.folder, "existing-service", "passthrough")
         config = module.read_settings(self.folder)
