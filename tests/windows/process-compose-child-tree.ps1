@@ -106,7 +106,11 @@ exit 1
     $yaml = $yamlLines -join [Environment]::NewLine
     [IO.File]::WriteAllText($project,$yaml)
     $common = @('--address','127.0.0.1','--port',[string]$managementPort)
-    $startArgs = $common + @('--disable-dotenv','--config',$project,
+    # Start-Process flattens ArgumentList into a Windows command-line string.
+    # Quote this single config-path argument explicitly, including spaces and
+    # apostrophes. PowerShell's native call operator below remains unchanged.
+    $quotedProject = '"' + $project.Replace('"', '\\"') + '"'
+    $startArgs = $common + @('--disable-dotenv','--config',$quotedProject,
                              'up','--keep-project','--tui=false')
     $startParams = @{
         FilePath=$Binary
