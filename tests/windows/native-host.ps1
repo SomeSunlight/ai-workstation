@@ -43,7 +43,7 @@ try {
     & (Join-Path $root 'bootstrap/windows/Services.ps1') host preflight
     $project = Join-Path $temp 'process-compose.yaml'
     $yaml = Get-Content -LiteralPath $project -Raw
-    if ($yaml -notmatch '(?m)^ordered_shutdown: true\\s*$') {
+    if ($yaml -notmatch '(?m)^ordered_shutdown: true\s*$') {
         throw 'Native host must stop dependents first and Strata last before supervisor exit.'
     }
     # Regression: a cold native Strata model load can last 1-2 minutes,
