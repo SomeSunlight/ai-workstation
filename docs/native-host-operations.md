@@ -121,7 +121,11 @@ interactive interface.
      must be a real file, not an unqualified name such as `run-model.bat`.
 
      - **`.exe`:** executable directly (for example `C:\Apps\caddy\caddy.exe`).
-     - **`.bat` / `.cmd`:** launch through `C:\Windows\System32\cmd.exe`,
+     - **`.bat` / `.cmd`:** legacy transitional wrappers only, not permitted
+       for the hardened Strata launch; inspect and replace Strata's batch
+       with its equivalent already-installed direct Python/native entrypoint.
+       For other legacy services only, scripts may be launched through
+       `C:\Windows\System32\cmd.exe`,
        with `"/d", "/c", "C:\\Apps\\models\\run-model.bat"` in `arguments`.
        `/c` executes the batch file and waits; it allows supervision to
        observe when that process exits. Avoid `/k`, which leaves an
@@ -466,3 +470,96 @@ It does not yet install all four programs on a clean native Windows system,
 remove the general Process Compose security hold, supply private launch
 parameters from Git, or prove actual four-child Speedy startup/shutdown/reboot. Those remain open acceptance criteria
 under issue #41.
+
+
+## Review-only #53: locally approved Strata and direct Process Compose launch
+
+**Existing working installations are not migrated by a repository update.**
+AIW renders the private Process Compose project only while stopped. No download,
+installation, hash reapproval or service restart occurs merely by reading this
+document, performing Check or running a normal managed service start.
+
+### Why the launcher changes
+
+An observed Kaspersky `HEUR:Trojan.Multi.Powecod.b` detection reported a
+`cmd.exe` process. Native Process Compose v1.124.0 defaults to `cmd /C`,
+while the previous AIW renderer produced a UTF-16LE/Base64 PowerShell
+`-EncodedCommand` for every service and recurring health probe. The operator
+confirmed that `process-compose-pilot.exe` was the parent of five such
+`cmd.exe` processes. This explains the suspicious process pattern but does
+**not prove** a false-positive malware verdict. Do not add antivirus
+exceptions or suppress the event.
+
+The revised generated project uses native `entrypoint` **argument arrays**
+for all four service starters: Process Compose launches `pwsh -NoProfile
+-NonInteractive -File aiw-native-child.ps1 ...` directly, without `cmd.exe`.
+For executable health probes, the project explicitly sets
+`shell_command: pwsh`, `shell_argument: -Command` and uses normal
+PowerShell single-quoted literal arguments (including doubled apostrophes).
+Both use only private JSON paths; neither embeds DPAPI secret values in
+command lines. Other AIW entrypoint scripts such as `aiw.cmd` are outside
+this supervisor-level change. **Limitation:** Process Compose's exec-probe
+shell accepts only one shell argument; `pwsh -Command` may load the
+operator's PowerShell profile. Keep that user profile trusted and avoid
+altering it during testing. Verify the profile has no undesirable side
+effects before approving this change on a live host.
+
+### One-time migration or deliberate update (Windows, stopped services)
+
+1. Preserve the currently running, known-good AIW checkout, its private
+   `native-host.json`, and the prior local Strata installation as rollback.
+   In **Run and monitor AI services**, choose **Stop all managed services**.
+   Do not kill unknown processes or start an additional inference engine.
+2. In **Set up or change this computer → Edit service startup settings**,
+   keep `services.strata.executable` as the verified direct installed
+   Python interpreter or native binary; preserve exact `arguments` (one
+   item per parameter) and `working_directory`. Remove the obsolete Strata
+   batch file from `required_paths` only if no longer needed. All other
+   private service fields, credentials and readiness settings remain intact.
+3. Add the mandatory **`services.strata.integrity_files`** list to your
+   *private* `native-host.json`. Include absolute paths to the actual
+   code-bearing start files, such as the Python `serve/server.py` entrypoint,
+   the inspected Strata configuration/launch control and appropriate
+   installed native engine executable. Do **not** list the interpreter
+   twice; it is automatically hashed from `executable`. Do not list large
+   model weight files or private credentials. Confirm these are the
+   actual files used by your installation, not example paths.
+4. Choose **Check the edited settings**. Then choose **Review Strata
+   launch-chain file hashes** (option 13) to inspect the exact paths and
+   SHA-256 values. Confirm the installation provenance and argv digest
+   against the expected known-good version. This action writes nothing.
+5. Choose **Approve reviewed Strata launch** (option 14). Read the
+   displayed hashes again and confirm deliberately. AIW writes the
+   machine-local `strata-launch-approved.json` next to `native-host.json`;
+   it does not overwrite previous approvals without saving a dated
+   `.before-*.bak`. Approval is refused if a supervisor ownership record
+   indicates the host is running.
+6. Choose **Apply edited settings for the next startup** (regenerates
+   `process-compose.yaml`, with an actual syntax/dry-run check), then
+   **Check whether old services still occupy the ports**.
+7. Choose **Run and monitor AI services → Start all enabled services**.
+   Inspect the live monitor and per-service saved logs, then confirm
+   authenticating Goose/Open WebUI and seeing both model aliases through
+   the existing Dispatcher. Inspect `cmd.exe` children of the Process
+   Compose supervisor and Kaspersky's detailed event history; do not
+   declare the alert permanently resolved from one successful start.
+
+### What fails closed; rollback
+
+The native Strata child and AIW preflight independently verify the
+approved direct executable, path, working directory, hashed argument
+array and each declared launch-chain code file. A missing manifest,
+changed file or path, shell/batch/package-manager wrapper or unapproved
+arguments **blocks Strata before process creation**. The other three
+services and existing S02 client registry/metrics are not modified.
+No automatic installation, downloads or approval is performed on `up`.
+
+For an explicit Strata update, stop services, stage verified new code
+outside the normal launcher, review it, approve the new local hashes,
+apply the same private JSON and start only once. For a rollback, restore
+the previous **matching** reviewed files, private host JSON if changed,
+and prior `strata-launch-approved.json.before-*.bak` manifest while
+stopped; reapply the private definition before restarting. This is
+operator-controlled, not automatic recovery. A local hash demonstrates
+consistency with the locally approved bytes, not that those bytes are
+free of malware. Avoid globally whitelisting any antivirus alert.

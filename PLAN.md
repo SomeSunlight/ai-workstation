@@ -5,8 +5,8 @@
 **Review base:** current accepted `main` after squash-merging the native S03 and Goose dual-role work. Rebuild existing [Draft PR #54](https://github.com/SomeSunlight/ai-workstation/pull/54) from `main`; discard its obsolete stacked commit ancestry. No live Speedy change or merge is authorized by this review.
 
 - [x] Reconfirm accepted baseline and exact parent process of Kaspersky-associated `cmd /C pwsh -EncodedCommand` activity: live CIM showed `process-compose-pilot.exe` as the parent.
-- [ ] Preserve original #53 offline, private, explicit hash approval/rollback gate, only for enabled native Strata.
-- [ ] Replace encoded/indirect native start with Process Compose argv `entrypoint`; run native readiness probes under a defined PowerShell shell with plain, safely quoted commands.
+- [x] Preserve the original #53 private hash approval/rollback gate for enabled native Strata, with CLI and explicit stopped-host menu operations (review candidate; CI pending).
+- [x] Replace encoded/indirect service start with Process Compose argv `entrypoint`, and configure plain PowerShell readiness probes (code implemented; CI/real-host acceptance still pending).
 - [ ] Add isolated Windows tests: shell-free service start + recurring probe with paths containing spaces/apostrophes; preserve DPAPI/no plaintext credentials and deterministic child-tree stop.
 - [ ] Document exact operator stop, review/approve, apply, restart, observe-Kaspersky and rollback path; do not mutate existing client keys, role aliases or metrics databases.
 - [ ] Review relevant Windows + Ubuntu CI and any nonsecret limitations; obtain explicit owner acceptance before merging.
