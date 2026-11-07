@@ -335,9 +335,19 @@ the takeover. The isolated Windows CI test supports this pilot but the
    Execute model discovery, a tiny completion and an optional short
    stream in each. Confirm three distinct client IDs in the active
    Dispatcher SQLite audit data.
-7. Choose **Stop all AIW-managed services** and verify each owned
-   child process exits and relinquishes its port. A surviving child
-   blocks rollback and any second launch until ownership is resolved.
+7. Choose **Stop all AIW-managed services**. The generated native project
+   uses `ordered_shutdown: true`, so Process Compose requests stops in
+   reverse dependency order (**Open WebUI → Caddy → Dispatcher → Strata**),
+   then the supervisor itself exits. A separately attached TUI can show the
+   progression while the supervisor is available; it disconnects when the
+   supervisor exits. The normal menu command prints periodic waiting status.
+   Unlike the old six-second PID-only check, AIW now confirms both the
+   supervisor's exit and freedom of **all declared TCP listening ports**
+   (plus its management port), allowing up to three minutes for slow
+   shutdown. Only then does it remove the private ownership record and print
+   `[OK]`. An orphaned Strata/listener, unverifiable port state or timed-out
+   supervisor causes a failure, **retains the ownership record** and blocks
+   another launch until manually investigated. No unknown process is killed.
 8. Reboot Windows, reopen AIW and choose **Start all enabled services**.
    Verify the same individual keys and persistent WebUI data still work.
    Automatic startup at login is not assumed.
