@@ -65,9 +65,9 @@ function Select-Client([string]$Purpose, [bool]$ForCopy = $false) {
         $origin = switch ($list[$i].origin) {
             'generated' { 'individual key' }
             'imported' { 'legacy shared key' }
-            default { 'older registration' }
+            default { 'origin not recorded' }
         }
-        Write-Host (' {0,2}  {1} ({2})' -f ($i+1), $list[$i].id, $origin)
+        Write-Host (' {0,2}  {1} | policy: {2} | {3}' -f ($i+1), $list[$i].id, $list[$i].policy, $origin)
     }
     Write-Host '  0  Cancel'
     $input = (Read-Host 'Application number').Trim()
@@ -149,6 +149,7 @@ function Show-KeysMenu {
     Write-Host '  5  Import an OLD shared gateway key (migration only)'
     Write-Host '  6  Rename an application identity (keep its key)'
     Write-Host '  7  Remove an application from the registry'
+    Write-Host '  8  Change model parameter policy for an existing application'
     Write-Host '  0  Back to main menu          ?  Show these options'
 }
 
@@ -198,7 +199,7 @@ function Start-EnabledServices {
     Write-Host 'If the previous startup script still owns any ports, STOP here and plan a controlled handover.'
     Write-Host 'Only the separately opted-in, exact-checksum Windows pilot may start a real native-host project.'
     if (-not (Confirm-Aiw 'Start all enabled services?')) { return }
-    $openMonitor = Confirm-Aiw 'Open the live status/logs monitor after starting?' $true
+    $openMonitor = Confirm-Aiw 'Open the live TUI monitor (status and embedded logs) after starting?' $true
     Invoke-Aiw @('up')
     Write-Host '[OK] AI Workstation supervisor launched. Inspect individual readiness in the monitor.'
     if ($openMonitor) {
@@ -344,6 +345,30 @@ function Setup-Menu {
     }
 }
 
+function Change-ClientPolicy {
+    Write-Host 'default: apply role defaults; client-requested values take priority.'
+    Write-Host 'enforce: role policy takes priority over client-requested values.'
+    Write-Host 'passthrough: forward client parameters; do not inject role defaults.'
+    $entry = Select-Client 'change the request policy for'
+    if (-not $entry) { return }
+    $old = [string]$entry.policy
+    $new = (Read-Host 'New policy [default/enforce/passthrough] (Enter cancels)').Trim().ToLowerInvariant()
+    if (-not $new) { return }
+    if ($new -notin @('default', 'enforce', 'passthrough')) {
+        Write-Warning 'Invalid policy. Choose default, enforce or passthrough.'
+        return
+    }
+    if ($new -eq $old) {
+        Write-Host "Policy already '$old' for '$($entry.id)'; nothing changed."
+        return
+    }
+    if (Confirm-Aiw "Change '$($entry.id)' policy from '$old' to '$new'?") {
+        Invoke-Aiw @('client', 'set-policy', [string]$entry.id, '--policy', $new)
+        Write-Host 'Next: after editing all clients, choose option [4] to regenerate the Dispatcher registry.'
+        Write-Host 'Then explicitly restart ONLY Dispatcher to activate the new policies.'
+    }
+}
+
 function Keys-Menu {
     Show-KeysMenu
     while ($true) {
@@ -409,6 +434,7 @@ function Keys-Menu {
                         }
                     }
                 }
+                '8' { Change-ClientPolicy }
                 default { Write-Warning 'Unknown operation. Enter ? for the list.' }
             }
         }
