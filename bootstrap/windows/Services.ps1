@@ -266,8 +266,10 @@ function Run-Menu {
                     Invoke-Aiw @('tui')
                 }
                 '5' {
-                    Write-Warning 'This stops all services owned by THIS AI Workstation supervisor.'
-                    if (Confirm-Aiw 'Stop the supervised AI services?') { Invoke-Aiw @('down') }
+                    Write-Warning 'Stops the AIW-owned services in reverse dependency order, then their supervisor.'
+                    Write-Host 'The command waits for the supervisor to exit and for service ports to be free.'
+                    Write-Host 'A slow Strata shutdown can take time. No second instance will be started.'
+                    if (Confirm-Aiw 'Stop all AIW-managed services?') { Invoke-Aiw @('down') }
                 }
                 '6' { Restart-ManagedService }
                 default { Write-Warning 'Unknown operation. Enter ? for the list.' }
