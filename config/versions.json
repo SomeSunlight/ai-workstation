@@ -68,7 +68,17 @@
         "linux_amd64_go_build_verified": "go1.27.0",
         "go_stdlib_html_template_min_patched": "go1.27.2",
         "production_adoption_blocked": true,
-        "reason": "Official v1.124.0 Linux AMD64 binary reports go1.27.0; do not assume template vulnerabilities reachable, but avoid production cutover pending patched toolchain rebuild/security audit."
+        "reason": "Official v1.124.0 Linux AMD64 binary reports go1.27.0; do not assume template vulnerabilities reachable, but avoid production cutover pending patched toolchain rebuild/security audit.",
+        "reviewed_windows_pilot": {
+          "source_repository": "F1bonacc1/process-compose",
+          "source_commit": "f471d83a5dfa4779d589d0a73182b6d6e22736b2",
+          "source_tag": "v1.124.0",
+          "go_version": "go1.27.3",
+          "binary_sha256": "7b966884a41987173ab6d342947376b799ea633492122f624f18f5328475b701",
+          "qualification_run": "https://github.com/SomeSunlight/ai-workstation/actions/runs/41833439667",
+          "artifact_id": "13323299112",
+          "status": "isolated Windows pilot only; not a production release"
+        }
       }
     }
   }

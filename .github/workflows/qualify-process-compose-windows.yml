@@ -1,0 +1,147 @@
+# Isolated pilot qualification, NOT an installable production release.
+# Fixed upstream source commit + patched Go toolchain + Windows child-tree test.
+name: Qualify patched Process Compose (Windows)
+
+on:
+  push:
+    branches:
+      - feature/41-gateway-client-cutover-runbook
+    paths:
+      - .github/workflows/qualify-process-compose-windows.yml
+      - tests/windows/process-compose-child-tree.ps1
+      - tests/windows/tree-fixture-parent.ps1
+      - tests/windows/tree-fixture-child.ps1
+      - tools/aiw-services.py
+      - config/versions.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-windows:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - name: Check out AIW process-tree test code
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            tests/windows
+            tools/aiw-services.py
+            tools/aiw-secret-windows.ps1
+            config/versions.json
+      - name: Check out immutable upstream Process Compose v1.124.0 source
+        uses: actions/checkout@v7
+        with:
+          repository: F1bonacc1/process-compose
+          ref: f471d83a5dfa4779d589d0a73182b6d6e22736b2
+          path: upstream-process-compose
+          persist-credentials: false
+      - name: Set up patched Go toolchain
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.3'
+          check-latest: false
+          cache: false
+      - name: Build pinned source with patched Go (no production install)
+        shell: pwsh
+        env:
+          GOTOOLCHAIN: local
+          CGO_ENABLED: '0'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (& go version) -join ''
+          Write-Host "[SOURCE] process-compose v1.124.0 commit f471d83a5dfa4779d589d0a73182b6d6e22736b2"
+          Write-Host "[BUILD] $version"
+          if ($version -notmatch 'go1\.27\.3') { throw 'Unexpected Go toolchain.' }
+          New-Item -ItemType Directory -Path './review-bin' -Force | Out-Null
+          Push-Location './upstream-process-compose'
+          try {
+            & go build -trimpath -buildvcs=false -ldflags '-X github.com/f1bonacc1/process-compose/src/config.Version=v1.124.0' -o '../review-bin/process-compose.exe' .
+            if ($LASTEXITCODE -ne 0) { throw 'Process Compose source build failed.' }
+          }
+          finally { Pop-Location }
+          $meta = (& go version -m './review-bin/process-compose.exe') -join [Environment]::NewLine
+          Write-Host $meta
+          if ($meta -notmatch 'go1\.27\.3') { throw 'Binary lacks patched toolchain provenance.' }
+          Get-FileHash -LiteralPath './review-bin/process-compose.exe' -Algorithm SHA256 | Format-List
+      - name: Isolated Process Compose parent/child stop test
+        shell: pwsh
+        run: ./tests/windows/process-compose-child-tree.ps1 -Binary "$PWD/review-bin/process-compose.exe"
+      - name: Install pinned Python runner for private pilot import test
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: '0.11.26'
+      - name: Verify exact-hash private pilot install, ownership and uninstall
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:AIW_SERVICES_DIR = Join-Path $env:RUNNER_TEMP ('aiw-pilot-' + [guid]::NewGuid().ToString('N'))
+          $args = @('run','--no-project','--with','PyYAML==6.0.3','python','tools/aiw-services.py')
+          $archive = Join-Path $env:RUNNER_TEMP 'reviewed-pilot.zip'
+          Compress-Archive -LiteralPath './review-bin/process-compose.exe' -DestinationPath $archive
+          & uv @args init
+          if ($LASTEXITCODE -ne 0) { throw 'Pilot services init failed.' }
+          & uv @args pilot install --archive $archive
+          if ($LASTEXITCODE -ne 0) { throw 'Expected reviewed pilot install failed.' }
+          & uv @args pilot status
+          if ($LASTEXITCODE -ne 0) { throw 'Pilot status failed.' }
+          $pilot = Join-Path $env:AIW_SERVICES_DIR 'bin/process-compose-pilot.exe'
+          $hash = (Get-FileHash -LiteralPath $pilot -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -cne '7b966884a41987173ab6d342947376b799ea633492122f624f18f5328475b701') {
+            throw 'Wrong installed pilot binary SHA-256.'
+          }
+          # Provenance tampering must immediately fail closed.
+          Add-Content -LiteralPath $pilot -Value 'corrupted-review-only' -Encoding utf8
+          & uv @args pilot status
+          if ($LASTEXITCODE -eq 0) { throw 'Modified pilot executable was wrongly accepted.' }
+          Copy-Item -LiteralPath './review-bin/process-compose.exe' -Destination $pilot -Force
+          & uv @args pilot status
+          if ($LASTEXITCODE -ne 0) { throw 'Restored reviewed executable was rejected.' }
+
+          # Pilot opt-in MUST NOT permit unreviewed custom Process Compose YAML.
+          $project = Join-Path $env:AIW_SERVICES_DIR 'process-compose.yaml'
+          $originalYaml = Get-Content -LiteralPath $project -Raw
+          Set-Content -LiteralPath $project -Encoding utf8 -Value @(
+            'version: "0.5"'
+            'processes:'
+            '  unreviewed:'
+            '    command: echo unreviewed'
+            '    disabled: false'
+          )
+          & uv @args up
+          if ($LASTEXITCODE -eq 0) { throw 'Reviewed pilot was allowed to run arbitrary native YAML.' }
+          if (Test-Path -LiteralPath (Join-Path $env:AIW_SERVICES_DIR 'runtime/process-compose-windows.json')) {
+            throw 'Forbidden native project produced supervisor ownership record.'
+          }
+          Set-Content -LiteralPath $project -Encoding utf8 -Value $originalYaml
+
+          # Only the isolated, harmless smoke process can be started here.
+
+          (Get-Content -LiteralPath $project -Raw).Replace('disabled: true','disabled: false') |
+            Set-Content -LiteralPath $project -Encoding utf8
+          try {
+            & uv @args up
+            if ($LASTEXITCODE -ne 0) { throw 'Smoke supervisor did not start.' }
+            $record = Get-Content (Join-Path $env:AIW_SERVICES_DIR 'runtime/process-compose-windows.json') -Raw | ConvertFrom-Json
+            if (-not $record.identity.exe.EndsWith('process-compose-pilot.exe')) {
+              throw 'Smoke supervisor did not use the reviewed pilot binary.'
+            }
+          }
+          finally {
+            & uv @args down
+            if ($LASTEXITCODE -ne 0) { throw 'Smoke supervisor did not stop.' }
+          }
+          & uv @args pilot remove
+          if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $pilot)) {
+            throw 'Pilot was not unregistered cleanly after shutdown.'
+          }
+          Write-Host '[PASS] Reviewed Windows supervisor binary hash, user opt-in, owned smoke lifecycle and reversible removal.'
+      - name: Upload review-only binary and provenance (not trusted for host installation)
+        uses: actions/upload-artifact@v4
+        with:
+          name: process-compose-windows-review-go1273
+          path: review-bin/process-compose.exe
+          retention-days: 7
+          if-no-files-found: error

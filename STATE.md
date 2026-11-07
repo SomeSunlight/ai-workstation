@@ -25,18 +25,60 @@ Parent/Child relationships current. The first attempted check with an older
 CLI 0.8.0/internal compiler 0.6.0 falsely reported nine-node drift.
 That incompatible generated candidate was rejected and removed from the
 current review tree; inherited Development Workflow rules are intact.
-A correctly pinned read-only CI gate and this closure are proposed in
-[PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44), not yet
-merged. No production Caddy/Dispatcher/Strata or container service
-was migrated by PR #42.
+The correctly pinned, read-only CI gate and post-merge context closure
+were accepted in [PR #44](https://github.com/SomeSunlight/ai-workstation/pull/44),
+squash-merged into `main` on 2026-11-03 as
+`0a54b6c9393b8f4b06c7deb20b473ad305af81e1`; [issue #40](https://github.com/SomeSunlight/ai-workstation/issues/40)
+is closed. Neither #42 nor #44 migrated live Caddy/Dispatcher/Strata
+or container services.
 
-**Next priority:** issue [#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
-(usable, separately isolated Goose/Hermes Docker Workbench after host
-prerequisite review), then issue
-[#41](https://github.com/SomeSunlight/ai-workstation/issues/41)
-(generic Caddy management and owner-approved per-client authentication
-cutover with the working gateway preserved). The Process Compose
-production hold remains active.
+**Active priority: [issue #41](https://github.com/SomeSunlight/ai-workstation/issues/41).**
+Native Windows host AI Workstation must eventually manage the existing
+Caddy + S02 Dispatcher + native Strata **and existing native-host Open WebUI**
+using one approved Process Compose supervisor and a reversible replacement
+of the private PowerShell starter. Keep the native-host Open WebUI instance and give it its **own**
+S02 application credential; laptop/WSL Goose and Open WebUI keep their
+separate Docker Compose setup and **different** S02 credentials. Protected
+home-network Caddy access and the legacy shared key must remain intact
+until an owner-approved staged cutover. A review-stage operator runbook
+is proposed in [docs/gateway-client-migration.md](docs/gateway-client-migration.md).
+
+**Current #41 draft implementation:** [PR #45](https://github.com/SomeSunlight/ai-workstation/pull/45)
+adds a private Windows host input for Strata/Dispatcher/Caddy plus optional existing native Open WebUI, and a native Process Compose
+renderer, DPAPI-only native child launch and authenticated readiness probes,
+no-double-owner listening-port preflight, and a task-oriented native
+Windows workbench (**Run and monitor**, **Set up**, **Application keys**, **Help**).
+First-time setup and native-host inspection/validation are read-only; the
+workbench can open the machine-local JSON, apply its edited settings via
+automatic Process Compose rendering + dry-run, check occupied ports and
+offer to open the live monitor/logs when starting. The
+[native-host operations guide](docs/native-host-operations.md) includes
+nested, explicit Windows executable/argument rules and safe host tests. The generated
+project has an explicit Strata → Dispatcher → Caddy → optional native Open WebUI healthy-start dependency. Existing WebUI data roots and Strata JSON configurations are verified before enabling a live start.
+Actual program paths, launch arguments, private credentials and host secrets
+must be configured only on the operator's host. CI verified the real pinned
+Windows native Process Compose **configuration dry-run with four processes**,
+Windows collision/drift/security-gate refusals and existing Linux release
+checks. **The production hold remains active**: no live native service has
+been adopted or started, no patched supervisor has been qualified, and
+Speedy real child-tree stop/reboot tests are not yet complete. After those
+gates, the required first real acceptance test must Start/Status/Logs/TUI/Stop
+all four configured native services via AIW alone and restore them by AIW Start after reboot;
+the existing private PowerShell starter is rollback only.
+
+**Current Dispatcher distinction:** the staging S03 attach-to-Strata trial uses a separate invocation from the previously model-loading native Dispatcher ensemble; do not replace the accepted existing instance prematurely. Local owner-specific paths and a corrected private JSON are not in public Git. The revised workbench has Windows runner regression coverage for guided setup, task navigation and original-key-to-digest actions. The separate native Windows `aiw` shell command remains available, with no WSL impact.
+
+**Speedy native first-client success and quiet readiness (2026-11-06):** Owner verified that AI Workstation starts Strata, attached Dispatcher, Caddy and native Open WebUI together, can inspect logs via the TUI, and records individual client IDs for Goose WSL, WSL Open WebUI and native WebUI in `instances/Speedy_S03_Stage/data/metrics.db`; the normal HTTPS gateway behaves correctly for 401/200. Long-running 5-second `/v1/models` probes were identified as our own AIW readiness checks and created misleading request logs. AIW review branch now offers a private `host quiet-probes` dry-run/apply and original JSON backup, uses local Strata/Dispatcher `/health`, a TLS-only Caddy readiness check with genuine certificate validation (no HTTP request), and retains successful real-client and error logs. Dispatcher [PR #30](https://github.com/SomeSunlight/Llama_Dispatcher/pull/30) includes selective Uvicorn healthy-probe suppression. The owner has not yet tested the new quiet-health settings on Speedy; currently running production stack should remain unchanged until a controlled stop/re-render/start. Owner asks to import the older `Speedy_Win` ensemble 3090 and preserve historical measurements. Public user-owned `SomeSunlight/Llama_Dispatcher_Speedy_Win` repo includes four aliases (sparringpartner, agent, context_king, uncensored) with a stable machine GUID. Draft [PR #32](https://github.com/SomeSunlight/Llama_Dispatcher/pull/32) snapshots that instance and the historical SQLite via backup into the reviewed checkout without copying legacy code or touching the active Stage DB; S04/S06 schema-aware combination and S07 engine-independent LaunchPlan still require accepted review.
+
+**Speedy owner live attempt #1 — failure under too-short Strata readiness (2026-11-05):** After importing three separate S02 client keys and preparing native gateway config, the owner started all four native services through AIW and attached to Process Compose. TUI showed `strata: Failed` after roughly 16 seconds of loading vision encoder/model weights (`readiness check fail - exit status 1`), with all remaining `dispatcher/caddy/open-webui: Skipped`. This is a premature readiness-deadline explanation, **not proof of a corrupt model**; an incorrect health URL/status or true Strata failure remains possible if it fails after the longer wait. Four transient console windows also flashed; old code used a `DETACHED_PROCESS` console-less supervisor. On review branch, renderer now allows ~300s cold start for Strata, preserves per-service rotated local logs, and UI offers saved logs even after failure. Supervisor launcher uses a hidden separate Windows console, expected to avoid child console windows; actual Windows Terminal host verification still required. User's three individual keys are saved in KeePass but **not yet configured inside** Goose and both Open WebUI instances; these are to be connected only after Dispatcher/Caddy S02 gateway passes the live auth check. No automatic WebUI database edits are allowed. Controlled next step: owner-confirmed `aiw down` and free-port check, update/re-render/dry-run, then one supervised restart with logs and per-client verification. Updated official host guide is not yet operator-reviewed.
+
+**First live start requires individual S02 keys (2026-11-04):** Owner requested that Goose in WSL, Open WebUI in WSL and native-host Open WebUI all get *different* credentials before exercising the native four-service manager. The existing Caddy single-token matcher and the S03 starter's auto-generated shared-only registry would otherwise reject or misattribute them. The separate [Dispatcher draft PR #30](https://github.com/SomeSunlight/Llama_Dispatcher/pull/30) retains an existing validated digest-only registry when explicitly configured and provides a strict, reversible, **offline-only** Caddy stage which delegates `/v1/*` authorization to S02 while preserving the independent legacy `/strata/v1/*` gate. The [AIW individual-client guide](docs/gateway-client-migration.md) specifies secure Windows DPAPI generation, protected transfer to WSL/Goose and existing WebUI Admin connections, and three distinct SQLite client-id verification. All native services remain operator-controlled and were not started during staging. Follow-up native Workbench UX tuning recorded as issue #46.
+
+**Reviewed Windows supervisor pilot (2026-11-04):** User authorized progressing to the first real Speedy start while retaining reversible process ownership. The official Process Compose v1.124.0 build is still gated; the latest release does not remove the Go 1.27.0 security-build concern. In an isolated Windows CI run [#41833439667](https://github.com/SomeSunlight/ai-workstation/actions/runs/41833439667), pinned upstream source `f471d83a5dfa4779d589d0a73182b6d6e22736b2` compiled with **Go 1.27.3**; its SHA-256 is `7b966884a41987173ab6d342947376b799ea633492122f624f18f5328475b701`, repeated across independent CI builds. A real nested Windows Process Compose → parent PowerShell → child TCP listener test passed full `down` parent/child termination and port release. An **explicit, checksum-pinned pilot installation** was added to the Windows setup UI, separate from the official binary, with private opt-in and fail-closed checks of exact installed bytes. The general production hold remains true; only AIW-generated native-host projects can qualify for this Windows-only pilot. The Windows pilot install/smoke/rejection CI and the first **real-host** lifecycle/reboot test remain separate acceptance gates. The private legacy PowerShell launcher and its configs are untouched; no live service changed during CI.
+
+Additional native-host Goose/Hermes Docker containers [#39](https://github.com/SomeSunlight/ai-workstation/issues/39)
+are deferred: not needed for this deployment. The Process Compose production
+hold is unchanged and still active.
 
 ## Accepted repository baseline
 

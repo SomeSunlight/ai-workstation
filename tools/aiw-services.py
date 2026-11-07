@@ -8,6 +8,7 @@ No service is started during init, validation, or client onboarding.
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import socket
 import time
 import hashlib
@@ -263,6 +264,25 @@ def client_copy(folder: Path, name: str) -> None:
     print("No secret was printed or saved to clients.json.")
 
 
+def client_set_policy(folder: Path, name: str, policy: str) -> None:
+    """Change only a registered client's request policy; never rotate its key."""
+    if not CLIENT_ID.fullmatch(name) or policy not in POLICIES:
+        raise ConfigError("Invalid client ID or policy.")
+    doc = read_settings(folder)
+    if name not in doc["clients"]:
+        raise ConfigError("Unknown registered client ID.")
+    previous = doc["clients"][name]["policy"]
+    if previous == policy:
+        print("Policy already", policy, "for", name, "- no change.")
+        return
+    doc["clients"][name]["policy"] = policy
+    save_settings(folder, doc)
+    print("Updated client policy:", name, "|", previous, "->", policy)
+    print("Original API key and provenance are unchanged.")
+    print("Next: regenerate clients.json with 'client render';")
+    print("then explicitly restart Dispatcher to activate this policy.")
+
+
 def client_rename(folder: Path, old: str, new: str) -> None:
     """Rename logical identity without rotating or revealing the DPAPI secret."""
     if not CLIENT_ID.fullmatch(old) or not CLIENT_ID.fullmatch(new):
@@ -461,7 +481,128 @@ def install_process_compose(folder: Path, archive_path: Path | None = None) -> N
     print("Installed checksum-verified", version, "to", dest)
     print("No host services or startup tasks were changed.")
 
+def reviewed_windows_pilot_pin() -> dict:
+    """Return the centrally reviewed Windows pilot source/build pin."""
+    try:
+        manifest = json.loads(VERSION_FILE.read_text(encoding="utf-8"))
+        cfg = manifest["versions"]["process_compose"]["security"]["reviewed_windows_pilot"]
+        digest = cfg["binary_sha256"]
+        if not re.fullmatch(r"[a-f0-9]{64}", digest):
+            raise ValueError("bad digest")
+        if cfg["go_version"] != "go1.27.3" or cfg["source_commit"] != (
+            "f471d83a5dfa4779d589d0a73182b6d6e22736b2"
+        ):
+            raise ValueError("unreviewed source or Go toolchain")
+        return cfg
+    except (OSError, KeyError, TypeError, ValueError):
+        raise ConfigError("Missing or invalid pinned Windows pilot approval metadata.") from None
+
+
+def pilot_binary(folder: Path) -> Path:
+    return folder / "bin" / "process-compose-pilot.exe"
+
+
+def pilot_marker(folder: Path) -> Path:
+    return folder / "security" / "reviewed-windows-pilot.json"
+
+
+def windows_reviewed_pilot_active(folder: Path) -> bool:
+    """Private opt-in + exact pinned binary hash; unrelated hosts stay blocked."""
+    marker = pilot_marker(folder)
+    if not marker.exists() and not marker.is_symlink():
+        return False
+    if os.name != "nt" or platform.machine().upper().replace("X86_64", "AMD64") != "AMD64":
+        return False
+    if marker.is_symlink() or not marker.is_file():
+        raise ConfigError("Invalid reviewed Windows pilot marker.")
+    try:
+        state = json.loads(marker.read_text(encoding="utf-8"))
+        pin = reviewed_windows_pilot_pin()
+        if state != {"sha256": pin["binary_sha256"],
+                     "source_commit": pin["source_commit"],
+                     "approval": "operator-opt-in"}:
+            raise ValueError("pilot metadata mismatch")
+    except (OSError, ValueError, TypeError):
+        raise ConfigError("Unrecognized reviewed Windows pilot approval marker.") from None
+    binary = pilot_binary(folder)
+    if not binary.is_file() or binary.is_symlink():
+        raise ConfigError("Reviewed Windows pilot binary missing or linked.")
+    if hashlib.sha256(binary.read_bytes()).hexdigest() != pin["binary_sha256"]:
+        raise ConfigError("Reviewed Windows pilot binary hash changed: refusing startup.")
+    override = os.environ.get("AIW_PROCESS_COMPOSE_BIN")
+    if override and os.path.normcase(os.path.realpath(override)) != os.path.normcase(os.path.realpath(binary)):
+        raise ConfigError("Explicit supervisor binary conflicts with the reviewed Windows pilot.")
+    return True
+
+
+def install_windows_reviewed_pilot(folder: Path, archive_path: Path) -> None:
+    """Deliberate limited Windows host pilot, never replace the official binary."""
+    if os.name != "nt" or platform.machine().upper().replace("X86_64", "AMD64") != "AMD64":
+        raise ConfigError("Reviewed pilot installation is available only on Windows AMD64.")
+    if windows_supervisor_state_path(folder).exists() or windows_supervisor_state_path(folder).is_symlink():
+        raise ConfigError("An AIW supervisor ownership record exists; stop it before installing a pilot.")
+    doc = read_settings(folder)
+    if port_accepts_connections(doc["process_compose"]["port"]):
+        raise ConfigError("Native management port is occupied; refusing supervisor installation.")
+    source = archive_path.expanduser().resolve()
+    if source.is_symlink() or not source.is_file() or source.stat().st_size > MAX_ARCHIVE_BYTES:
+        raise ConfigError("Reviewed pilot ZIP must be a local regular file within archive size limit.")
+    pin = reviewed_windows_pilot_pin()
+    try:
+        with zipfile.ZipFile(source) as archive:
+            infos = [item for item in archive.infolist()
+                     if Path(item.filename).name == "process-compose.exe" and not item.is_dir()]
+            if len(infos) != 1 or infos[0].file_size > 160 * 1024 * 1024:
+                raise ConfigError("Expected one size-limited process-compose.exe in the pilot ZIP.")
+            contents = archive.read(infos[0])
+    except (zipfile.BadZipFile, OSError, RuntimeError):
+        raise ConfigError("Invalid reviewed Windows pilot artifact ZIP.") from None
+    if hashlib.sha256(contents).hexdigest() != pin["binary_sha256"]:
+        raise ConfigError("Reviewed Windows pilot binary SHA-256 mismatch: refusing install.")
+    dest = pilot_binary(folder)
+    if dest.is_symlink():
+        raise ConfigError("Refusing pilot installation through a symlink.")
+    if dest.exists():
+        if hashlib.sha256(dest.read_bytes()).hexdigest() != pin["binary_sha256"]:
+            raise ConfigError("Different pilot binary already exists; no automatic replacement.")
+    else:
+        private_write(dest, contents, replace=False)
+    record = (json.dumps({
+        "sha256": pin["binary_sha256"], "source_commit": pin["source_commit"],
+        "approval": "operator-opt-in",
+    }) + "\n").encode("utf-8")
+    if pilot_marker(folder).exists():
+        if not windows_reviewed_pilot_active(folder):
+            raise ConfigError("Pilot approval marker exists but does not match the reviewed build.")
+        print("[OK] Reviewed Windows pilot already active for this host.")
+        return
+    private_write(pilot_marker(folder), record, replace=False)
+    print("[OK] Reviewed Windows Process Compose pilot installed and opted in.")
+    print("Pinned source:", pin["source_commit"], "| Go", pin["go_version"])
+    print("Review:", pin["qualification_run"])
+    print("Official binary preserved at", folder / "bin" / "process-compose.exe")
+    print("No process started. Live takeover still needs free ports and explicit operator approval.")
+
+
+def remove_windows_reviewed_pilot(folder: Path) -> None:
+    if os.name != "nt":
+        raise ConfigError("Reviewed pilot removal is Windows-only.")
+    if windows_supervisor_state_path(folder).exists():
+        raise ConfigError("Owned supervisor may still be running; stop and verify before removing pilot.")
+    doc = read_settings(folder)
+    if port_accepts_connections(doc["process_compose"]["port"]):
+        raise ConfigError("Supervisor management port is occupied; refusing removal.")
+    if not windows_reviewed_pilot_active(folder):
+        print("No reviewed pilot currently active for this Windows account.")
+        return
+    pilot_marker(folder).unlink()
+    pilot_binary(folder).unlink()
+    print("[OK] Reviewed Windows pilot unregistered; ordinary production hold remains active.")
+
+
 def native_binary(folder: Path) -> str:
+    if os.name == "nt" and windows_reviewed_pilot_active(folder):
+        return str(pilot_binary(folder))
     explicit = os.environ.get("AIW_PROCESS_COMPOSE_BIN")
     if explicit:
         if not Path(explicit).is_file():
@@ -476,7 +617,7 @@ def native_binary(folder: Path) -> str:
     raise ConfigError("Native Process Compose missing. Run: aiw services install")
 
 
-def check_production_security_gate(project: Path, action: str, process: str | None) -> None:
+def check_production_security_gate(folder: Path, project: Path, action: str, process: str | None) -> None:
     """Known Go 1.27.0 official build: permit only the harmless fixture pilot."""
     if action not in {"up", "tui", "start", "restart"}:
         return
@@ -487,6 +628,13 @@ def check_production_security_gate(project: Path, action: str, process: str | No
         raise ConfigError("Missing Process Compose production security gate.") from None
     if not blocked:
         return
+    # The general production gate stays locked. The exact reviewed, locally
+    # opted-in Windows-only Go 1.27.3 binary qualifies for a limited pilot.
+    if os.name == "nt" and windows_reviewed_pilot_active(folder):
+        # Reviewed Windows pilot applies to AIW-generated host projects ONLY,
+        # not to arbitrary Process Compose YAML or unrelated native services.
+        if project.read_text(encoding="utf-8").startswith("# AIW native-host project"):
+            return
     try:
         doc = yaml.safe_load(project.read_text(encoding="utf-8"))
         services = doc["processes"]
@@ -586,7 +734,8 @@ def port_accepts_connections(port: int) -> bool:
 
 
 def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
-                              status_command: list[str], port: int, env: dict) -> None:
+                              status_command: list[str], port: int, env: dict,
+                              service_ports: list[int] | None = None) -> None:
     """Start Windows Process Compose headless with an independent lifetime.
 
     Upstream v1.124.0 does NOT support --detached on Windows. Python is
@@ -607,11 +756,20 @@ def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
     log_path = state.parent / "process-compose-stdout.log"
     if log_path.is_symlink():
         raise ConfigError("Refusing to write supervisor logs through a symlink.")
+    # A detached *console-less* supervisor makes each Windows console child
+    # (cmd/pwsh/batch) create its own terminal window. Give the supervisor its
+    # own HIDDEN console instead; descendants can inherit that same console,
+    # while Process Compose still writes to durable private log files.
+    # A separate console keeps the supervisor independent of the AIW menu
+    # terminal. This is Windows-host behavior, verified by a real-host test.
+    startup_info = subprocess.STARTUPINFO()
+    startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startup_info.wShowWindow = subprocess.SW_HIDE
     with open(log_path, "ab") as log:
         proc = subprocess.Popen(
             cmd, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
             env=env, close_fds=True,
-            creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+            startupinfo=startup_info, creationflags=subprocess.CREATE_NEW_CONSOLE,
         )
     identity = None
     for _ in range(8):
@@ -625,7 +783,8 @@ def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
             "captured. See the private runtime/process-compose-stdout.log."
         )
     private_write(state, (json.dumps({"identity": identity,
-                                      "port": port}) + "\n").encode("utf-8"),
+                                      "port": port,
+                                      "service_ports": service_ports or []}) + "\n").encode("utf-8"),
                   replace=False)
     for _ in range(30):
         if proc.poll() is not None:
@@ -640,7 +799,9 @@ def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
             if result.returncode == 0:
                 print("[OK] Native Windows Process Compose supervisor ready.",
                       "PID:", identity["pid"], "| port:", port)
-                print("Use Status/Logs/Stop. The original host services were not touched.")
+                print("Read service output using Run and monitor -> Read saved service logs.")
+                print("All services are managed together; no extra visible terminal is intended.")
+                print("Use Status/Logs/Stop for the AIW-owned supervisor.")
                 return
         time.sleep(0.2)
     raise ConfigError(
@@ -649,14 +810,192 @@ def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
     )
 
 
-def windows_supervisor_stopped(folder: Path, pid: int) -> bool:
-    state = windows_supervisor_state_path(folder)
-    for _ in range(30):
-        if windows_process_identity(pid) is None:
-            state.unlink(missing_ok=True)
-            return True
-        time.sleep(0.2)
-    return False
+def windows_native_service_ports(folder: Path) -> list[int]:
+    """Read declared native service ports; a smoke-only project has no host JSON."""
+    path = folder / "native-host.json"
+    if not path.exists():
+        return []
+    if not path.is_file() or path.is_symlink():
+        raise ConfigError("Invalid native host configuration for shutdown verification.")
+    try:
+        services = json.loads(path.read_text(encoding="utf-8"))["services"]
+        if not isinstance(services, dict) or not services:
+            raise ValueError("No native services")
+        ports = []
+        for service in services.values():
+            if not isinstance(service, dict) or type(service.get("enabled")) is not bool:
+                raise ValueError("Invalid native service configuration")
+            if not service["enabled"]:
+                continue
+            listed = service["listen_ports"]
+            if not isinstance(listed, list) or not listed:
+                raise ValueError("Missing service ports")
+            ports.extend(listed)
+        if (any(type(p) is not int or not 1 <= p <= 65535 for p in ports)
+                or len(ports) != len(set(ports))):
+            raise ValueError("Invalid service port")
+        return sorted(ports)
+    except (OSError, ValueError, KeyError, TypeError):
+        raise ConfigError("Cannot read native service ports for shutdown verification.") from None
+
+
+def windows_shutdown_ports(folder: Path, identity: dict) -> list[int]:
+    """Prefer the startup snapshot, but support existing Windows ownership records."""
+    path = windows_supervisor_state_path(folder)
+    if not path.is_file() or path.is_symlink():
+        raise ConfigError("Missing or linked supervisor ownership record.")
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if record.get("identity") != identity:
+            raise ValueError("Ownership changed")
+        management = record["port"]
+        if type(management) is not int or not 1 <= management <= 65535:
+            raise ValueError("Invalid management port")
+        declared = record.get("service_ports")
+        if declared is None:  # Backward compatible with pre-change live supervisors.
+            declared = windows_native_service_ports(folder)
+        if not isinstance(declared, list) or any(
+                type(p) is not int or not 1 <= p <= 65535 for p in declared):
+            raise ValueError("Invalid saved service port list")
+        return sorted(set(declared + [management]))
+    except (OSError, KeyError, ValueError, TypeError):
+        raise ConfigError("Cannot verify Windows supervisor shutdown port inventory.") from None
+
+
+def windows_loopback_listeners(ports: list[int]) -> set[int]:
+    """Cheap repeated check: no subprocess or command shell in the polling loop."""
+    busy = set()
+    for port in ports:
+        if port_accepts_connections(port):
+            busy.add(port)
+            continue
+        try:
+            with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as conn:
+                conn.settimeout(0.25)
+                if conn.connect_ex(("::1", port)) == 0:
+                    busy.add(port)
+        except OSError:  # IPv6 loopback may not be configured.
+            pass
+    return busy
+
+
+def windows_all_listeners(ports: list[int]) -> set[int]:
+    """Final authoritative Windows listener check covers all IPv4/IPv6 bindings."""
+    if not ports:
+        return set()
+    command = (
+        "$ErrorActionPreference='Stop'; "
+        "$wanted=@(" + ",".join(map(str, ports)) + "); "
+        "@(Get-NetTCPConnection -State Listen -ErrorAction Stop | "
+        "Where-Object { $wanted -contains [int]$_.LocalPort } | "
+        "Select-Object -ExpandProperty LocalPort -Unique) -join ','"
+    )
+    try:
+        result = subprocess.run(
+            ["pwsh", "-NoProfile", "-NonInteractive", "-Command", command],
+            capture_output=True, text=True, check=False, timeout=12,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise ConfigError("Cannot inspect all Windows TCP listeners after shutdown.") from None
+    if result.returncode:
+        raise ConfigError("Windows TCP listener verification failed after shutdown.")
+    try:
+        busy = {int(item.strip()) for item in result.stdout.strip().split(",")
+                if item.strip()}
+    except ValueError:
+        raise ConfigError("Unexpected Windows TCP listener verification output.") from None
+    if not busy.issubset(set(ports)):
+        raise ConfigError("Unexpected ports in Windows TCP listener verification.")
+    return busy
+
+
+def windows_wait_for_shutdown(folder: Path, identity: dict, ports: list[int],
+                              timeout_seconds: float = 180) -> None:
+    """Finish Stop only after supervisor exit AND all service listeners close."""
+    path = windows_supervisor_state_path(folder)
+    deadline = time.monotonic() + timeout_seconds
+    next_report = time.monotonic() + 5
+    print("Waiting for native services and supervisor to stop...", flush=True)
+    while True:
+        alive = windows_process_identity(identity["pid"]) == identity
+        busy = windows_loopback_listeners(ports)
+        if not alive and not busy:
+            busy = windows_all_listeners(ports)
+        if not alive and not busy:
+            if not path.is_file() or path.is_symlink():
+                raise ConfigError("Shutdown ownership record missing or linked; inspect manually.")
+            try:
+                record = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                raise ConfigError("Shutdown ownership record is unreadable.") from None
+            if record.get("identity") != identity:
+                raise ConfigError("Shutdown ownership changed; refusing to clear it.")
+            path.unlink()
+            print("[OK] Windows services stopped, all configured TCP ports free; "
+                  "supervisor ownership released.")
+            return
+        now = time.monotonic()
+        if now >= deadline:
+            problems = []
+            if alive:
+                problems.append("supervisor still running")
+            if busy:
+                problems.append("TCP ports still listening: " +
+                                ", ".join(map(str, sorted(busy))))
+            raise ConfigError(
+                "Shutdown incomplete (" + "; ".join(problems) +
+                "). Ownership record retained; do not start a second instance."
+            )
+        if now >= next_report:
+            print("[WAIT] Shutdown in progress: " +
+                  ("supervisor still active; " if alive else "") +
+                  ("busy TCP ports " + ", ".join(map(str, sorted(busy)))
+                   if busy else "waiting for supervisor exit"), flush=True)
+            next_report = now + 5
+        time.sleep(1)
+
+
+def native_host_setup(folder: Path, action: str, process: str | None = None, *, apply: bool = False) -> None:
+    """Use the repo-owned, separate Windows host renderer without editing Git files."""
+    cmd = [sys.executable, str(Path(__file__).with_name("aiw-native-host.py")),
+           action, "--directory", str(folder)]
+    if process:
+        cmd += ["--service", process]
+    if apply:
+        cmd.append("--apply")
+    result = subprocess.run(cmd, check=False)
+    if result.returncode:
+        raise ConfigError("Native Windows host " + action + " failed.")
+
+
+NATIVE_LOG_NAMES = ("strata", "dispatcher", "caddy", "open-webui")
+
+
+def saved_service_logs(folder: Path, service: str | None = None, lines: int = 100) -> None:
+    """Inspect persistent native service logs, even after supervisor failure.
+
+    No management API, process restart, or token lookup is performed.
+    Files may contain private application output; display locally only.
+    """
+    if service and service not in NATIVE_LOG_NAMES:
+        raise ConfigError("Unknown native service log name.")
+    if not 1 <= lines <= 1000:
+        raise ConfigError("Log line count must be 1..1000.")
+    log_root = folder / "runtime" / "logs"
+    if log_root.is_symlink():
+        raise ConfigError("Refusing linked private service log directory.")
+    for name in ((service,) if service else NATIVE_LOG_NAMES):
+        path = log_root / (name + ".log")
+        print("\n---", name, "saved startup/service log ---")
+        print("File:", path)
+        if path.is_symlink():
+            raise ConfigError("Refusing linked native service log file.")
+        if not path.is_file():
+            print("No saved output from this service yet.")
+            continue
+        with path.open("r", encoding="utf-8", errors="replace") as stream:
+            for line in deque(stream, maxlen=lines):
+                print(line.rstrip("\r\n"))
 
 
 def native(folder: Path, action: str, process: str | None) -> None:
@@ -664,7 +1003,14 @@ def native(folder: Path, action: str, process: str | None) -> None:
     project = project_path(folder, doc)
     if not project.is_file():
         raise ConfigError("Missing native Process Compose YAML.")
-    check_production_security_gate(project, action, process)
+    check_production_security_gate(folder, project, action, process)
+    # Generated native-host projects are explicitly provisioned. Before any
+    # launch, require the private settings to still match the rendered project,
+    # and refuse ports held by the previous unmanaged startup script.
+    if (os.name == "nt" and action in {"up", "start"} and
+            project.read_text(encoding="utf-8").startswith(
+                "# AIW native-host project")):
+        native_host_setup(folder, "preflight", process if action == "start" else None)
     binary = native_binary(folder)
     port = doc["process_compose"]["port"]
     api_token = folder / "secrets" / "process-compose.api-token"
@@ -714,27 +1060,38 @@ def native(folder: Path, action: str, process: str | None) -> None:
         if action == "up":
             print("Starting ONLY configured native processes under Process Compose.")
             print("Management: 127.0.0.1:", port, "| config:", project)
+            service_ports = (windows_native_service_ports(folder)
+                             if project.read_text(encoding="utf-8").startswith(
+                                 "# AIW native-host project") else [])
             return windows_launch_supervisor(folder, binary, cmd,
-                                             basic + ["process", "list"], port, env)
+                                             basic + ["process", "list"], port, env,
+                                             service_ports)
         if action in {"tui", "start", "stop", "restart", "down"}:
             record = windows_ensure_owned(folder, binary)
+            if action == "down":
+                shutdown_ports = windows_shutdown_ports(folder, record)
         if action in {"status", "logs"} and port_accepts_connections(port):
             # Read-only operations still must not talk to unknown listeners.
             windows_ensure_owned(folder, binary)
     if action == "up":
         print("Starting ONLY configured native processes under Process Compose.")
         print("Management: 127.0.0.1:", port, "| config:", project)
-    result = subprocess.run(cmd, check=False, env=env)
+    try:
+        result = subprocess.run(
+            cmd, check=False, env=env,
+            timeout=240 if os.name == "nt" and action == "down" else None,
+        )
+    except subprocess.TimeoutExpired:
+        raise ConfigError(
+            "Native Process Compose shutdown timed out. Ownership record retained; "
+            "do not launch a duplicate supervisor."
+        ) from None
     if result.returncode:
         raise ConfigError("Native Process Compose " + action + " failed (exit " +
                           str(result.returncode) + ").")
     if action == "down" and os.name == "nt":
-        if not windows_supervisor_stopped(folder, record["pid"]):
-            raise ConfigError(
-                "Shutdown was requested but supervisor has not exited. "
-                "Ownership record retained; inspect before trying again."
-            )
-        print("[OK] Native Windows Process Compose stopped; ownership record removed.")
+        windows_wait_for_shutdown(folder, record, shutdown_ports)
+
     elif action == "check":
         print("[OK] Explicit private Process Compose project validated. Nothing started.")
 
@@ -743,14 +1100,23 @@ def run(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Native host services and S02 client identities")
     parser.add_argument("--directory", type=Path, default=default_dir())
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for k in ("init", "where", "install", "check", "up", "tui", "status", "down", "logs"):
+    for k in ("init", "where", "install", "check", "up", "tui", "status", "down", "logs", "logs-file"):
         p = sub.add_parser(k)
-        if k == "logs":
+        if k in {"logs", "logs-file"}:
             p.add_argument("name", nargs="?")
+        if k == "logs-file":
+            p.add_argument("--lines", type=int, default=100)
         if k == "install":
             p.add_argument("--archive", type=Path, help="Official local archive; SHA-256 verified")
     for k in ("start", "stop", "restart"):
         sub.add_parser(k).add_argument("name")
+    host = sub.add_parser("host", help="Prepare native Windows Caddy/Dispatcher/Strata project")
+    host.add_argument("action", choices=("init", "inspect", "validate", "render", "preflight", "quiet-probes"))
+    host.add_argument("--service", choices=("strata", "dispatcher", "caddy", "open-webui"))
+    host.add_argument("--apply", action="store_true")
+    pilot = sub.add_parser("pilot", help="Opt in to a pinned, independently qualified Windows test supervisor")
+    pilot.add_argument("action", choices=("install", "status", "remove"))
+    pilot.add_argument("--archive", type=Path)
     clients = sub.add_parser("client")
     group = clients.add_subparsers(dest="client_cmd", required=True)
     add = group.add_parser("add")
@@ -762,6 +1128,9 @@ def run(argv: list[str] | None = None) -> None:
     importing.add_argument("--policy", choices=sorted(POLICIES), required=True)
     client_list = group.add_parser("list")
     client_list.add_argument("--format", choices=("text", "json", "tsv"), default="text")
+    policy_edit = group.add_parser("set-policy")
+    policy_edit.add_argument("name")
+    policy_edit.add_argument("--policy", required=True, choices=sorted(POLICIES))
     group.add_parser("render")
     group.add_parser("reveal").add_argument("name")
     group.add_parser("copy").add_argument("name")
@@ -775,6 +1144,24 @@ def run(argv: list[str] | None = None) -> None:
         init(folder)
     elif args.cmd == "install":
         install_process_compose(folder, args.archive)
+    elif args.cmd == "pilot":
+        if args.action == "install":
+            if args.archive is None:
+                raise ConfigError("Pilot installation requires --archive with the downloaded, reviewed ZIP.")
+            install_windows_reviewed_pilot(folder, args.archive)
+        elif args.action == "status":
+            if os.name != "nt":
+                print("Reviewed native-host pilot is Windows-only.")
+            else:
+                state = windows_reviewed_pilot_active(folder)
+                print("Reviewed Windows pilot:", "enabled" if state else "not enabled")
+                print("General Process Compose production hold remains active.")
+        elif args.action == "remove":
+            remove_windows_reviewed_pilot(folder)
+    elif args.cmd == "host":
+        native_host_setup(folder, args.action, args.service, apply=args.apply)
+    elif args.cmd == "logs-file":
+        saved_service_logs(folder, args.name, args.lines)
     elif args.cmd == "where":
         doc = read_settings(folder)
         print("Configuration:", settings_path(folder))
@@ -796,17 +1183,20 @@ def run(argv: list[str] | None = None) -> None:
                 for row in rows:
                     print(row["id"] + "\t" + row["origin"])
             else:
-                print("Registered client identities:")
+                print("Registered client identities (effective after Dispatcher restart):")
                 for row in rows:
-                    role = {"imported": "existing shared key (migration, do not distribute)",
-                            "generated": "individual client key",
-                            "unknown": "older registration (key type not recorded)"}[row["origin"]]
-                    print(" -", row["id"], "|", role)
-                print("Shared or older keys should NOT be distributed as new client keys.")
+                    origin = {"imported": "imported shared key (do not redistribute)",
+                              "generated": "individually generated key",
+                              "unknown": "key origin not recorded (may be active)"}[row["origin"]]
+                    print(" -", row["id"], "| policy:", row["policy"], "|", origin)
+                print("Unknown origin does not mean an unused or expired key.")
+                print("Use Dispatcher request metrics to establish actual client usage.")
         elif args.client_cmd == "copy":
             client_copy(folder, args.name)
         elif args.client_cmd == "rename":
             client_rename(folder, args.old, args.new)
+        elif args.client_cmd == "set-policy":
+            client_set_policy(folder, args.name, args.policy)
         elif args.client_cmd == "render":
             client_render(folder, folder / "clients.json")
         elif args.client_cmd == "reveal":
