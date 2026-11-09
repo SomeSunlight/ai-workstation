@@ -150,6 +150,8 @@ if "$cli" goose shell </dev/null > "$temp/output" 2>&1; then exit 1; fi
 
 # New menu entries are discoverable; no Docker change required for menu navigation.
 output="$(printf '1\n1\nb\nq\nq\n' | "$cli")"
+grep -Fq '7) Pull selected Goose image (same version)' <<< "$output"
+grep -Fq '8) Update application (Goose: latest stable or specific version)' <<< "$output"
 grep -Fq '12) Show Goose version' <<< "$output"
 grep -Fq '13) Inspect Goose configuration' <<< "$output"
 grep -Fq '14) Edit Goose configuration' <<< "$output"
