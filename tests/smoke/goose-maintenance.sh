@@ -24,6 +24,9 @@ providers:
     model: sparringpartner
     base_url: https://user:password@local.example.net/v1?api_key=secret-in-url
     api_key: secret-in-yaml
+custom_providers:
+  - name: another
+    api_base: https://user:password@another.example.net/v1?token=secret-list
 YAML
 cat > "$temp/bin/docker" <<'MOCK'
 #!/usr/bin/env bash
@@ -82,8 +85,9 @@ grep -Fq 'custom' <<< "$output"
 grep -Fq 'sparringpartner' <<< "$output"
 grep -Fq 'https://local.example.net/v1' <<< "$output"
 grep -Fq 'https://llm.example.net/v1' <<< "$output"
+grep -Fq 'https://another.example.net/v1' <<< "$output"
 grep -Fq 'GOOSE_SUBAGENT_MODEL: agent' <<< "$output"
-for secret in secret-in-url secret-in-yaml secret-in-env password; do
+for secret in secret-in-url secret-in-yaml secret-in-env secret-list password; do
     ! grep -Fq "$secret" <<< "$output"
 done
 grep -Fq -- '--network none' "$MOCK_DOCKER_LOG"
@@ -117,6 +121,19 @@ if printf 'y\n' | VISUAL= EDITOR=editor "$cli" goose edit > "$temp/output" 2>&1;
     echo 'Invalid YAML was accepted' >&2; exit 1
 fi
 grep -Fq 'model: agent' "$MOCK_VOLUME/.config/goose/config.yaml"
+
+# Detect an out-of-band edit while the operator is in the editor.
+cat > "$temp/bin/editor-race" <<'EDITOR'
+#!/usr/bin/env bash
+cp "$MOCK_NEW_CONFIG" "$1"
+printf '# external edit\n' >> "$MOCK_VOLUME/.config/goose/config.yaml"
+EDITOR
+chmod +x "$temp/bin/editor-race"
+export MOCK_NEW_CONFIG="$temp/next.yaml"
+if printf 'y\n' | VISUAL= EDITOR=editor-race "$cli" goose edit > "$temp/output" 2>&1; then
+    echo 'Stale Goose configuration was overwritten' >&2; exit 1
+fi
+grep -Fq '# external edit' "$MOCK_VOLUME/.config/goose/config.yaml"
 
 # Explicit rejection (default) and concurrent session both fail closed.
 export MOCK_NEW_CONFIG="$temp/next.yaml"
