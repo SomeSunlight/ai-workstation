@@ -17,6 +17,7 @@ bash ./tests/smoke/interactive-menu.sh
 bash ./tests/smoke/menu-preview.sh
 bash ./tests/smoke/goose-runtime.sh
 bash ./tests/smoke/goose-provider-config.sh
+bash ./tests/smoke/goose-maintenance.sh
 bash ./tests/smoke/goose-compose-config.sh
 if [[ -x "${ROOT}/.venv/bin/python" ]]; then
   "${ROOT}/.venv/bin/python" tests/smoke/services-registry.py
