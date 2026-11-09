@@ -77,13 +77,12 @@ aiw_menu_confirm_command() {
     [[ "$reply" == y || "$reply" == Y ]]
 }
 
-aiw_menu_edit_config() {
-    aiw_menu_ensure_config || return 1
-    local file editor
-    file="$(aiw_menu_config_path)"
+# Shared editor selection for AIW YAML and Goose native configuration.
+aiw_open_editor() {
+    local file="$1" editor
     editor="${VISUAL:-${EDITOR:-}}"
     if [[ -n "$editor" ]]; then
-        # No eval: split command + simple flags, never interpret shell metacharacters.
+        # No eval: only simple arguments; shell metacharacters are not executed.
         local -a argv=()
         IFS=' ' read -r -a argv <<< "$editor"
         "${argv[@]}" "$file"
@@ -97,4 +96,9 @@ aiw_menu_edit_config() {
         printf '[XX] No editor found. Set VISUAL or EDITOR and retry.\n' >&2
         return 1
     fi
+}
+
+aiw_menu_edit_config() {
+    aiw_menu_ensure_config || return 1
+    aiw_open_editor "$(aiw_menu_config_path)"
 }
