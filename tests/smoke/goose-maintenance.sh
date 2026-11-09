@@ -126,6 +126,7 @@ grep -Fq 'model: agent' "$MOCK_VOLUME/.config/goose/config.yaml"
 cat > "$temp/bin/editor-race" <<'EDITOR'
 #!/usr/bin/env bash
 cp "$MOCK_NEW_CONFIG" "$1"
+printf '# operator update\n' >> "$1"
 printf '# external edit\n' >> "$MOCK_VOLUME/.config/goose/config.yaml"
 EDITOR
 chmod +x "$temp/bin/editor-race"
