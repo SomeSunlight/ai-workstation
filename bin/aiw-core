@@ -59,7 +59,10 @@ Usage:
   aiw goose update [VERSION|--repository] [--yes]
   aiw goose session [WORKSPACE] [GOOSE ARGUMENTS...]
   aiw goose run WORKSPACE [GOOSE RUN ARGUMENTS...]
-  aiw goose version
+  aiw goose version         Show native Goose version (no agent)
+  aiw goose inspect         Inspect saved providers, models and endpoints (redacted)
+  aiw goose edit            Edit native config YAML safely (advanced)
+  aiw goose shell           Open read-only offline maintenance shell (advanced)
   aiw goose workspace add NAME [PATH]
   aiw goose workspace list
   aiw goose workspace remove NAME
@@ -119,6 +122,10 @@ run_menu_action() {
     case "${1:-}" in
         goose_workspace_list) preview=(aiw goose workspace list) ;;
         goose_configure) preview=(aiw goose configure) ;;
+        goose_version) preview=(aiw goose version) ;;
+        goose_maintenance_inspect) preview=(aiw goose inspect) ;;
+        goose_maintenance_edit) preview=(aiw goose edit) ;;
+        goose_maintenance_shell) preview=(aiw goose shell) ;;
         goose_edit_env) preview=(aiw goose env) ;;
         goose_check) preview=(aiw goose check) ;;
         goose_quick_help) preview=(aiw goose quick-help) ;;
@@ -435,6 +442,7 @@ goose_init() {
 
 # Native configuration, connection checks and optional provider environment.
 source "${ROOT}/tools/goose-config.sh"
+source "${ROOT}/tools/goose-maintenance.sh"
 
 goose_quick_help() {
     cat <<'EOF_HELP'
@@ -485,7 +493,7 @@ goose_down() {
 
 goose_version() {
     require_docker
-    goose_compose run --rm --no-deps --entrypoint goose goose --version
+    goose_compose run --rm --no-deps --pull never --entrypoint goose goose --version
 }
 
 goose_resolve_workspace_argument() {
@@ -507,6 +515,8 @@ goose_run_in_workspace() {
     shift 3
 
     require_docker
+    local session_lock_fd session_status=0
+    goose_maintenance_lock shared session_lock_fd
     require_goose_configuration
     local host_path container_path
     host_path="$(goose_workspace_path "$workspace_name")"
@@ -529,7 +539,10 @@ goose_run_in_workspace() {
         --entrypoint goose \
         --volume "${host_path}:${container_path}" \
         --workdir "$container_path" \
-        goose "$goose_command_name" "$@"
+        goose "$goose_command_name" "$@" || session_status=$?
+    flock --unlock "$session_lock_fd"
+    exec {session_lock_fd}>&-
+    return "$session_status"
 }
 
 goose_session() {
@@ -559,6 +572,15 @@ goose_command() {
             ;;
         configure)
             goose_configure
+            ;;
+        inspect)
+            goose_maintenance_inspect
+            ;;
+        edit)
+            goose_maintenance_edit
+            ;;
+        shell)
+            goose_maintenance_shell
             ;;
         env)
             goose_edit_env
@@ -982,6 +1004,10 @@ Goose
 9) Configure provider, model and extensions
 10) Edit Goose environment (advanced)
 11) Test selected connection (no workspace)
+12) Show Goose version
+13) Inspect Goose configuration
+14) Edit Goose configuration (advanced)
+15) Maintenance shell (read-only, advanced)
 b) Back
 q) Exit
 EOF_MENU
@@ -998,6 +1024,10 @@ EOF_MENU
             9) run_menu_action goose_configure ;;
             10) run_menu_action goose_edit_env ;;
             11) run_menu_action goose_check ;;
+            12) run_menu_action goose_version ;;
+            13) run_menu_action goose_maintenance_inspect ;;
+            14) run_menu_action goose_maintenance_edit ;;
+            15) run_menu_action goose_maintenance_shell ;;
             b|B) return ;;
             q|Q) exit 0 ;;
             *) printf 'Unknown selection.\n' ;;
