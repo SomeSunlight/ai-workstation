@@ -999,8 +999,8 @@ Goose
 4) Manage workspaces
 5) Show status
 6) Show quick help
-7) Pull pinned Goose image
-8) Update application
+7) Pull selected Goose image (same version)
+8) Update application (Goose: latest stable or specific version)
 9) Configure provider, model and extensions
 10) Edit Goose environment (advanced)
 11) Test selected connection (no workspace)
