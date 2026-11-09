@@ -8,7 +8,8 @@ import yaml
 
 ROUTE_KEYS = {
     "url", "base_url", "api_base_url", "endpoint", "api_endpoint",
-    "host", "base_path", "openai_base_url", "openai_host", "openai_base_path",
+    "host", "base_path", "api_base", "openai_api_base",
+    "openai_base_url", "openai_host", "openai_base_path",
 }
 MODEL_KEYS = {
     "active_provider", "model", "model_name", "model_id",
@@ -67,11 +68,15 @@ def show_config(config):
 
     def walk(node, location="", depth=0):
         nonlocal counter
-        if depth > 8 or counter > 100 or not isinstance(node, dict):
+        if depth > 8 or counter > 100 or not isinstance(node, (dict, list)):
             return
         if id(node) in seen:
             return
         seen.add(id(node))
+        if isinstance(node, list):
+            for index, item in enumerate(node[:100]):
+                walk(item, f"{location}[{index}]", depth + 1)
+            return
         for key, value in node.items():
             counter += 1
             if counter > 100:
@@ -84,7 +89,7 @@ def show_config(config):
                 print(f"  {path}: {safe_url(value)}")
             elif kind in MODEL_KEYS and isinstance(value, (str, int, float)):
                 print(f"  {path}: {clean(value)}")
-            elif isinstance(value, dict):
+            elif isinstance(value, (dict, list)):
                 walk(value, path, depth + 1)
 
     walk(config)
