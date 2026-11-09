@@ -55,7 +55,8 @@ goose_maintenance_run() {
     config_path="$(goose_maintenance_config_path)" || return 1
     mount_spec='type=volume,source=ai-workstation_goose-home,target=/home/goose'
     [[ "$access" == rw ]] || mount_spec+=',readonly'
-    local tty=(-i)
+    local tty=()
+    [[ "$operation" != write ]] || tty=(-i)
     [[ "$operation" != shell ]] || tty=(-it)
     docker run "${tty[@]}" --rm --pull=never --network none --read-only \
         --cap-drop ALL --security-opt no-new-privileges:true --pids-limit 64 \
