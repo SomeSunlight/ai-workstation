@@ -87,6 +87,49 @@ Path(__file__).with_name("launched.txt").write_text("launched", encoding="utf-8"
     $data | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cfgFile -Encoding utf8
     & pwsh -NoProfile -NonInteractive -File $guard -Config $cfgFile -Approve *> $null
     if ($LASTEXITCODE -eq 0) { throw 'Shell/batch launch was accepted as hardened.' }
+
+    # Native AIW starts through a temporary uv helper environment; the
+    # Dispatcher must select its own .venv instead of inheriting that path.
+    $envEntry = Join-Path $dir 'inspect-env.py'
+    $envResult = Join-Path $dir 'virtual-env-observed.txt'
+    Set-Content -LiteralPath $envEntry -Encoding utf8 -Value @'
+import os
+from pathlib import Path
+Path(__file__).with_name("virtual-env-observed.txt").write_text(
+    os.environ.get("VIRTUAL_ENV", "<unset>"), encoding="utf-8"
+)
+'@
+    $data.services.dispatcher = @{
+        enabled = $true
+        executable = $exe
+        working_directory = $dir
+        arguments = @($envEntry)
+        environment = @{}
+        secret_environment = @{}
+    }
+    $data.services.caddy = $data.services.dispatcher.Clone()
+    $data | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $cfgFile -Encoding utf8
+    $previousVirtualEnv = [Environment]::GetEnvironmentVariable('VIRTUAL_ENV', 'Process')
+    try {
+        [Environment]::SetEnvironmentVariable('VIRTUAL_ENV', 'C:\aiw\uv\cache\builds-v0\temporary', 'Process')
+        & pwsh -NoProfile -NonInteractive -File $child -Config $cfgFile -Service dispatcher
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $envResult)) {
+            throw 'Synthetic Dispatcher did not launch.'
+        }
+        if ((Get-Content -LiteralPath $envResult -Raw) -cne '<unset>') {
+            throw 'Dispatcher inherited an unrelated temporary uv VIRTUAL_ENV.'
+        }
+        & pwsh -NoProfile -NonInteractive -File $child -Config $cfgFile -Service caddy
+        if ($LASTEXITCODE -ne 0 -or
+            (Get-Content -LiteralPath $envResult -Raw) -cne 'C:\aiw\uv\cache\builds-v0\temporary') {
+            throw 'Dispatcher-specific cleanup unexpectedly affected another service.'
+        }
+    }
+    finally {
+        [Environment]::SetEnvironmentVariable('VIRTUAL_ENV', $previousVirtualEnv, 'Process')
+    }
+    Write-Host '[OK] Dispatcher ignores temporary uv VIRTUAL_ENV; other native services retain theirs.'
+
     Write-Host '[OK] Strata approved start, missing approval, tampering, explicit reapproval, rollback, argv drift, cmd denial.'
 }
 finally {
