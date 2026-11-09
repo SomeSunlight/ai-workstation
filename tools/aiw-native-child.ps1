@@ -57,6 +57,11 @@ try {
     }
     $arguments = @($svc.arguments | ForEach-Object { [string]$_ })
     Set-Location -LiteralPath $cwd
+    if ($Service -eq 'dispatcher') {
+        # The Dispatcher selects its own project .venv via uv run --frozen.
+        # Do not inherit AIW's temporary uv bootstrap environment.
+        Remove-Item Env:VIRTUAL_ENV -ErrorAction SilentlyContinue
+    }
     & $exe @arguments
     $code = $LASTEXITCODE
     if ($null -eq $code) { $code = 1 }
