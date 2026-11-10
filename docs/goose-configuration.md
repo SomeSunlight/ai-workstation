@@ -35,6 +35,30 @@ Settings, custom providers, credentials and history remain in
 native file-backed secrets (`GOOSE_DISABLE_KEYRING=1`) and disables Goose
 telemetry by default. Treat volume backups as sensitive.
 
+## Inspect version and maintain native settings without an agent
+
+From **AIW → Standard tools → Goose**, select:
+
+- **Show Goose version**: reports the real installed Goose binary version with an ephemeral container. No agent session, project mount or image download.
+- **Inspect Goose configuration**: reports saved provider/model names and endpoint URLs, plus selected routing settings from the optional Goose-only environment. Credentials and unknown YAML fields are withheld; URL userinfo, query and fragment are stripped. This is a *diagnostic projection*, not a complete unredacted YAML dump. Be careful with secrets embedded directly in URL paths.
+- **Edit Goose configuration (advanced)**: edits a protected temporary copy of the actual native YAML using the same editor selection as AIW (`VISUAL`, `EDITOR`, system fallback). AIW validates YAML before asking whether to apply it, checks for active Goose sessions, and makes a private `config.yaml.aiw-backup` next to the original. No provider/schema translation or implicit settings changes occur. YAML syntax validation does **not** guarantee that the selected Goose release accepts every setting. Start a new session after an edit.
+- **Maintenance shell (read-only, advanced)**: opens `/bin/sh` in the selected installed image, with Goose home mounted read-only. No network, project mount or Goose agent starts. Exit to remove the container.
+
+The corresponding WSL/native Linux commands are:
+
+```bash
+aiw goose version
+aiw goose inspect
+aiw goose edit
+aiw goose shell
+```
+
+Inspection and editing use the selected **locally installed** image with `--pull=never`; if it is absent, use the normal Goose image update/pull action first. The home volume must already exist: a maintenance command never silently creates an empty replacement volume. Native config defaults to `/home/goose/.config/goose/config.yaml`; a supported Goose-only `GOOSE_PATH_ROOT` or `XDG_CONFIG_HOME` override must resolve inside the persistent home volume.
+
+Editing refuses concurrent AIW Goose sessions (and detects other running Compose Goose containers). A session/edit file lock is stored privately under the AIW user configuration directory. Temporary edited files and the rollback copy contain **secrets**: they must not be committed, logged or shared. The temporary host copy is removed after editing; the last backup remains private inside the named Docker volume. The maintenance shell has read-only volume access, even though ordinary Goose sessions retain their existing writable home. No Docker socket is mounted.
+
+Windows editors can be used from WSL when correctly configured through `VISUAL` or `EDITOR`, but there is deliberately **no permanent Windows bind mount of the Goose home**. Do not use this advanced edit action to perform routine provider changes that native `goose configure` already supports.
+
 ## Connect a local/self-hosted OpenAI-compatible API
 
 Choose the built-in **OpenAI** provider with your own API base URL, or create a

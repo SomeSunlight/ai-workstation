@@ -12,9 +12,7 @@ goose_configure() {
 }
 
 goose_edit_env() {
-    local editor_command=() editor_status=0
-    IFS=' ' read -r -a editor_command <<< "${VISUAL:-${EDITOR:-sensible-editor}}"
-    command -v "${editor_command[0]}" >/dev/null 2>&1 || fail 'No editor available. Set EDITOR to your installed terminal editor.'
+    local editor_status=0
     mkdir -p "$CONFIG_DIR" "$(dirname -- "$GOOSE_ENV_FILE")"
     chmod 700 "$CONFIG_DIR"
     if [[ ! -e "$GOOSE_ENV_FILE" ]]; then
@@ -30,7 +28,7 @@ EOF_ENV
         )
     fi
     chmod 600 "$GOOSE_ENV_FILE"
-    "${editor_command[@]}" "$GOOSE_ENV_FILE" || editor_status=$?
+    aiw_open_editor "$GOOSE_ENV_FILE" || editor_status=$?
     chmod 600 "$GOOSE_ENV_FILE"
     return "$editor_status"
 }
