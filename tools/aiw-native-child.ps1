@@ -37,6 +37,16 @@ try {
     if (-not [IO.File]::Exists($exe) -or -not [IO.Directory]::Exists($cwd)) {
         throw 'Configured executable or working directory is unavailable.'
     }
+    if ($Service -eq 'strata') {
+        $guard = Join-Path $PSScriptRoot 'aiw-native-integrity.ps1'
+        if (-not (Test-Path -LiteralPath $guard -PathType Leaf)) {
+            throw 'Required Strata integrity verifier is missing.'
+        }
+        & $guard -Config $Config -Service strata
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Strata launch is not locally approved; native process was not created.'
+        }
+    }
     foreach ($item in $svc.environment.GetEnumerator()) {
         [Environment]::SetEnvironmentVariable([string]$item.Key, [string]$item.Value, 'Process')
     }
@@ -47,6 +57,11 @@ try {
     }
     $arguments = @($svc.arguments | ForEach-Object { [string]$_ })
     Set-Location -LiteralPath $cwd
+    if ($Service -eq 'dispatcher') {
+        # The Dispatcher selects its own project .venv via uv run --frozen.
+        # Do not inherit AIW's temporary uv bootstrap environment.
+        Remove-Item Env:VIRTUAL_ENV -ErrorAction SilentlyContinue
+    }
     & $exe @arguments
     $code = $LASTEXITCODE
     if ($null -eq $code) { $code = 1 }

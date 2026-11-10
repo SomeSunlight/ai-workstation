@@ -136,6 +136,8 @@ function Show-SetupMenu {
     Write-Host '     Requires the matching GitHub Actions artifact ZIP; the old binary stays intact.'
     Write-Host ' 11  Show reviewed supervisor pilot status'
     Write-Host ' 12  Remove reviewed supervisor pilot (only while stopped)'
+    Write-Host ' 13  Review Strata launch-chain file hashes (read-only)'
+    Write-Host ' 14  Approve reviewed Strata launch (stopped host only)'
     Write-Host '  0  Back to main menu          ?  Show these options'
 }
 
@@ -338,6 +340,15 @@ function Setup-Menu {
                     Write-Warning 'Pilot removal is only allowed after its owned supervisor has stopped.'
                     if (Confirm-Aiw 'Remove reviewed pilot registration and binary?') {
                         Invoke-Aiw @('pilot','remove')
+                    }
+                }
+                '13' { Invoke-Aiw @('host','integrity-review') }
+                '14' {
+                    Write-Warning 'Approve only after inspecting file provenance and hash changes.'
+                    Write-Warning 'Stop all AIW-owned services first; a running supervisor blocks approval.'
+                    Invoke-Aiw @('host','integrity-review')
+                    if (Confirm-Aiw 'Trust this exact native Strata launch and its listed file hashes?') {
+                        Invoke-Aiw @('host','integrity-approve')
                     }
                 }
                 default { Write-Warning 'Unknown operation. Enter ? for the list.' }

@@ -1,5 +1,24 @@
 # AI Workstation Plan
 
+## Owner acceptance checkpoint — Issue #53: native Strata integrity and shell-free launch (2026-11-10)
+
+**Review:** [Draft PR #54](https://github.com/SomeSunlight/ai-workstation/pull/54) is a clean, independent `main`-based #53 change; the obsolete #45-stacked ancestry was removed earlier. The owner has completed the primary **live Speedy** acceptance and intends to squash-merge after the final review. This plan records verified evidence, not an automated deployment or an already completed merge.
+
+- [x] Confirm the unwanted native supervisor process chain (`process-compose-pilot.exe → cmd /C → pwsh -EncodedCommand`) and replace service startup with explicit PowerShell `entrypoint` argv plus plain, quoted PowerShell readiness probes; do not introduce an antivirus exclusion.
+- [x] Require offline operator review and explicit SHA-256 approval of Strata's installed interpreter and the selected code-bearing launch files before execution. On the tested host the operator approved `serve/server.py` and `engine/strata.exe`. Leave tunable model/config parameters outside that strict code-file list; preserve stable native command arguments and local approval/rollback.
+- [x] Preserve existing Dispatcher aliases, separate S02 keys, Caddy routes and existing Open WebUI/metrics. Four AIW-owned services **started successfully on Speedy** with the Strata integrity preflight active. Both `agent` and `sparringpartner` answered with/without reasoning from native and WSL Open WebUI; the four cases were distinguishable in Dispatcher metrics.
+- [x] **Owner observation:** no further Kaspersky alerts during the reviewed live starts. The practical nuisance has disappeared in this acceptance trial. This does not prove earlier detections were false positives or rule out future detections.
+- [x] Remove inherited `VIRTUAL_ENV` **only for the Dispatcher native child**, allowing its own project `.venv` to be selected by `uv run --frozen`; test that other services still inherit their intended environment.
+- [x] Test synthetic Windows integrity refusal/tampering/reapproval/rollback, plain-probe invocation and native child-tree behavior. **Exact code head `5c6fc5c`: [Validate](https://github.com/SomeSunlight/ai-workstation/actions/runs/42723440856) (Ubuntu/Windows) and [Process Compose qualification](https://github.com/SomeSunlight/ai-workstation/actions/runs/42723440828) (Windows) both successful.**
+- [x] Record live-host findings and CI evidence in the PR. Keep all personal host paths, credentials, Kaspersky logs and metrics outside the repository.
+- [ ] Owner confirms PR #54 and performs the **squash-merge to `main`**; close #53 as completed only after that merge.
+- [ ] After the accepted merge, update the independent [Goose maintenance draft PR #58](https://github.com/SomeSunlight/ai-workstation/pull/58) onto the new `main`, rerun CI and perform its separate WSL/Goose acceptance.
+
+**Boundary:** This PR hardens the Strata launch path; it does not prove whole-stack offline provisioning, remove the broader Process Compose production/pilot qualification hold or eliminate every PowerShell probe caveat. Current-version Goose was **not retested in this final #53 session**; that is separate from the owner's successful Open WebUI/S02 checks and must not be silently marked as completed. Long-term antivirus behavior and a fresh manual rollback exercise can be checked during normal operations, without conflating those with the successful current trial.
+
+---
+
+
 ## Integration checkpoint — live S03 dual roles and native host (2026-11-07)
 
 **Review scope:** [AIW PR #45](https://github.com/SomeSunlight/ai-workstation/pull/45) and [Dispatcher PR #30](https://github.com/SomeSunlight/Llama_Dispatcher/pull/30) together provide an operator-tested *first operational slice*. Owner proposes squash-merging both into `main` to establish a stable baseline, while leaving remaining issue requirements open. The documented current reviews are not an instruction to merge them automatically.
@@ -11,7 +30,7 @@
 
 **Review-branch operational improvements:** client policy editing without key rotation, role-registry generation separated from native Process Compose rendering, persistent TUI/service logs, and Windows shutdown waiting for both the managed supervisor to exit and declared ports to be free. The shutdown code and `ordered_shutdown` project setting have synthetic Windows/Linux CI, but the new full shutdown and reboot behavior still needs real-host acceptance. General pinned-official-Process-Compose production hold remains; the qualified Windows-only pilot stays an explicit opt-in.
 
-**Next priority:** [#53](https://github.com/SomeSunlight/ai-workstation/issues/53), native Strata launch-chain integrity/Kaspersky hardening, **after** the #45 baseline is integrated. [Draft PR #54](https://github.com/SomeSunlight/ai-workstation/pull/54) is currently stacked on an older #45 revision and must be rebased/re-reviewed against the newly accepted `main`, not merged blindly. No antivirus blanket exclusion; no unattended installs/downloads on normal start; local SHA-256 approval and explicit updates. False-positive causation remains plausible, not proven.
+**Current #53 outcome (2026-11-10):** [PR #54](https://github.com/SomeSunlight/ai-workstation/pull/54) was rebuilt cleanly on accepted `main`, has passed exact-head CI and the owner-reported live Strata/Dispatcher/WebUI/S02 checks; **no Kaspersky alerts were observed** in this trial. See the acceptance checkpoint above for remaining merge and Goose/PR #58 work. The original Kaspersky false-positive hypothesis remains unproven.
 
 **Other open work:** [#41](https://github.com/SomeSunlight/ai-workstation/issues/41) remains open for genuinely reproducible fresh-host provisioning, permanent patched Process Compose release and outstanding real-host lifecycle gates; [#46](https://github.com/SomeSunlight/ai-workstation/issues/46) for consolidated configuration activation UX; [#55](https://github.com/SomeSunlight/ai-workstation/issues/55) for private instance configuration/backup/disaster recovery. Goose subagent/planner/web-search setup can proceed independently. Preserve private host paths, credentials and live metrics; no automatic service mutation on repository updates.
 
