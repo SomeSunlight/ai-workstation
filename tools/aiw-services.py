@@ -1038,6 +1038,227 @@ def windows_all_listeners(ports: list[int]) -> set[int]:
     return busy
 
 
+
+def configured_tcp_ports(folder: Path) -> list[tuple[str, int, bool]]:
+    """Configuration-only inventory, independent of service process state."""
+    doc = read_settings(folder)
+    items = [("supervisor", doc["process_compose"]["port"], True)]
+    host = folder / "native-host.json"
+    if host.is_symlink():
+        raise ConfigError("Linked native-host.json; cannot inspect configured ports.")
+    if host.is_file():
+        try:
+            services = json.loads(host.read_text(encoding="utf-8"))["services"]
+            if not isinstance(services, dict):
+                raise ValueError("bad services")
+            for name, entry in services.items():
+                enabled = entry["enabled"]
+                ports = entry["listen_ports"]
+                if type(enabled) is not bool or not isinstance(ports, list):
+                    raise ValueError("bad service")
+                for port in ports:
+                    if type(port) is not int or not 1 <= port <= 65535:
+                        raise ValueError("bad port")
+                    items.append((name, port, enabled))
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            raise ConfigError("Cannot inspect native-host.json service ports.") from None
+    else:
+        # WSL/native Linux can also use this CLI with native Process Compose.
+        # Process names with no declared TCP listener are not invented.
+        project = project_path(folder, doc)
+        if project.is_file() and not project.is_symlink():
+            try:
+                processes = yaml.safe_load(project.read_text(encoding="utf-8")).get("processes", {})
+                if isinstance(processes, dict):
+                    for name, entry in processes.items():
+                        availability = entry.get("availability", {}) if isinstance(entry, dict) else {}
+                        tcp = availability.get("tcp", {}) if isinstance(availability, dict) else {}
+                        address = tcp.get("target", "") if isinstance(tcp, dict) else ""
+                        match = re.search(r":([0-9]{1,5})$", str(address))
+                        if match and 1 <= int(match.group(1)) <= 65535:
+                            items.append((name, int(match.group(1)),
+                                          not entry.get("disabled", False)))
+            except (OSError, ValueError, yaml.YAMLError, TypeError, AttributeError):
+                raise ConfigError("Cannot inspect native service TCP declarations.") from None
+    return items
+
+
+def windows_tcp_process_inventory(ports: set[int]) -> tuple[list[dict], dict[int, dict]]:
+    """Windows listener/owner snapshot via OS APIs, not TCP connect() inference."""
+    if not ports:
+        return [], {}
+    command = (
+        "$ErrorActionPreference='Stop'; "
+        "$wanted=@(" + ",".join(map(str, sorted(ports))) + "); "
+        "$sockets=@(Get-NetTCPConnection -State Listen -ErrorAction Stop | "
+        "Where-Object { $wanted -contains [int]$_.LocalPort } | "
+        "ForEach-Object { [pscustomobject]@{port=[int]$_.LocalPort; "
+        "address=[string]$_.LocalAddress; pid=[int]$_.OwningProcess} }); "
+        "$procs=@(Get-CimInstance Win32_Process -ErrorAction Stop | ForEach-Object { "
+        "$created=if ($_.CreationDate) { $_.CreationDate.ToUniversalTime().ToString('o') } "
+        "else { '' }; "
+        "[pscustomobject]@{pid=[int]$_.ProcessId; ppid=[int]$_.ParentProcessId; "
+        "name=[string]$_.Name; created=$created} }); "
+        "[pscustomobject]@{sockets=$sockets; processes=$procs} | "
+        "ConvertTo-Json -Compress -Depth 5"
+    )
+    try:
+        result = subprocess.run(["pwsh", "-NoProfile", "-NonInteractive", "-Command", command],
+                                capture_output=True, text=True, check=False, timeout=18)
+        if result.returncode:
+            raise ValueError("OS probe failed")
+        values = json.loads(result.stdout)
+        if not isinstance(values, dict):
+            raise ValueError("bad result")
+        sockets = values.get("sockets", [])
+        processes = values.get("processes", [])
+        if not isinstance(sockets, list) or not isinstance(processes, list):
+            raise ValueError("bad arrays")
+        return sockets, {int(p["pid"]): p for p in processes}
+    except (OSError, ValueError, TypeError, KeyError, subprocess.TimeoutExpired):
+        raise ConfigError("Cannot inspect Windows TCP listeners and process owners.") from None
+
+
+def linux_tcp_process_inventory(ports: set[int]) -> tuple[list[dict], dict[int, dict]]:
+    """Use ss on WSL/Linux. If absent, read proc sockets without inventing PIDs."""
+    sockets = []
+    processes = {}
+    if shutil.which("ss"):
+        try:
+            result = subprocess.run(["ss", "-H", "-ltnp"], capture_output=True,
+                                    text=True, check=False, timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            raise ConfigError("Linux TCP listener inspection is unavailable.") from None
+        if result.returncode:
+            raise ConfigError("Linux TCP listener inspection failed.")
+        for line in result.stdout.splitlines():
+            fields = line.split()
+            if len(fields) < 5:
+                continue
+            match = re.search(r":([0-9]+)$", fields[3])
+            if not match:
+                continue
+            port = int(match.group(1))
+            if port not in ports:
+                continue
+            pid_match = re.search(r"pid=(\d+)", line)
+            name_match = re.search(r'users:\(\("([^"]+)"', line)
+            pid = int(pid_match.group(1)) if pid_match else None
+            sockets.append({"port": port, "address": fields[3], "pid": pid})
+            if pid is not None:
+                processes[pid] = {"name": name_match.group(1) if name_match else "unknown"}
+    else:
+        if not Path("/proc/net/tcp").is_file():
+            raise ConfigError("Neither ss nor /proc/net/tcp is available to inspect ports.")
+        for path in (Path("/proc/net/tcp"), Path("/proc/net/tcp6")):
+            if not path.is_file():
+                continue
+            try:
+                for line in path.read_text().splitlines()[1:]:
+                    fields = line.split()
+                    if len(fields) > 3 and fields[3] == "0A":
+                        port = int(fields[1].split(":")[-1], 16)
+                        if port in ports:
+                            sockets.append({"port": port, "address": fields[1], "pid": None})
+            except (OSError, ValueError, IndexError):
+                raise ConfigError("Cannot inspect Linux /proc TCP listeners.") from None
+    return sockets, processes
+
+
+def verified_windows_supervisor_pid(folder: Path) -> int | None:
+    """Only verified recorded AIW identity is a source of green ownership."""
+    state = windows_supervisor_state_path(folder)
+    if state.is_symlink() or not state.is_file():
+        return None
+    try:
+        record = json.loads(state.read_text(encoding="utf-8"))
+        identity = record["identity"]
+        pid = identity["pid"]
+        if type(pid) is not int or windows_process_identity(pid) != identity:
+            return None
+        allowed = [folder / "bin" / "process-compose.exe", pilot_binary(folder)]
+        if identity["exe"] not in {
+                os.path.normcase(os.path.realpath(path)) for path in allowed}:
+            return None
+        saved_boot = record.get("boot_id")
+        boot = windows_boot_id()
+        if boot and saved_boot and boot != saved_boot:
+            return None
+        return pid
+    except (ValueError, OSError, KeyError, TypeError):
+        return None
+
+
+def windows_is_supervised_pid(pid: int, supervisor: int | None,
+                              processes: dict[int, dict]) -> bool:
+    """Trace live parent chain with creation ordering to guard parent PID reuse."""
+    if supervisor is None:
+        return False
+    visited = set()
+    while pid not in visited:
+        if pid == supervisor:
+            return True
+        visited.add(pid)
+        child = processes.get(pid)
+        if not child:
+            return False
+        parent_pid = child.get("ppid")
+        parent = processes.get(parent_pid)
+        if not parent or not child.get("created") or not parent.get("created"):
+            return False
+        if child["created"] < parent["created"]:
+            return False
+        pid = parent_pid
+    return False
+
+
+def _port_status_color(status: str) -> str:
+    if not sys.stdout.isatty() or os.environ.get("NO_COLOR"):
+        return status
+    return {"AIW": "\033[32mAIW\033[0m",
+            "CONFLICT": "\033[31mCONFLICT\033[0m",
+            "UNKNOWN": "\033[33mUNKNOWN\033[0m"}.get(status, status)
+
+
+def show_service_ports(folder: Path) -> None:
+    """Read-only reusable inventory; unknown never means free or AIW-owned."""
+    configured = configured_tcp_ports(folder)
+    ports = {port for _, port, _ in configured}
+    if os.name == "nt":
+        sockets, processes = windows_tcp_process_inventory(ports)
+        owner = verified_windows_supervisor_pid(folder)
+    else:
+        sockets, processes = linux_tcp_process_inventory(ports)
+        owner = None  # Linux Process Compose has no Windows ownership record.
+    print("\nService TCP listeners (read-only; enabled/disabled is configuration):")
+    print(f"{'Service':<18} {'Port':>5} {'Config':<9} {'State':<10}  Owner")
+    print("-" * 78)
+    for name, port, enabled in configured:
+        active = [entry for entry in sockets if entry.get("port") == port]
+        label = "FREE"
+        names = []
+        if active:
+            statuses = []
+            for entry in active:
+                pid = entry.get("pid")
+                if pid is None or int(pid) not in processes:
+                    statuses.append("UNKNOWN")
+                    names.append("PID unavailable")
+                else:
+                    pid = int(pid)
+                    process = processes[pid]
+                    own = os.name == "nt" and windows_is_supervised_pid(pid, owner, processes)
+                    statuses.append("AIW" if own else "CONFLICT")
+                    names.append(str(process.get("name", "unknown")) + " (PID " + str(pid) + ")")
+            label = ("CONFLICT" if "CONFLICT" in statuses else
+                     "UNKNOWN" if "UNKNOWN" in statuses else "AIW")
+        print(f"{name:<18} {port:>5} {'enabled' if enabled else 'disabled':<9} "
+              f"{_port_status_color(label):<10}  {', '.join(sorted(set(names))) or '-'}")
+    print("AIW = verified supervisor/descendant; CONFLICT = other known process; "
+          "UNKNOWN = owner not safely determined.")
+    print("This report never starts, stops or takes over a service.")
+
+
 def windows_wait_for_shutdown(folder: Path, identity: dict, ports: list[int],
                               timeout_seconds: float = 180) -> None:
     """Finish Stop only after supervisor exit AND all service listeners close."""
