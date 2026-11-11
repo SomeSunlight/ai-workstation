@@ -110,6 +110,12 @@ jobs:
             tools/aiw-native-health.ps1
             tools/aiw-native-integrity.ps1
             config/versions.json
+            tools/agent_sandbox.py
+            tools/agent_sandbox_core.py
+            tests/smoke/agent-sandbox.py
+      - name: Verify cross-platform sandbox recipe/path handling (no Docker daemon)
+        shell: pwsh
+        run: python tests/smoke/agent-sandbox.py
       - name: Verify Windows shortcut creation and safe rename migration
         shell: pwsh
         run: ./tests/windows/shortcuts.ps1
