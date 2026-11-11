@@ -130,7 +130,8 @@ class CatalogueAndContainerBoundary(unittest.TestCase):
     def test_session_mount_excludes_original(self):
         service.save_catalog({"environments": {
             "standard": {"active": "1", "versions": {
-                "1": {"image_id": "sha256:" + "a" * 64}}}}})
+                "1": {"image_id": "sha256:" + "a" * 64,
+                      "local_tag": "aiw-agent-standard:r1"}}}}})
         with (mock.patch.object(service, "require_migration"),
               mock.patch.object(service, "goose_env", return_value=self.root / "missing.env"),
               mock.patch.object(service, "workspace", return_value=self.original),
