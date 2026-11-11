@@ -46,8 +46,8 @@ The workbench is divided into user tasks:
   should open immediately afterward. The monitor attaches to the existing
   supervisor, rather than launching a duplicate.
 - **Set up or change this computer:** first-time preparation; inspect,
-  edit, check and apply the machine-local startup settings; check whether the
-  old services still occupy the ports.
+  edit, check and apply machine-local startup settings; inspect current TCP
+  listeners and their owning processes.
 - **Manage application access keys:** create an original per-app key, copy it
   to the clipboard, list/rename registrations or prepare Dispatcher key hashes.
   These actions do not automatically activate the new keys in a running
@@ -99,6 +99,38 @@ This launch mode is exercised in Windows CI but its visual behavior under
 the owner's Windows Terminal settings still needs a real-host check.
 The native AIW menu and attached live Process Compose TUI remain the
 interactive interface.
+
+## Everyday diagnostics and recovery after a crash
+
+In the native Windows workbench, **Run and monitor → Show current status**
+includes the configured service/port/process inventory. **Set up → Show
+service TCP ports and process owners** displays the same read-only overview
+without starting anything. The equivalent direct CLI is `aiw ports`.
+
+- **AIW** (green where terminal colors are available): verified supervisor
+  or current descendant, with PID and process name.
+- **CONFLICT** (red): a listener owned by another known process; do not
+  automatically stop or adopt it.
+- **FREE**: no TCP listener was found on the declared port.
+- **UNKNOWN**: listener exists but a safe process attribution was unavailable.
+  Linux/WSL uses `ss` or read-only `/proc` sockets and does not invent
+  managed ownership without a verified supervisor identity.
+
+The overview covers Process Compose's management port and enabled/disabled
+native services from private configuration. It never changes local processes,
+credentials or port assignments. Windows uses OS-native process/socket
+inspection internally; the operator does not need PowerShell port commands.
+
+If Windows crashes or restarts while native AIW services were running,
+an ownership JSON file may survive when the supervisor does not. **The next
+Start handles this automatically, without a recovery question or warning,**
+if the prior supervisor is no longer identifiable, no other Process Compose
+process exists and all saved/current service plus management ports are free.
+The stale record is archived privately for diagnostics. If the original
+supervisor is still valid, Start reuses it and never launches a second one.
+If processes, ports or probes are uncertain, startup refuses to disturb
+them and prints a detailed port overview. Process identity and security
+approval checks remain mandatory.
 
 ## First-time setup
 
@@ -191,10 +223,10 @@ interactive interface.
    private JSON and prepares the Process Compose definition, then performs a
    real **dry-run validation**. The internal *render* step is automatic:
    there is no YAML to edit and no running process is changed.
-6. Choose **Check whether old services still occupy the ports**. If your
-   original launcher is still running, **conflicts are expected**. This
-   read-only check must refuse the conflicting ports; do not try to kill
-   a foreign PID or run both launchers.
+6. Choose **Show service TCP ports and process owners**. This read-only
+   inventory identifies configured services, ports and listener PIDs. An
+   unverified foreign listener blocks a later Start, but this view never
+   changes running processes.
 
 If you later change startup parameters, repeat **Edit → Check → Apply**
 while the AIW supervisor is stopped. Your private JSON stays the source of
@@ -236,10 +268,9 @@ working Windows stack:
 5. Choose **Apply edited settings for the next startup** and confirm.
    Expect a successful Process Compose configuration **dry-run** for
    four processes. This does not start, stop or reload the live stack.
-6. Choose **Check whether old services still occupy the ports**. While
-   the previous starter's Strata/Caddy/WebUI instances run, expect
-   **occupied-port refusal**. This is a successful *safety test*, not
-   a reason to stop unknown processes.
+6. Choose **Show service TCP ports and process owners**. If an independently
+   launched service is listening, the owner is shown as a potential conflict.
+   The overview itself is always read-only and does not refuse inspection.
 7. Under **Run and monitor AI services**, inspect the actions and return
    without starting anything. The menu now explicitly distinguishes
    Start, Status, Logs, the live monitor and Stop.
@@ -322,8 +353,8 @@ the takeover. The isolated Windows CI test supports this pilot but the
    no old services are running, **do not start the old script**.
    Verify the required ports have no unrelated owners.
 3. In AIW, select **Set up or change this computer → Check the edited
-   settings → Apply edited settings for the next startup → Check whether
-   old services still occupy the ports**. Require a successful dry-run
+   settings → Apply edited settings for the next startup → Show service TCP ports
+   and process owners**. Require a successful dry-run
    and free declared service ports.
 4. Choose **Run and monitor AI services → Start all enabled services**
    and opt in to the live status/logs monitor. Inspect each service's
@@ -430,7 +461,7 @@ For a **controlled retry** after receiving the cold-start fix:
    the AIW-owned supervisor**; do not kill unknown PIDs. Check its
    exit result. If the supervisor ownership record does not match, stop
    and inspect rather than force-removing it.
-2. Use **Set up → Check whether old services still occupy the ports**.
+2. Use **Set up → Show service TCP ports and process owners**.
    If any old/foreign service is listening, investigate ownership.
    A failed supervisor can leave a child process briefly busy;
    don't start a second copy of Strata on the same port.
@@ -539,7 +570,7 @@ effects before approving this change on a live host.
    indicates the host is running.
 6. Choose **Apply edited settings for the next startup** (regenerates
    `process-compose.yaml`, with an actual syntax/dry-run check), then
-   **Check whether old services still occupy the ports**.
+   **Show service TCP ports and process owners**.
 7. Choose **Run and monitor AI services → Start all enabled services**.
    Inspect the live monitor and per-service saved logs, then confirm
    authenticating Goose/Open WebUI and seeing both model aliases through
