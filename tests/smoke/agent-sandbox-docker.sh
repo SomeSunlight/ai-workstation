@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 tmp="$(mktemp -d)"
-export HOME="$tmp/home" AIW_AGENT_SANDBOX_DIR="$tmp/state"
+export HOME="$tmp/home" AIW_AGENT_SANDBOX_DIR="$tmp/state" AIW_SANDBOX_CI_DIAGNOSTICS=1
 mkdir -p "$HOME" "$tmp/project"
 printf '# Original\n' > "$tmp/project/README.md"
 cleanup() {
