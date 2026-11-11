@@ -47,6 +47,7 @@ jobs:
           bash tests/smoke/open-webui-runtime.sh
           bash tests/smoke/interactive-menu.sh
           uv run --frozen python tests/smoke/services-registry.py
+          uv run --frozen python tests/smoke/native-operation-diagnostics.py
 
       - name: Verify actual pinned native Process Compose (disposable Ubuntu project)
         run: |
@@ -105,6 +106,7 @@ jobs:
             tools/aiw-download-windows.ps1
             tools/aiw-services.py
             tools/aiw-native-host.py
+            tests/smoke/native-operation-diagnostics.py
             tools/aiw-native-child.ps1
             tools/aiw-native-health.ps1
             tools/aiw-native-integrity.ps1
@@ -132,6 +134,9 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           version: "0.11.26"
+      - name: Exercise offline native host diagnostic regressions on Windows
+        shell: pwsh
+        run: uv run --no-project --with PyYAML==6.0.3 python tests/smoke/native-operation-diagnostics.py
       - name: Exercise the real native Windows menu under StrictMode
         shell: pwsh
         run: ./tests/windows/services-menu.ps1
@@ -194,11 +199,12 @@ jobs:
             if (-not (Test-Path $ownerRecord)) {
               throw 'Windows supervisor identity/PID marker missing.'
             }
-            $duplicateRejected = $false
-            try { & ./bootstrap/windows/Services.ps1 up }
-            catch { $duplicateRejected = $true }
-            if (-not $duplicateRejected) {
-              throw 'A second supervisor was unexpectedly allowed on the same port.'
+            $firstRecord = Get-Content -LiteralPath $ownerRecord -Raw
+            $firstId = ($firstRecord | ConvertFrom-Json).identity
+            & ./bootstrap/windows/Services.ps1 up
+            $secondId = (Get-Content -LiteralPath $ownerRecord -Raw | ConvertFrom-Json).identity
+            if ($firstId.pid -ne $secondId.pid -or $firstId.created -ne $secondId.created) {
+              throw 'Idempotent Start created another supervisor instead of reusing the owner.'
             }
             & ./bootstrap/windows/Services.ps1 status
             & ./bootstrap/windows/Services.ps1 logs
@@ -209,12 +215,20 @@ jobs:
           if (Test-Path "$env:AIW_SERVICES_DIR/runtime/process-compose-windows.json") {
             throw 'Supervisor ownership record not removed on down.'
           }
-          $foreignStopRejected = $false
-          try { & ./bootstrap/windows/Services.ps1 down }
-          catch { $foreignStopRejected = $true }
-          if (-not $foreignStopRejected) {
-            throw 'Stop should refuse when no owned supervisor is registered.'
+          # Simulate a prior unclean Windows exit using the already-stopped
+          # supervisor's record; never interfere with a live process.
+          Set-Content -LiteralPath $ownerRecord -Value $firstRecord -NoNewline -Encoding utf8
+          try {
+            & ./bootstrap/windows/Services.ps1 up
+            if (-not (Test-Path -LiteralPath $ownerRecord)) {
+              throw 'Stale ownership was not recovered on the next start.'
+            }
+            if (@(Get-ChildItem -LiteralPath "$env:AIW_SERVICES_DIR/runtime" -Filter '*.stale-*.bak').Count -ne 1) {
+              throw 'Expected exactly one archived stale ownership record.'
+            }
           }
+          finally { & ./bootstrap/windows/Services.ps1 down }
+          & ./bootstrap/windows/Services.ps1 down  # idempotent, no foreign control
           # Exercise real native Windows HTTPS fallback and verified offline
           # archive import in a distinct temporary workspace.
           $offline = Join-Path $env:RUNNER_TEMP "process-compose_windows_amd64.zip"
