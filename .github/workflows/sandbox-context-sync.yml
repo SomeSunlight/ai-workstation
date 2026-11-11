@@ -1,0 +1,32 @@
+name: PR59 ContextCanon generation (temporary branch helper)
+on:
+  push:
+    branches: [feat/59-sandbox-lifecycle-pr1]
+    paths:
+      - CONTEXT.src.md
+      - .github/workflows/sandbox-context-sync.yml
+permissions:
+  contents: write
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: '0.11.26'
+      - name: Rebuild exact pinned official context
+        run: |
+          uvx --from 'git+https://github.com/SomeSunlight/context-canon.git@786c50957c4c06f9209ebacfa021609b592c0b07' contextcanon build --all .
+          uvx --from 'git+https://github.com/SomeSunlight/context-canon.git@786c50957c4c06f9209ebacfa021609b592c0b07' contextcanon check --all .
+      - name: Commit generated output to this review branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'build(context): regenerate official packages for #59'
+            git push origin HEAD:feat/59-sandbox-lifecycle-pr1
+          fi
