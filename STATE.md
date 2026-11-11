@@ -1,5 +1,12 @@
 # AI Workstation Current State
 
+## Unaccepted review candidate — #59 PR 1 (2026-11-11)
+
+A separate branch `feat/59-sandbox-lifecycle-pr1` proposes an **opt-in** agent-neutral sandbox service with an initial Goose adapter. Legacy Compose Goose and its live provider/credential/session volume remain unchanged. Only an operator may migrate with verified backup, build/pin standard, promote reviewed named images or apply project-file proposals. Runtime packages go into retained-then-discardable isolated session homes. This is **not** yet accepted live-host behavior; Ubuntu/Windows synthetic tests and ContextCanon regeneration/CI must be checked on the exact PR head, and real WSL Goose/Dispatcher/extension continuity is an independent owner acceptance gate. PR 2 network and hostile-code enforcement is not included.
+
+---
+
+
 ## Accepted PR #42 baseline (2026-11-03)
 
 [AI Workstation PR #42](https://github.com/SomeSunlight/ai-workstation/pull/42)
