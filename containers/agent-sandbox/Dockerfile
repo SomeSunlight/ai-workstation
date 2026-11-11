@@ -1,8 +1,8 @@
 # AIW operator-reviewed image only. Docker build receives immutable registry digests.
 # Build context contains this Dockerfile alone; no secrets or project files.
 ARG UV_BASE
-FROM ${UV_BASE} AS uv
 ARG BASE
+FROM ${UV_BASE} AS uv
 FROM ${BASE}
 USER root
 COPY --from=uv /uv /uvx /usr/local/bin/
@@ -18,4 +18,4 @@ ENV UV_TOOL_BIN_DIR=/home/goose/.local/bin
 ENV PATH=/home/goose/.local/bin:/opt/aiw/bin:/usr/local/bin:/usr/bin:/bin
 USER goose
 WORKDIR /workspace
-ENTRYPOINT ["/usr/local/bin/goose"]
+ENTRYPOINT ["goose"]
