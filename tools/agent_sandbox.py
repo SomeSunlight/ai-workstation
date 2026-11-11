@@ -242,7 +242,7 @@ def build_standard(upgrade: bool) -> None:
     image = build_image(recipe, base, local_tag, uv_base)
     docker("run", "--rm", "--pull", "never", "--network", "none",
            "--read-only", "--entrypoint", "/bin/sh", image,
-           "-c", "uv --version && python3 --version && git --version", show=True)
+           "-c", "uv --version && python3 --version && git --version && goose --version", show=True)
     record["versions"][revision] = {
         "image_id": image, "local_tag": local_tag, "parent": None,
         "goose_base": base, "uv_base": uv_base,
