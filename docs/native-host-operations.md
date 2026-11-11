@@ -105,7 +105,9 @@ interactive interface.
 In the native Windows workbench, **Run and monitor → Show current status**
 includes the configured service/port/process inventory. **Set up → Show
 service TCP ports and process owners** displays the same read-only overview
-without starting anything. The equivalent direct CLI is `aiw ports`.
+without starting anything. The equivalent direct CLI is `aiw ports` on Windows or
+`aiw services ports` from WSL/native Linux. The Linux native-services
+submenu also exposes the same port-owner overview.
 
 - **AIW** (green where terminal colors are available): verified supervisor
   or current descendant, with PID and process name.
