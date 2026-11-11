@@ -8,7 +8,7 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** ai-workstation  
-**Context version:** `0.2.2`
+**Context version:** `0.2.3`
 
 **Resulting imported Contexts:**
 
@@ -126,6 +126,10 @@ Run `./tools/release-check.sh` before committing.
 #### `ONB-DCF5EB952F7D` — Keep secrets out of Git images and Compose
 
 Secrets must not be committed, copied into images or stored in Compose files.
+
+#### `RULE-59A1B2C3D4E5` — Keep agent mutations inside disposable boundaries
+
+AIW owns installation, persistent native configuration, approved sandbox definitions and original projects; an agent application and its tools/subagents may change only an explicitly scoped disposable session. Durable environments and project changes require a separate operator-reviewed promotion or apply operation. Neither instructions to an agent nor ordinary Docker isolation establish strong hostile-code or network security.
 
 #### `RULE-81304E42320A` — Keep shipped product behavior general and English-language
 

@@ -8,13 +8,13 @@
 > Edit [CONTEXT.src.md](CONTEXT.src.md) instead.
 
 **Node:** Windows and WSL bootstrap  
-**Context version:** `0.2.2-draft`
+**Context version:** `0.2.3-draft`
 
 **Resulting imported Contexts:**
 
-- **Development Workflow** — `0.3.0-draft` — via Parent Context **Bootstrap** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../../.context/versions/37b676f7bc008873/CONTEXT.md)
-- **ai-workstation** — `0.2.2` — via Parent Context **Bootstrap** — [inspect accepted carrier](../../.context/versions/37b676f7bc008873/CONTEXT.md)
-- **Bootstrap** — `0.2.2-draft` — direct Parent Context — [inspect accepted carrier](../../.context/versions/37b676f7bc008873/CONTEXT.md)
+- **Development Workflow** — `0.3.0-draft` — via Parent Context **Bootstrap** — Why: We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here. — [inspect accepted carrier](../../.context/versions/b0fce691d379016c/CONTEXT.md)
+- **ai-workstation** — `0.2.3` — via Parent Context **Bootstrap** — [inspect accepted carrier](../../.context/versions/b0fce691d379016c/CONTEXT.md)
+- **Bootstrap** — `0.2.3-draft` — direct Parent Context — [inspect accepted carrier](../../.context/versions/b0fce691d379016c/CONTEXT.md)
 
 ## Local Overview
 
@@ -112,6 +112,10 @@ Run `./tools/release-check.sh` before committing.
 #### `ONB-DCF5EB952F7D` — Keep secrets out of Git images and Compose
 
 Secrets must not be committed, copied into images or stored in Compose files.
+
+#### `RULE-59A1B2C3D4E5` — Keep agent mutations inside disposable boundaries
+
+AIW owns installation, persistent native configuration, approved sandbox definitions and original projects; an agent application and its tools/subagents may change only an explicitly scoped disposable session. Durable environments and project changes require a separate operator-reviewed promotion or apply operation. Neither instructions to an agent nor ordinary Docker isolation establish strong hostile-code or network security.
 
 #### `RULE-81304E42320A` — Keep shipped product behavior general and English-language
 

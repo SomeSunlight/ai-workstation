@@ -1,0 +1,423 @@
+{
+  "changes": [],
+  "compiler_version": "0.8.0",
+  "digests": {
+    "normalized": "a9181d0a1f6b102444aa3256904f7c585d52942ec4ae757fbdf8e09c07ae8c1e",
+    "package": "7d661cbba80f9ce7abcd39a2206a4f66d2fb2a361cdba46ad6270226c7fc5433"
+  },
+  "files": [
+    {
+      "path": ".context/resource-origins.json",
+      "sha256": "0caa06a9a9688f40221942ddb61c4bfdaa208b45c902b6c53864a967a20e9019",
+      "size": 1260
+    },
+    {
+      "path": "CONTEXT.md",
+      "sha256": "da919658ccffaa1292c0553ec138ac772c5706059623d5b76b1323ebb62815c1",
+      "size": 10976
+    },
+    {
+      "path": "CONTEXT/README.md",
+      "sha256": "37bdcad600896b9c2995e058911dfd9cc25433d9cf924c0bcbe15e41941f0ebb",
+      "size": 2146
+    },
+    {
+      "path": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md",
+      "sha256": "0f1d4fd50389971c92268b6f06809d2533908b3694e27239267647725165303d",
+      "size": 9660
+    },
+    {
+      "path": "CONTEXT/references/n86fee10195c6f43/CONTEXT.md",
+      "sha256": "e3d74914f467a7c57024254488d640663ef8feb489ed1f4335d07039b9987483",
+      "size": 261
+    },
+    {
+      "path": "CONTEXT/references/n86fee10195c6f43/SECURITY.md",
+      "sha256": "4a014e8f0d1998e36935818522440f320dd9f64efedc3569d42eba21df263d83",
+      "size": 1409
+    },
+    {
+      "path": "CONTEXT/references/n86fee10195c6f43/docs/native-linux.md",
+      "sha256": "090a5a251d43dcdb8189426b158f3f864c1c96c3d927246ca1feb3011a6815eb",
+      "size": 4317
+    },
+    {
+      "path": "CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md",
+      "sha256": "6b348ebc0c4f23aca4229f5a6886bc2eb964fc80bd5ea458c1170823ee2d0c9f",
+      "size": 2233
+    },
+    {
+      "path": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md",
+      "sha256": "5f48cc76c2f3aaf76ea730d03ec5fe158b831bd329b2673ef6d28559906436ff",
+      "size": 6400
+    }
+  ],
+  "imports": [
+    {
+      "id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "name": "Development Workflow",
+      "normalized_digest": "0ca4b977665a971dcb068c22342d6d7904e5f03a078a6c58b66fe5af3328be79",
+      "package_digest": "6b2694121e5c69ed772e9b9fde7e15e71f97444a13b2f1f808190e4f7eabe0cb",
+      "version": "0.3.0-draft",
+      "why": "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
+    },
+    {
+      "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "name": "ai-workstation",
+      "normalized_digest": "2f565077baa4f83651279d9fa31b00727443e43d8be51d3568b320f2b29e78b7",
+      "package_digest": "fb084389762c54d3e940f0b8fcd8552f66e843b4a1f9f4579cdcf36f9638462e",
+      "version": "0.2.3",
+      "why": null
+    },
+    {
+      "id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
+      "name": "Bootstrap",
+      "normalized_digest": "1fd35cc81897721bf02a5ae1a3483284129bbe5b04f89d70ea7c17beb0870049",
+      "package_digest": "2c52c0490ea31a15d0f7954df0dee39fdbb7b7739bf754b8d5b2e9d10cb8d922",
+      "version": "0.2.3-draft",
+      "why": null
+    }
+  ],
+  "node": {
+    "id": "ad9cbb59-ae04-4290-9c53-5d70cfefe434",
+    "name": "Ansible host configuration",
+    "version": "0.2.3-draft"
+  },
+  "parents": [],
+  "removed_rules": [],
+  "rules": [
+    {
+      "group": "Recoverable planning",
+      "id": "CCW-010",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "Before implementation, framework-context, or substantial documentation changes, ensure an Issue records why the change exists; it may be brief.",
+      "title": "Back every change with an Issue",
+      "why": "Repository history should show the reason without reconstructing chat history."
+    },
+    {
+      "group": "Recoverable planning",
+      "id": "CCW-001",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "Before starting a new coherent development block, record a short purpose and checklist in the project's durable planning surface; use `PLAN.md` when the project follows this workflow convention.",
+      "title": "Plan a coherent change block before editing",
+      "why": "Repository state must explain what work is in progress even if the chat, model session, or tool run disappears."
+    },
+    {
+      "group": "Recoverable planning",
+      "id": "CCW-002",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "When a listed step is actually complete, mark its `PLAN.md` checkbox `[x]` immediately rather than reconstructing completion at the end of a long session.",
+      "title": "Checkpoint completed plan items immediately",
+      "why": "Immediate checkpoints turn PLAN into a reliable recovery ledger instead of requiring plan archaeology after an interruption."
+    },
+    {
+      "group": "Recoverable planning",
+      "id": "CCW-003",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "Put decisions, active constraints, accepted state, and next steps needed to resume work in repository documentation such as `PLAN.md`, `STATE.md`, or the project's equivalent rather than relying on chat history or model memory.",
+      "title": "Keep recovery-critical knowledge in the repository",
+      "why": "Long conversations and agent sessions are transient; the repository is the durable shared recovery point for humans and tools."
+    },
+    {
+      "group": "Recoverable planning",
+      "id": "CCW-007",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "When the project owner resumes work after a short conversational interruption, explicitly says to continue, and reports no intervening repository changes, continue from the last established branch/PR state unless a repository operation gives evidence that it changed. Do not spend a new work cycle re-checking already established repository facts merely to prove that nothing happened.",
+      "title": "Resume recent explicit continuation without re-proving unchanged state",
+      "why": "In a controlled single-owner workflow, repeated defensive re-verification consumes the useful working window without adding evidence. Any stated or observed intervening change still invalidates this assumption."
+    },
+    {
+      "group": "Transparent machine semantics",
+      "id": "CCW-012",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "When Markdown is also parsed, compiled, extracted, or otherwise given machine-significant meaning, every field or wording whose value affects machine semantics must live in an explicitly marked machine structure rather than being inferred from ordinary presentation prose. Keep that machine significance recognizable in rendered and review surfaces; rendering may style or summarize the control structure, but must not make the machine/human boundary indistinguishable.",
+      "title": "Mark machine-significant Markdown explicitly",
+      "why": "Humans must be able to tell which Markdown is freely editable presentation and which content participates in operational semantics; hidden parser contracts turn harmless-looking prose edits into surprising behavior."
+    },
+    {
+      "group": "Proportional verification",
+      "id": "CCW-004",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "For one coherent correction block, make the related authoring/code changes and run proportionate focused checks first; do not repeat the project's most expensive generated-output, integration, packaging, or full verification cycle after every micro-edit.",
+      "title": "Batch related edits before expensive final verification",
+      "why": "Final verification is valuable, but repeating it on superseded intermediate heads adds ceremony without increasing confidence in the candidate that will actually be reviewed or merged."
+    },
+    {
+      "group": "Proportional verification",
+      "id": "CCW-009",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "When the project owner explicitly approves a coherent implementation scope and says intermediate product review is unnecessary, mark the fast-run as active in the durable PLAN with its scope and exit condition, keep recovery checkpoints and focused verification inside bounded work blocks, and defer repeated PR-description polish, full CI, generated-output regeneration, and other review ceremony until the coherent review candidate. When the fast-run ends, record that closure before returning to ordinary review cadence.",
+      "title": "Use owner-approved fast-run blocks without weakening the final gate",
+      "why": "Explicit delegation can remove intermediate coordination cost without sacrificing recoverability. Visible start/scope/exit/closure boundaries prevent a long single-worker fast-run from becoming undocumented process state, while final human review and exact-head merge verification remain unchanged."
+    },
+    {
+      "group": "Proportional verification",
+      "id": "CCW-005",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "A coherent development block may be presented for project-owner review while understood and disclosed CI failures or generated drift remain. After explicit project-owner approval and before merging, require the exact current head to pass the project's complete merge-gate verification, including zero generated drift when generated canonical output is part of the project contract.",
+      "title": "Require exact-head green verification at the merge gate, not the first review gate",
+      "why": "Human review should happen before spending finalization effort on a candidate that may still change, while the accepted branch remains protected by a strict reproducibility gate."
+    },
+    {
+      "group": "Human review gate",
+      "id": "CCW-011",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "Applicable Context constrains a task; it does not silently expand its writable scope.",
+      "title": "Expand change scope explicitly",
+      "why": "A local task must not acquire wider impact merely because broader Context was loaded."
+    },
+    {
+      "group": "Human review gate",
+      "id": "CCW-006",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "Keep a review PR or equivalent change set open until the project owner explicitly approves the reviewed result.",
+      "title": "Do not merge without explicit project-owner approval",
+      "why": "Green automation proves only the properties it checks; it does not prove that the product, architecture, or documentation is acceptable to its human owner."
+    },
+    {
+      "group": "Accepted baseline",
+      "id": "CCW-008",
+      "modifications": [],
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "statement": "After a reviewed change is successfully merged into the accepted branch, reconcile the durable repository state that records the accepted baseline before starting the next coherent development block. Record the merge outcome in `PLAN.md`, update `STATE.md` or equivalent current-state documentation, and refresh README/CHANGELOG or review-status wording made stale by the merge when applicable.",
+      "title": "Close the post-merge baseline checkpoint before new development",
+      "why": "The merge itself creates project facts after the merge candidate was frozen. Without a post-merge checkpoint, the accepted code can be correct while recovery documentation still describes the pre-merge state."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-6566E6E85D48",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "The repository is the installation specification; running containers and manually modified hosts are not the source of truth.",
+      "title": "Repository is the installation specification",
+      "why": "Prevents runtime or host drift from becoming an implicit configuration authority."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-504C6A92475F",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "When developing or installing Linux workloads under WSL, use the WSL Linux filesystem rather than `/mnt/c`; native Windows and native Linux tools use their own appropriate host filesystems.",
+      "title": "Keep WSL development inside its Linux filesystem",
+      "why": "Avoids WSL filesystem performance and permission problems without incorrectly imposing WSL paths on the other supported execution modes."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-02E2C1B8C47B",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Update `config/versions.json`, documentation and tests together.",
+      "title": "Keep versions documentation and tests aligned",
+      "why": "Keeps declared versions, human guidance and validation in sync."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-BE08FE3A5E3D",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Run `./tools/release-check.sh` before committing.",
+      "title": "Run release check before committing",
+      "why": "Provides the project-defined pre-commit validation step."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-DCF5EB952F7D",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Secrets must not be committed, copied into images or stored in Compose files.",
+      "title": "Keep secrets out of Git images and Compose",
+      "why": "Keeps credentials out of durable repository history and built artifacts."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "RULE-59A1B2C3D4E5",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "AIW owns installation, persistent native configuration, approved sandbox definitions and original projects; an agent application and its tools/subagents may change only an explicitly scoped disposable session. Durable environments and project changes require a separate operator-reviewed promotion or apply operation. Neither instructions to an agent nor ordinary Docker isolation establish strong hostile-code or network security.",
+      "title": "Keep agent mutations inside disposable boundaries",
+      "why": "Keep agent autonomy useful without silently turning experiments into persistent machine state or unreviewed changes to originals."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "RULE-81304E42320A",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Design and document AI Workstation for native Windows, Linux under WSL and native Linux using platform-specific adapters where needed. Keep public code, menu/CLI text, default examples and documentation in English regardless of the conversation language. Personal hostnames, usernames, domains, provider preferences and password-manager choices belong in private operator configuration, not product assumptions.",
+      "title": "Keep shipped product behavior general and English-language",
+      "why": "A reusable workstation must remain understandable and portable across owners, operating systems and future hardware; distinguish intended compatibility from actually validated platform support."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "RULE-7E9AB1D9A8A0",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "Prefer concise menus that preserve readable action results, redisplay choices on request, offer numbered selection of already known objects and briefly distinguish terms such as original credentials versus derived hashes. Keep details in linked guidance and test representative user journeys on each relevant operating system.",
+      "title": "Make operator workflows discoverable with little memorization",
+      "why": "Users should be able to return weeks later without recalling identifiers or internal commands; these are practical UX preferences, not a requirement to build another TUI or a ban on direct CLI commands."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-14050ED3235E",
+      "modifications": [],
+      "origin_node_id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
+      "origin_node_name": "Bootstrap",
+      "statement": "Keep installation entry points thin and move implementation into modules.",
+      "title": "Keep installation entry points thin",
+      "why": "Preserves a small entry-point surface while keeping implementation maintainable."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-F02E76A8ECF4",
+      "modifications": [],
+      "origin_node_id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
+      "origin_node_name": "Bootstrap",
+      "statement": "Preserve idempotency: a second run must be safe.",
+      "title": "Preserve installer idempotency",
+      "why": "Installation is explicitly designed to be rerun after interruption or partial completion."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-DDE1BB850066",
+      "modifications": [],
+      "origin_node_id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
+      "origin_node_name": "Bootstrap",
+      "statement": "Never introduce an automatic destructive migration.",
+      "title": "No automatic destructive migration",
+      "why": "Destructive changes require explicit human control rather than implicit installer behavior."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-B139299ADE50",
+      "modifications": [],
+      "origin_node_id": "ad9cbb59-ae04-4290-9c53-5d70cfefe434",
+      "origin_node_name": "Ansible host configuration",
+      "statement": "Existing conflicting container packages are reported, not removed automatically.",
+      "title": "Conflicting container packages are not removed automatically",
+      "why": "Avoids destructive host changes during Docker setup."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-4D9D0588DD63",
+      "modifications": [],
+      "origin_node_id": "ad9cbb59-ae04-4290-9c53-5d70cfefe434",
+      "origin_node_name": "Ansible host configuration",
+      "statement": "The Docker daemon is exposed only through its local Unix socket.",
+      "title": "Docker daemon stays on the local Unix socket",
+      "why": "Avoids exposing the Docker control plane over a network interface."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "ONB-FE26E55B301A",
+      "modifications": [],
+      "origin_node_id": "ad9cbb59-ae04-4290-9c53-5d70cfefe434",
+      "origin_node_name": "Ansible host configuration",
+      "statement": "Only the interactive Linux user joins the powerful `docker` group.",
+      "title": "Only the interactive user joins the docker group",
+      "why": "Keeps Docker-equivalent host authority limited to the intended interactive account."
+    }
+  ],
+  "schema": "contextcanon/package/v4",
+  "sources": [
+    {
+      "id": "f78265e4-e023-4d7a-9b26-9a917ef68a4a",
+      "name": "Bootstrap",
+      "normalized_digest": "1fd35cc81897721bf02a5ae1a3483284129bbe5b04f89d70ea7c17beb0870049",
+      "package_digest": "2c52c0490ea31a15d0f7954df0dee39fdbb7b7739bf754b8d5b2e9d10cb8d922",
+      "relationship": "parent",
+      "version": "0.2.3-draft",
+      "why": null
+    }
+  ],
+  "topics": [
+    {
+      "condition": "When planning, resuming, checkpointing, reviewing, testing, finalizing, merging, or closing the accepted baseline for a coherent development block:",
+      "id": "CCW-TOPIC-CHANGE-WORKFLOW",
+      "origin_node_id": "c4c94726-3cc7-4df6-b779-72bbf9c06f40",
+      "origin_node_name": "Development Workflow",
+      "targets": [
+        {
+          "intent": "required",
+          "kind": "resource",
+          "locator": "CONTEXT/references/c4c94726-3cc7-4df6-b779-72bbf9c06f40/nodes/library/development-workflow/docs/change-workflow.md"
+        }
+      ],
+      "title": "Executing a development block"
+    },
+    {
+      "condition": "When reporting a vulnerability or checking the project security-reporting procedure, read the security document.",
+      "id": "ONB-FA47F00F43A9",
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "targets": [
+        {
+          "intent": "required",
+          "kind": "resource",
+          "locator": "CONTEXT/references/n86fee10195c6f43/SECURITY.md",
+          "resource_id": "RESOURCE-B06EC8C816F4"
+        }
+      ],
+      "title": "Security reporting resource"
+    },
+    {
+      "condition": "When diagnosing installation, WSL access, permissions, Docker-session, elevation or recovery problems, read the troubleshooting guide.",
+      "id": "ONB-0513F8B51242",
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "targets": [
+        {
+          "intent": "required",
+          "kind": "resource",
+          "locator": "CONTEXT/references/n86fee10195c6f43/docs/troubleshooting.md",
+          "resource_id": "RESOURCE-B762C2ED8A3A"
+        }
+      ],
+      "title": "Troubleshooting guide"
+    },
+    {
+      "condition": "When recreating or auditing the original public-repository setup from the tested prototype, read the repository setup guide.",
+      "id": "ONB-716FC7DB282B",
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "targets": [
+        {
+          "intent": "required",
+          "kind": "resource",
+          "locator": "CONTEXT/references/n86fee10195c6f43/docs/repository-setup.md",
+          "resource_id": "RESOURCE-5D8641A6973B"
+        }
+      ],
+      "title": "Public repository creation procedure"
+    }
+  ]
+}

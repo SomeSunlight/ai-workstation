@@ -1,5 +1,5 @@
 # Windows and WSL bootstrap — Local Context Source
-<!-- ctx:node id="a46c5141-dcdf-4f28-9839-4053a02e04cf" name="Windows and WSL bootstrap" version="0.2.2-draft" -->
+<!-- ctx:node id="a46c5141-dcdf-4f28-9839-4053a02e04cf" name="Windows and WSL bootstrap" version="0.2.3-draft" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
@@ -21,8 +21,8 @@ Details: CONTEXT-format.md
 -->
 
 <!-- contextcanon-placement-parent:start -->
-- [Bootstrap](..) — `0.2.2-draft` — `relationship=parent`
-  <!-- ctx:source id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.2.2-draft" normalized-digest="1e795319abed6f4d66c0c48f227a5bc89b72dc3f50b394b549489a660c8623b8" package-digest="1cea3ebe40730eb2d962e15cb9c5e967ab6d13443a030fead969db897d1b68c7" -->
+- [Bootstrap](..) — `0.2.3-draft` — `relationship=parent`
+  <!-- ctx:source id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" version="0.2.3-draft" normalized-digest="1fd35cc81897721bf02a5ae1a3483284129bbe5b04f89d70ea7c17beb0870049" package-digest="2c52c0490ea31a15d0f7954df0dee39fdbb7b7739bf754b8d5b2e9d10cb8d922" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview
