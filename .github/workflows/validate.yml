@@ -90,6 +90,16 @@ jobs:
           uv run --frozen ansible-playbook ansible/playbooks/workstation.yml --syntax-check
           uv run --frozen ansible-playbook ansible/playbooks/verify.yml --syntax-check
 
+  sandbox-docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Verify actual disposable Docker home and approved image inheritance
+        run: |
+          docker info >/dev/null
+          bash tests/smoke/agent-sandbox-docker.sh
+
   windows-shortcuts:
     runs-on: windows-2025
     steps:
