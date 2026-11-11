@@ -332,10 +332,10 @@ def inventory(identifier: str) -> list[tuple[str, str]]:
                     meta["image_id"], "tool", "list")
     return sorted(set(UV_RESULT.findall(output)))
 
-def candidate(identifier: str, name: str) -> None:
+def candidate(identifier: str, name: str, upgrade: bool = False) -> None:
     validate_name(name)
-    if catalogue()["environments"].get(name):
-        raise Refused("Name already in approved catalogue.")
+    if bool(catalogue()["environments"].get(name)) != upgrade:
+        raise Refused("Use --upgrade for existing names; new names cannot request upgrades.")
     folder, meta = current_session(identifier)
     directory = STATE / "candidates" / name
     if directory.exists():
@@ -352,7 +352,7 @@ def candidate(identifier: str, name: str) -> None:
     save_json(directory / "candidate.json",
               {"name": name, "session": identifier, "parent": meta["environment"],
                "parent_image_id": meta["image_id"], "created": now(),
-               "detected_uv_tools": [{"package": p, "version": v} for p, v in tools],
+               "upgrade": upgrade, "detected_uv_tools": [{"package": p, "version": v} for p, v in tools],
                "uncaptured": ["uvx cache", "manual and apt installations"]})
     print(f"Candidate recipe: {directory / 'Dockerfile'}")
     print("Review/edit as operator; no image built or approved yet.")
@@ -381,31 +381,77 @@ def promote(name: str) -> None:
     parent = entry(proposal["parent"])
     if proposal["parent_image_id"] != parent["image"]:
         raise Refused("Parent image changed; start a new candidate.")
-    if catalogue()["environments"].get(name):
-        raise Refused("No implicit environment overwrite.")
+    data = catalogue()
+    existing = data["environments"].get(name)
+    if bool(existing) != bool(proposal.get("upgrade")):
+        raise Refused("Candidate/new-name or upgrade status disagrees with the catalogue.")
+    if existing and proposal["parent"] != name:
+        raise Refused("Upgrades must derive from the currently approved named environment.")
+    revision = next_revision(existing or {"versions": {}})
     print(recipe.read_text())
     print(f"Approved parent image: {parent['image']}")
     print(f"Rebuildable pins: {tools}")
     confirm("Build and approve this reviewed recipe under a permanent name?", "APPROVE " + name)
-    image = build_image(recipe, parent["image"], f"aiw-agent-{name}:r1")
+    image = build_image(recipe, parent["image"], f"aiw-agent-{name}:r{revision}")
     if tools:
         output = docker("run", "--rm", "--pull", "never", "--network", "none",
                         "--read-only", "--env", "UV_TOOL_DIR=/opt/aiw/tools",
                         "--entrypoint", "/usr/local/bin/uv", image, "tool", "list")
         if not set(tools).issubset(set(UV_RESULT.findall(output))):
             raise Refused("Built image does not contain pinned tools; not promoted.")
-    target = private_dir(STATE / "recipes" / name / "1")
+    target = private_dir(STATE / "recipes" / name / revision)
     shutil.copyfile(recipe, target / "Dockerfile")
-    data = catalogue()
-    data["environments"][name] = {
-        "active": "1",
-        "versions": {"1": {"image_id": image, "parent": parent["name"],
-                           "parent_image_id": parent["image"],
-                           "recipe": str(target / "Dockerfile"),
-                           "recipe_sha256": hashlib.sha256(recipe.read_bytes()).hexdigest(),
-                           "uv_tools": tools, "approved_at": now()}}}
+    record = existing or {"versions": {}, "active": None}
+    record["versions"][revision] = {
+        "image_id": image, "parent": parent["name"],
+        "parent_image_id": parent["image"],
+        "recipe": str(target / "Dockerfile"),
+        "recipe_sha256": hashlib.sha256(recipe.read_bytes()).hexdigest(),
+        "uv_tools": tools, "approved_at": now()}
+    record["active"] = revision
+    data["environments"][name] = record
     save_catalog(data)
     print(f"Approved {name}: {image}. Standard unchanged.")
+
+def rollback(name: str, revision: str) -> None:
+    data = catalogue()
+    record = data["environments"].get(name)
+    if not record or revision not in record["versions"]:
+        raise Refused("Unknown approved environment revision.")
+    image = record["versions"][revision]["image_id"]
+    if inspect_image(image)["Id"] != image:
+        raise Refused("Requested rollback image is unavailable locally.")
+    confirm(f"Restore {name} selection to approved r{revision} ({image})?", "ROLLBACK " + name)
+    record["active"] = revision
+    save_catalog(data)
+    print(f"Active {name} is now approved revision {revision}; retained sessions are unchanged.")
+
+
+def rebuild(name: str, revision: str) -> None:
+    record = catalogue()["environments"].get(name)
+    if not record or revision not in record["versions"]:
+        raise Refused("Unknown approved environment revision.")
+    approved = record["versions"][revision]
+    recipe = (ROOT / approved["recipe"]) if name == "standard" else Path(approved["recipe"])
+    if hashlib.sha256(recipe.read_bytes()).hexdigest() != approved["recipe_sha256"]:
+        raise Refused("Approved recipe has changed; no rebuild allowed.")
+    parent = approved["goose_base"] if name == "standard" else approved["parent_image_id"]
+    uv_base = approved.get("uv_base", "")
+    print(f"Rebuild {name} r{revision} offline from approved parent and recipe.")
+    image = build_image(recipe, parent, f"aiw-agent-verification-{name}:r{revision}", uv_base)
+    expected = {tuple(x) for x in approved.get("uv_tools", [])}
+    if expected:
+        output = docker("run", "--rm", "--pull", "never", "--network", "none",
+                        "--read-only", "--env", "UV_TOOL_DIR=/opt/aiw/tools",
+                        "--entrypoint", "/usr/local/bin/uv", image, "tool", "list")
+        if not expected.issubset(set(UV_RESULT.findall(output))):
+            raise Refused("Rebuilt packages differ; the approved selection is unchanged.")
+    if image == approved["image_id"]:
+        print("Rebuild digest matches approved image.")
+    else:
+        print("Rebuild package versions verified; image digest differs. "
+              "Investigate upstream apt/uv artifact nondeterminism; no promotion performed.")
+
 
 def remove_environment(name: str) -> None:
     validate_name(name)
@@ -467,10 +513,17 @@ def main() -> int:
     n = sub.add_parser("candidate")
     n.add_argument("id")
     n.add_argument("name")
+    n.add_argument("--upgrade", action="store_true")
     t = sub.add_parser("promote")
     t.add_argument("name")
     x = sub.add_parser("remove")
     x.add_argument("name")
+    rb = sub.add_parser("rollback")
+    rb.add_argument("name")
+    rb.add_argument("revision")
+    bv = sub.add_parser("rebuild")
+    bv.add_argument("name")
+    bv.add_argument("revision")
     args = parser.parse_args()
     try:
         if args.command == "list":
@@ -498,7 +551,11 @@ def main() -> int:
         elif args.command == "discard":
             destroy(args.id)
         elif args.command == "candidate":
-            candidate(args.id, args.name)
+            candidate(args.id, args.name, args.upgrade)
+        elif args.command == "rollback":
+            rollback(args.name, args.revision)
+        elif args.command == "rebuild":
+            rebuild(args.name, args.revision)
         elif args.command == "promote":
             promote(args.name)
         elif args.command == "remove":
