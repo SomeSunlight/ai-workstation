@@ -66,7 +66,7 @@ Usage:
   aiw goose workspace add NAME [PATH]
   aiw goose workspace list
   aiw goose workspace remove NAME
-  aiw goose sandbox help       Disposable agent work + reviewed environments (opt-in)
+  aiw goose sandbox --help     Disposable agent work + reviewed environments (opt-in)
   aiw goose help
   aiw goose quick-help      Show Goose slash-key shortcuts
 
@@ -644,6 +644,7 @@ goose_sandbox() {
 
 goose_sandbox_menu() {
     local choice work env session name paths
+    local -a selected_paths=()
     while true; do
         cat <<'EOF_MENU'
 
