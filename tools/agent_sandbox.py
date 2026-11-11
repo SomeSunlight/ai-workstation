@@ -136,6 +136,9 @@ def helper(image: str, mounts: list[str], script: str) -> str:
             "--user", "0:0", "--entrypoint", "/bin/sh"]
     for mount in mounts:
         args += ["--mount", mount]
+    # Test fixture only. Never enable diagnostics with real provider data.
+    if os.environ.get("AIW_SANDBOX_CI_DIAGNOSTICS") == "1":
+        return docker(*args, image, "-c", script, show=True)
     return docker(*args, image, "-c", script)
 
 def migration(command: str) -> None:
