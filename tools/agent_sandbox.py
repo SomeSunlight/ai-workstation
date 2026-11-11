@@ -46,10 +46,6 @@ def docker(*args: str, show: bool = False) -> str:
     completed = subprocess.run(["docker", *map(str, args)], check=False,
                                text=True, capture_output=not show)
     if completed.returncode:
-        # Diagnostic logs are only permitted for the isolated, synthetic CI fixture.
-        if os.environ.get("AIW_SANDBOX_CI_DIAGNOSTICS") == "1":
-            print((completed.stderr or "")[-4000:], file=sys.stderr)
-            print((completed.stdout or "")[-2000:], file=sys.stderr)
         raise Refused(f"Docker {args[0]} failed (exit {completed.returncode}); inspect Docker locally.")
     return (completed.stdout or "").strip()
 
@@ -144,9 +140,6 @@ def helper(image: str, mounts: list[str], script: str) -> str:
             "--user", "0:0", "--entrypoint", "/bin/sh"]
     for mount in mounts:
         args += ["--mount", mount]
-    # Test fixture only. Never enable diagnostics with real provider data.
-    if os.environ.get("AIW_SANDBOX_CI_DIAGNOSTICS") == "1":
-        return docker(*args, image, "-c", script, show=True)
     return docker(*args, image, "-c", script)
 
 def migration(command: str) -> None:
