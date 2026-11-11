@@ -1,5 +1,23 @@
 # AI Workstation Plan
 
+## Issue #59 — PR 1: disposable Goose agent sandbox (draft; 2026-11-11)
+
+**Scope:** separate opt-in sandbox service + Goose adapter only. No live Docker migration, running Windows service change, GitHub merge or PR 2 security profile. Branch `feat/59-sandbox-lifecycle-pr1` from current `main`.
+
+- [x] Read current #59 and inspect Goose Compose, native config/maintenance, context source and existing CI.
+- [x] Stage isolated non-Git/Git-compatible file copies with private SHA-256 baselines, operator review and explicit selected-file apply. No original is mounted inside the sandbox.
+- [x] Define opt-in backed-up migration, disposable session home, pinned standard image recipe and owner-only named recipe catalogue with explicit candidate/promotion/rollback.
+- [x] Preserve all existing legacy Goose entrypoints and private volume unchanged in the repository and deployment.
+- [x] Add offline synthetic source/Markdown, binary, conflict, path and session-mount tests; document limits and operation.
+- [ ] Run pinned ContextCanon source build/check and commit generated root/child packages on the draft branch (do not edit generated packages by hand).
+- [ ] Exact-head Ubuntu/Windows CI, Docker image build, isolated repeat-session tests, named-tool promotion/rebuild and WSL/Goose migration+provider/extension/history continuity. Record evidence separately; **do not imply these were run against the owner's host**.
+- [ ] Owner reviews the Draft PR, performs an opt-in WSL acceptance if desired, and explicitly authorizes a merge. PR 2 remains separate.
+
+**Known first-slice limits:** approved recipes capture version-pinned `uv tool` installs, not opaque `uvx` caches/arbitrary runtime installs; pre-migration Goose history is copied as a snapshot, newer histories stay with resumable sessions and are not silently merged. Direct legacy Goose sessions still have their historical RW workspace. Sandbox Docker bridge networking, tool permissions and unknown external extensions are not hardened against a malicious actor until PR 2. Native Windows launches this Linux adapter only via WSL. Multi-file apply keeps verified private backups but is not a transaction.
+
+---
+
+
 ## Owner acceptance checkpoint — Issue #53: native Strata integrity and shell-free launch (2026-11-10)
 
 **Review:** [Draft PR #54](https://github.com/SomeSunlight/ai-workstation/pull/54) is a clean, independent `main`-based #53 change; the obsolete #45-stacked ancestry was removed earlier. The owner has completed the primary **live Speedy** acceptance and intends to squash-merge after the final review. This plan records verified evidence, not an automated deployment or an already completed merge.
