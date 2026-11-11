@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 from collections import deque
+from contextlib import contextmanager
 import socket
 import time
 import hashlib
@@ -701,6 +702,125 @@ def windows_supervisor_state_path(folder: Path) -> Path:
     return folder / "runtime" / "process-compose-windows.json"
 
 
+
+@contextmanager
+def windows_start_lock(folder: Path):
+    """Crash-released Windows mutex for start/recovery, not a persistent lock bit."""
+    if os.name != "nt":
+        raise ConfigError("Windows start lock is Windows-only.")
+    import msvcrt
+    directory = folder / "runtime"
+    private_dir(directory)
+    path = directory / "process-compose-start.lock"
+    if path.is_symlink():
+        raise ConfigError("Linked supervisor start lock; refusing startup.")
+    with path.open("a+b") as stream:
+        stream.seek(0, os.SEEK_END)
+        if stream.tell() == 0:
+            stream.write(b"\x00")
+            stream.flush()
+        stream.seek(0)
+        try:
+            msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError:
+            raise ConfigError("Another AIW start is in progress; retry when it finishes.") from None
+        try:
+            yield
+        finally:
+            stream.seek(0)
+            msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+
+
+def windows_boot_id() -> str | None:
+    """Record the Windows boot epoch; PID/executable/creation remain required."""
+    try:
+        result = subprocess.run(
+            ["pwsh", "-NoProfile", "-NonInteractive", "-Command",
+             "$ErrorActionPreference='Stop'; "
+             "(Get-CimInstance Win32_OperatingSystem).LastBootUpTime."
+             "ToUniversalTime().ToString('o')"],
+            capture_output=True, text=True, check=False, timeout=12)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout.strip() if result.returncode == 0 and result.stdout.strip() else None
+
+
+def windows_process_compose_pids() -> set[int]:
+    """Fail closed rather than assume an uninspectable process list is empty."""
+    try:
+        result = subprocess.run(
+            ["pwsh", "-NoProfile", "-NonInteractive", "-Command",
+             "$ErrorActionPreference='Stop'; "
+             "@(Get-CimInstance Win32_Process -Filter "
+             "\"Name LIKE 'process-compose%'\" -ErrorAction Stop | "
+             "Select-Object -ExpandProperty ProcessId) -join ','"],
+            capture_output=True, text=True, check=False, timeout=12)
+    except (OSError, subprocess.TimeoutExpired):
+        raise ConfigError("Cannot inspect Process Compose processes; refusing startup.") from None
+    if result.returncode:
+        raise ConfigError("Process Compose process inspection failed; refusing startup.")
+    try:
+        return {int(v) for v in result.stdout.strip().split(",") if v.strip()}
+    except ValueError:
+        raise ConfigError("Invalid Process Compose process inventory; refusing startup.") from None
+
+
+def windows_prepare_start(folder: Path, binary: str, port: int,
+                          service_ports: list[int]) -> bool:
+    """True = existing exact supervisor. Archive only provably orphaned state.
+
+    Must be invoked with the Windows start mutex. NEVER terminate a PID here.
+    """
+    state = windows_supervisor_state_path(folder)
+    if state.is_symlink():
+        raise ConfigError("Linked supervisor ownership record; refusing startup.")
+    if not state.exists():
+        if windows_process_compose_pids():
+            raise ConfigError("Untracked Process Compose is running; no duplicate started. "
+                              "Inspect 'aiw ports'.")
+        return False
+    if not state.is_file():
+        raise ConfigError("Supervisor ownership record is not a regular file.")
+    try:
+        snapshot = state.read_bytes()
+        record = json.loads(snapshot)
+        identity = record["identity"]
+        if type(identity) is not dict:
+            raise ValueError("bad identity")
+        pid = identity["pid"]
+        if (type(pid) is not int or pid <= 0 or
+                type(identity.get("exe")) is not str or
+                type(identity.get("created")) is not str or
+                type(record["port"]) is not int):
+            raise ValueError("bad fields")
+    except (OSError, ValueError, KeyError, TypeError):
+        raise ConfigError("Invalid supervisor ownership record; refusing recovery.") from None
+    current = windows_process_identity(pid)
+    boot = windows_boot_id()
+    recorded_boot = record.get("boot_id")
+    if (current == identity and
+            current["exe"] == os.path.normcase(os.path.realpath(binary)) and
+            (not boot or not recorded_boot or recorded_boot == boot)):
+        print("[OK] Supervisor already running (PID " + str(pid) +
+              "). No duplicate started.")
+        return True
+    # A reused PID may belong to Adobe or any other application: never kill it.
+    if windows_process_compose_pids():
+        raise ConfigError("Supervisor identity changed but Process Compose is still running. "
+                          "Refusing recovery and duplicate startup; inspect 'aiw ports'.")
+    recorded_ports = windows_shutdown_ports(folder, identity)
+    checked = sorted(set(recorded_ports + service_ports + [port]))
+    occupied = windows_all_listeners(checked)
+    if occupied:
+        raise ConfigError("Stale ownership record but port(s) " +
+                          ", ".join(map(str, sorted(occupied))) +
+                          " still listening. Refusing recovery; inspect 'aiw ports'.")
+    if state.is_symlink() or state.read_bytes() != snapshot:
+        raise ConfigError("Ownership record changed during recovery; refusing startup.")
+    state.rename(state.with_name(state.name + ".stale-" + str(time.time_ns()) + ".bak"))
+    return False
+
+
 def windows_ensure_owned(folder: Path, binary: str) -> dict:
     """Refuse to operate on an unknown, replaced or untracked port owner."""
     state_file = windows_supervisor_state_path(folder)
@@ -734,19 +854,28 @@ def port_accepts_connections(port: int) -> bool:
 
 
 def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
-                              status_command: list[str], port: int, env: dict,
-                              service_ports: list[int] | None = None) -> None:
-    """Start Windows Process Compose headless with an independent lifetime.
+                               status_command: list[str], port: int, env: dict,
+                               service_ports: list[int] | None = None,
+                               preflight=None) -> None:
+    """Exactly one Windows process may reconcile/restart at a time."""
+    with windows_start_lock(folder):
+        return _windows_launch_supervisor_locked(
+            folder, binary, cmd, status_command, port, env, service_ports or [],
+            preflight)
 
-    Upstream v1.124.0 does NOT support --detached on Windows. Python is
-    only the bootstrapper; the native binary supervises its own children.
-    """
+
+def _windows_launch_supervisor_locked(folder: Path, binary: str, cmd: list[str],
+                                      status_command: list[str], port: int, env: dict,
+                                      service_ports: list[int], preflight) -> None:
+    if windows_prepare_start(folder, binary, port, service_ports):
+        return
+    if preflight is not None:
+        preflight()
     state = windows_supervisor_state_path(folder)
-    if state.exists() or state.is_symlink():
-        raise ConfigError(
-            "An ownership record already exists. Do not start a duplicate; "
-            "use Status/Stop, or inspect a stale record manually."
-        )
+    busy = windows_all_listeners([port])
+    if busy:
+        raise ConfigError("Management port " + str(port) +
+                          " already listens; inspect 'aiw ports'.")
     if port_accepts_connections(port):
         raise ConfigError(
             "Management port already has a listener. Refusing to take over "
@@ -784,7 +913,7 @@ def windows_launch_supervisor(folder: Path, binary: str, cmd: list[str],
         )
     private_write(state, (json.dumps({"identity": identity,
                                       "port": port,
-                                      "service_ports": service_ports or []}) + "\n").encode("utf-8"),
+                                      "service_ports": service_ports, "boot_id": windows_boot_id()}) + "\n").encode("utf-8"),
                   replace=False)
     for _ in range(30):
         if proc.poll() is not None:
@@ -1007,10 +1136,10 @@ def native(folder: Path, action: str, process: str | None) -> None:
     # Generated native-host projects are explicitly provisioned. Before any
     # launch, require the private settings to still match the rendered project,
     # and refuse ports held by the previous unmanaged startup script.
-    if (os.name == "nt" and action in {"up", "start"} and
+    if (os.name == "nt" and action == "start" and
             project.read_text(encoding="utf-8").startswith(
                 "# AIW native-host project")):
-        native_host_setup(folder, "preflight", process if action == "start" else None)
+        native_host_setup(folder, "preflight", process)
     binary = native_binary(folder)
     port = doc["process_compose"]["port"]
     api_token = folder / "secrets" / "process-compose.api-token"
@@ -1063,9 +1192,13 @@ def native(folder: Path, action: str, process: str | None) -> None:
             service_ports = (windows_native_service_ports(folder)
                              if project.read_text(encoding="utf-8").startswith(
                                  "# AIW native-host project") else [])
+            generated = project.read_text(encoding="utf-8").startswith(
+                "# AIW native-host project")
+            before_launch = (lambda: native_host_setup(folder, "preflight")
+                             if generated else None)
             return windows_launch_supervisor(folder, binary, cmd,
                                              basic + ["process", "list"], port, env,
-                                             service_ports)
+                                             service_ports, before_launch)
         if action in {"tui", "start", "stop", "restart", "down"}:
             record = windows_ensure_owned(folder, binary)
             if action == "down":
