@@ -54,5 +54,24 @@ docker run --rm --pull never --network none --read-only --entrypoint /bin/sh "$d
     -c 'ruff --version'
 docker run --rm --pull never --network none --read-only --entrypoint /bin/sh "$image_id" \
     -c '! command -v ruff'
+# An approved variant can be reused and revised without overwriting r1.
+session2="$(python3 "$root/tools/agent_sandbox.py" create ci-project --environment python-data | sed -n 's/^Session ID: //p')"
+[[ "$session2" =~ ^[0-9a-f]{12}$ ]]
+python3 "$root/tools/agent_sandbox.py" candidate "$session2" python-data --upgrade
+printf 'APPROVE python-data\n' | python3 "$root/tools/agent_sandbox.py" promote python-data
+printf 'ROLLBACK python-data\n' | python3 "$root/tools/agent_sandbox.py" rollback python-data 1
+active="$(python3 - "$tmp/state/catalog.json" <<'PY'
+import json,sys
+print(json.load(open(sys.argv[1]))["environments"]["python-data"]["active"])
+PY
+)"
+[[ "$active" == "1" ]] || { echo 'Rollback did not restore r1' >&2; exit 1; }
+# Disable migration is reversible at the legacy entrance, with no volume deletion.
+printf 'DISABLE\n' | python3 "$root/tools/agent_sandbox.py" migrate-disable
+if python3 "$root/tools/agent_sandbox.py" create ci-project --environment standard >/dev/null 2>&1; then
+    echo 'Disabled sandbox unexpectedly allowed new session' >&2
+    exit 1
+fi
+docker volume inspect ai-workstation_goose-home >/dev/null
 grep -Fxq '# Original' "$tmp/project/README.md"
-echo 'Real Docker sandbox image, isolated uv tool and named environment verified.'
+echo 'Real Docker migration, standard, named variant, upgrade/rollback and opt-out verified.'
