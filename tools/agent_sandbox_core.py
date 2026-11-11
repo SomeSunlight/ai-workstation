@@ -250,8 +250,12 @@ def apply(session: Path, selected: list[str], *, allow_binary: bool = False) -> 
             raise Refused(f"Original changed since staging; refusing all writes: {rel}")
         if rel in current and not allow_binary:
             content = (session / "work" / rel).read_bytes()
-            if b"\0" in content:
-                raise Refused(f"Binary file requires explicit --allow-binary: {rel}")
+            try:
+                if b"\0" in content:
+                    raise UnicodeError("Contains NUL")
+                content.decode("utf-8")
+            except UnicodeError:
+                raise Refused(f"Binary/non-UTF-8 file requires explicit --allow-binary: {rel}")
         if before and before["bytes"] <= MAX_TEXT_DIFF:
             # The review must not show another person's newer original as a proposed diff.
             if hash_file(original / rel) != before["sha256"]:
