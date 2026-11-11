@@ -79,10 +79,13 @@ def entry(name: str) -> dict:
     record = catalogue()["environments"].get(name)
     if not record or not record.get("active"):
         raise Refused(f"Unknown or inactive approved environment: {name}")
-    image = record["versions"][record["active"]]["image_id"]
-    if inspect_image(image)["Id"] != image:
-        raise Refused("Approved image digest mismatch; build/restore through AIW.")
-    return {"name": name, "image": image, "revision": record["active"]}
+    version = record["versions"][record["active"]]
+    image = version["image_id"]
+    local_tag = version.get("local_tag")
+    if not local_tag or inspect_image(local_tag)["Id"] != image:
+        raise Refused("Approved image tag/digest mismatch; restore through AIW.")
+    return {"name": name, "image": image, "tag": local_tag,
+            "revision": record["active"]}
 
 @contextlib.contextmanager
 def owner_lock(exclusive: bool = True):
@@ -235,12 +238,14 @@ def build_standard(upgrade: bool) -> None:
             "UPGRADE" if record["active"] else "BUILD")
     recipe = ROOT / "containers/agent-sandbox/Dockerfile"
     revision = next_revision(record)
-    image = build_image(recipe, base, f"aiw-agent-standard:r{revision}", uv_base)
+    local_tag = f"aiw-agent-standard:r{revision}"
+    image = build_image(recipe, base, local_tag, uv_base)
     docker("run", "--rm", "--pull", "never", "--network", "none",
            "--read-only", "--entrypoint", "/bin/sh", image,
            "-c", "uv --version && python3 --version && git --version", show=True)
     record["versions"][revision] = {
-        "image_id": image, "parent": None, "goose_base": base, "uv_base": uv_base,
+        "image_id": image, "local_tag": local_tag, "parent": None,
+        "goose_base": base, "uv_base": uv_base,
         "approved_at": now(), "recipe": "containers/agent-sandbox/Dockerfile",
         "recipe_sha256": hashlib.sha256(recipe.read_bytes()).hexdigest(),
         "uv": UV_VERSION, "python": PYTHON_VERSION}
@@ -408,7 +413,8 @@ def promote(name: str) -> None:
     print(f"Approved parent image: {parent['image']}")
     print(f"Rebuildable pins: {tools}")
     confirm("Build and approve this reviewed recipe under a permanent name?", "APPROVE " + name)
-    image = build_image(recipe, parent["image"], f"aiw-agent-{name}:r{revision}")
+    local_tag = f"aiw-agent-{name}:r{revision}"
+    image = build_image(recipe, parent["tag"], local_tag)
     if tools:
         output = docker("run", "--rm", "--pull", "never", "--network", "none",
                         "--read-only", "--tmpfs", "/tmp:rw,noexec,size=64m",
@@ -421,8 +427,8 @@ def promote(name: str) -> None:
     shutil.copyfile(recipe, target / "Dockerfile")
     record = existing or {"versions": {}, "active": None}
     record["versions"][revision] = {
-        "image_id": image, "parent": parent["name"],
-        "parent_image_id": parent["image"],
+        "image_id": image, "local_tag": local_tag, "parent": parent["name"],
+        "parent_image_id": parent["image"], "parent_local_tag": parent["tag"],
         "recipe": str(target / "Dockerfile"),
         "recipe_sha256": hashlib.sha256(recipe.read_bytes()).hexdigest(),
         "uv_tools": tools, "approved_at": now()}
@@ -437,8 +443,10 @@ def rollback(name: str, revision: str) -> None:
     if not record or revision not in record["versions"]:
         raise Refused("Unknown approved environment revision.")
     image = record["versions"][revision]["image_id"]
-    if inspect_image(image)["Id"] != image:
-        raise Refused("Requested rollback image is unavailable locally.")
+    if not record["versions"][revision].get("local_tag") or (
+        inspect_image(record["versions"][revision]["local_tag"])["Id"] != image
+    ):
+        raise Refused("Requested rollback image tag/digest is unavailable locally.")
     confirm(f"Restore {name} selection to approved r{revision} ({image})?", "ROLLBACK " + name)
     record["active"] = revision
     save_catalog(data)
@@ -453,7 +461,9 @@ def rebuild(name: str, revision: str) -> None:
     recipe = (ROOT / approved["recipe"]) if name == "standard" else Path(approved["recipe"])
     if hashlib.sha256(recipe.read_bytes()).hexdigest() != approved["recipe_sha256"]:
         raise Refused("Approved recipe has changed; no rebuild allowed.")
-    parent = approved["goose_base"] if name == "standard" else approved["parent_image_id"]
+    parent = approved["goose_base"] if name == "standard" else approved["parent_local_tag"]
+    if name != "standard" and inspect_image(parent)["Id"] != approved["parent_image_id"]:
+        raise Refused("Pinned approved parent image tag no longer matches its digest.")
     uv_base = approved.get("uv_base", "")
     print(f"Rebuild {name} r{revision} offline from approved parent and recipe.")
     image = build_image(recipe, parent, f"aiw-agent-verification-{name}:r{revision}", uv_base)
