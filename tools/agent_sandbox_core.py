@@ -138,6 +138,9 @@ def stage(original: Path, work: Path) -> dict:
         os.chmod(dst, entry["mode"])
         if hash_file(dst) != entry["sha256"]:
             raise Refused(f"Source changed while staging: {rel}")
+    # Owner-only baseline snapshots: agent sees work/, never these originals.
+    # Diff remains accurate even if someone edits the original during the session.
+    shutil.copytree(work, work.parent / "baseline-files", symlinks=False)
     return source
 
 
@@ -165,7 +168,9 @@ def review(session: Path) -> tuple[list[tuple[str, str]], str]:
                 (new and new["bytes"] > MAX_TEXT_DIFF)):
             lines.append("  Large file; hashes/size only. Inspect before accepting.")
             continue
-        old_bytes = (Path(metadata["original"]) / rel).read_bytes() if old else b""
+        old_bytes = (session / "baseline-files" / rel).read_bytes() if old else b""
+        if old and hashlib.sha256(old_bytes).hexdigest() != old["sha256"]:
+            raise Refused(f"Private baseline snapshot changed: {rel}")
         new_bytes = (session / "work" / rel).read_bytes() if new else b""
         if b"\0" in old_bytes or b"\0" in new_bytes:
             lines.append(f"  Binary: old={old['sha256'] if old else '-'} new={new['sha256'] if new else '-'}")
@@ -251,12 +256,33 @@ def apply(session: Path, selected: list[str], *, allow_binary: bool = False) -> 
             # The review must not show another person's newer original as a proposed diff.
             if hash_file(original / rel) != before["sha256"]:
                 raise Refused(f"Original drift: {rel}")
+    # Freeze the selected proposal bytes outside the agent mount before writing
+    # anything to the original. Refuse a changed/symlinked staged source.
+    accepted_dir = private_dir(session / "accepted")
+    for rel in selected:
+        if rel in current:
+            target = accepted_dir / rel
+            private_dir(target.parent)
+            with os.fdopen(os.open(session / "work" / rel,
+                                   os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)), "rb") as inp:
+                with target.open("wb") as out:
+                    shutil.copyfileobj(inp, out)
+            if hash_file(target) != current[rel]["sha256"]:
+                raise Refused(f"Proposed file changed during acceptance: {rel}")
     backup_dir = private_dir(session / "backups")
     for rel in selected:
         if rel in baseline:
             dest = backup_dir / rel
             private_dir(dest.parent)
-            shutil.copy2(original / rel, dest)
+            parent_fd, leaf = _parent_fd(original, rel, create=False)
+            try:
+                source_fd = os.open(leaf, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                                    dir_fd=parent_fd)
+                with os.fdopen(source_fd, "rb") as inp:
+                    with dest.open("wb") as out:
+                        shutil.copyfileobj(inp, out)
+            finally:
+                os.close(parent_fd)
             if hash_file(dest) != baseline[rel]["sha256"]:
                 raise Refused(f"Backup verification failed: {rel}")
     # After complete preflight and verified private backup, apply selected files only.
@@ -267,7 +293,7 @@ def apply(session: Path, selected: list[str], *, allow_binary: bool = False) -> 
             if rel not in current:
                 os.unlink(leaf, dir_fd=fd)
             else:
-                content = session / "work" / rel
+                content = accepted_dir / rel
                 temp_name = ".aiw-" + next(tempfile._get_candidate_names())
                 tmp_fd = os.open(temp_name, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
                                  mode=0o600, dir_fd=fd)
