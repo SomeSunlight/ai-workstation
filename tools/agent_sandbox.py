@@ -132,7 +132,8 @@ def no_legacy_sessions() -> None:
 
 def helper(image: str, mounts: list[str], script: str) -> str:
     args = ["run", "--rm", "--pull", "never", "--network", "none", "--read-only",
-            "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true",
+            "--cap-drop", "ALL", "--cap-add", "CHOWN",
+            "--security-opt", "no-new-privileges:true",
             "--user", "0:0", "--entrypoint", "/bin/sh"]
     for mount in mounts:
         args += ["--mount", mount]
