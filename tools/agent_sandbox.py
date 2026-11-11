@@ -393,6 +393,31 @@ def inspect_recipe(text: str) -> list[tuple[str, str]]:
         result.append(match.groups())
     return result
 
+def verify_pinned_tools(image: str, tools: list[tuple[str, str]]) -> None:
+    """Check installed Python distribution metadata without writing a uv temp file."""
+    if not tools:
+        return
+    source = """
+import importlib.metadata as md
+import json
+import re
+import sys
+from pathlib import Path
+normalize = lambda s: re.sub(r"[-_.]+", "-", s).lower()
+expected = {normalize(n): v for n, v in json.loads(sys.argv[1])}
+actual = {}
+for site in Path("/opt/aiw/tools").glob("*/lib/python*/site-packages"):
+    for dist in md.distributions(path=[str(site)]):
+        actual[normalize(dist.metadata["Name"])] = dist.version
+for name, version in expected.items():
+    if actual.get(name) != version:
+        raise SystemExit("Pinned uv tool verification failed: " + name)
+"""
+    docker("run", "--rm", "--pull", "never", "--network", "none",
+           "--read-only", "--entrypoint", "/usr/local/bin/python3",
+           image, "-B", "-c", source, json.dumps(tools))
+
+
 def promote(name: str) -> None:
     validate_name(name)
     folder = STATE / "candidates" / name
@@ -415,14 +440,7 @@ def promote(name: str) -> None:
     confirm("Build and approve this reviewed recipe under a permanent name?", "APPROVE " + name)
     local_tag = f"aiw-agent-{name}:r{revision}"
     image = build_image(recipe, parent["tag"], local_tag)
-    if tools:
-        output = docker("run", "--rm", "--pull", "never", "--network", "none",
-                        "--read-only", "--tmpfs", "/tmp:rw,noexec,size=64m",
-                        "--env", "UV_CACHE_DIR=/tmp/uv",
-                        "--env", "UV_TOOL_DIR=/opt/aiw/tools",
-                        "--entrypoint", "/usr/local/bin/uv", image, "tool", "list")
-        if not set(tools).issubset(set(UV_RESULT.findall(output))):
-            raise Refused("Built image does not contain pinned tools; not promoted.")
+    verify_pinned_tools(image, tools)
     target = private_dir(STATE / "recipes" / name / revision)
     shutil.copyfile(recipe, target / "Dockerfile")
     record = existing or {"versions": {}, "active": None}
@@ -467,15 +485,7 @@ def rebuild(name: str, revision: str) -> None:
     uv_base = approved.get("uv_base", "")
     print(f"Rebuild {name} r{revision} offline from approved parent and recipe.")
     image = build_image(recipe, parent, f"aiw-agent-verification-{name}:r{revision}", uv_base)
-    expected = {tuple(x) for x in approved.get("uv_tools", [])}
-    if expected:
-        output = docker("run", "--rm", "--pull", "never", "--network", "none",
-                        "--read-only", "--tmpfs", "/tmp:rw,noexec,size=64m",
-                        "--env", "UV_CACHE_DIR=/tmp/uv",
-                        "--env", "UV_TOOL_DIR=/opt/aiw/tools",
-                        "--entrypoint", "/usr/local/bin/uv", image, "tool", "list")
-        if not expected.issubset(set(UV_RESULT.findall(output))):
-            raise Refused("Rebuilt packages differ; the approved selection is unchanged.")
+    verify_pinned_tools(image, approved.get("uv_tools", []))
     if image == approved["image_id"]:
         print("Rebuild digest matches approved image.")
     else:
