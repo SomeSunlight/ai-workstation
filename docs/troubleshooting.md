@@ -14,25 +14,6 @@ Linux logs:
 ~/.local/state/ai-workstation/logs
 ```
 
-## Native host status and TCP ports
-
-On a native Windows service host, use `aiw status` or `aiw ports`.
-They report the configured service/port inventory, actual TCP listeners and
-available owning PID/process names without starting or stopping services.
-The Windows workbench provides the same view in its ordinary Status and
-Setup port-check operations. Green means verified AIW ownership; red
-means a known non-AIW listener; unavailable attribution remains unknown.
-
-After a forced Windows restart, a prior supervisor PID may belong to an
-entirely unrelated application. AIW never kills that reused PID. On the
-next `aiw up`, a provably stale ownership record is silently archived and
-the normal start continues. A valid already-running supervisor is reused
-rather than duplicated. Actual port conflicts still block startup.
-
-The native-service diagnostic implementation also supports WSL/Linux probes
-using `ss` or `/proc`. Container services retain their own Docker
-management and inspection commands.
-
 ## Native Ubuntu (no WSL)
 
 A native Ubuntu installation uses `./install.sh` and `aiw` directly. There
