@@ -343,7 +343,8 @@ def inventory(identifier: str) -> list[tuple[str, str]]:
                     "--read-only", "--tmpfs", "/tmp:rw,noexec,size=64m",
                     "--mount", f"type=volume,src={meta['home_volume']},dst=/home/goose,readonly",
                     "--user", f"{os.getuid()}:{os.getgid()}",
-                    "--env", "HOME=/home/goose", "--entrypoint", "/usr/local/bin/uv",
+                    "--env", "HOME=/home/goose", "--env", "UV_CACHE_DIR=/tmp/uv",
+                    "--entrypoint", "/usr/local/bin/uv",
                     meta["image_id"], "tool", "list")
     return sorted(set(UV_RESULT.findall(output)))
 
@@ -410,7 +411,9 @@ def promote(name: str) -> None:
     image = build_image(recipe, parent["image"], f"aiw-agent-{name}:r{revision}")
     if tools:
         output = docker("run", "--rm", "--pull", "never", "--network", "none",
-                        "--read-only", "--env", "UV_TOOL_DIR=/opt/aiw/tools",
+                        "--read-only", "--tmpfs", "/tmp:rw,noexec,size=64m",
+                        "--env", "UV_CACHE_DIR=/tmp/uv",
+                        "--env", "UV_TOOL_DIR=/opt/aiw/tools",
                         "--entrypoint", "/usr/local/bin/uv", image, "tool", "list")
         if not set(tools).issubset(set(UV_RESULT.findall(output))):
             raise Refused("Built image does not contain pinned tools; not promoted.")
@@ -457,7 +460,9 @@ def rebuild(name: str, revision: str) -> None:
     expected = {tuple(x) for x in approved.get("uv_tools", [])}
     if expected:
         output = docker("run", "--rm", "--pull", "never", "--network", "none",
-                        "--read-only", "--env", "UV_TOOL_DIR=/opt/aiw/tools",
+                        "--read-only", "--tmpfs", "/tmp:rw,noexec,size=64m",
+                        "--env", "UV_CACHE_DIR=/tmp/uv",
+                        "--env", "UV_TOOL_DIR=/opt/aiw/tools",
                         "--entrypoint", "/usr/local/bin/uv", image, "tool", "list")
         if not expected.issubset(set(UV_RESULT.findall(output))):
             raise Refused("Rebuilt packages differ; the approved selection is unchanged.")
