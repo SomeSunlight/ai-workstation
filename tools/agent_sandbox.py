@@ -224,11 +224,11 @@ def build_standard(upgrade: bool) -> None:
         raise Refused("Standard exists; use --upgrade for an explicit new revision.")
     base = digest_ref(host_selected_goose_image())
     uv_tag = f"ghcr.io/astral-sh/uv:{UV_VERSION}"
-    # Only the operator-owned build step downloads the pinned uv image.
+    confirm(f"Explicitly download {uv_tag} and build a standard sandbox from "
+            f"the selected Goose image {base}?", "UPGRADE" if record["active"] else "BUILD")
+    # A cancelled confirmation never downloads or builds anything.
     docker("pull", uv_tag, show=True)
     uv_base = digest_ref(uv_tag)
-    confirm("Build the pinned standard from reviewed Goose/uv image digests?",
-            "UPGRADE" if record["active"] else "BUILD")
     recipe = ROOT / "containers/agent-sandbox/Dockerfile"
     revision = next_revision(record)
     local_tag = f"aiw-agent-standard:r{revision}"
