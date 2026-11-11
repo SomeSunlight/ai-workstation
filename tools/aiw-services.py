@@ -881,6 +881,8 @@ def _windows_launch_supervisor_locked(folder: Path, binary: str, cmd: list[str],
             "Management port already has a listener. Refusing to take over "
             "an unknown Process Compose instance or other application."
         )
+    print("Starting configured native AI services under one Process Compose supervisor.")
+    print("Management: 127.0.0.1:" + str(port))
     private_dir(state.parent)
     log_path = state.parent / "process-compose-stdout.log"
     if log_path.is_symlink():
@@ -1220,11 +1222,12 @@ def _port_status_color(status: str) -> str:
             "UNKNOWN": "\033[33mUNKNOWN\033[0m"}.get(status, status)
 
 
-def show_service_ports(folder: Path) -> None:
+def show_service_ports(folder: Path, *, system: str | None = None) -> None:
     """Read-only reusable inventory; unknown never means free or AIW-owned."""
+    system = system or os.name
     configured = configured_tcp_ports(folder)
     ports = {port for _, port, _ in configured}
-    if os.name == "nt":
+    if system == "nt":
         sockets, processes = windows_tcp_process_inventory(ports)
         owner = verified_windows_supervisor_pid(folder)
     else:
@@ -1247,8 +1250,8 @@ def show_service_ports(folder: Path) -> None:
                 else:
                     pid = int(pid)
                     process = processes[pid]
-                    own = os.name == "nt" and windows_is_supervised_pid(pid, owner, processes)
-                    statuses.append("AIW" if own else "CONFLICT")
+                    own = system == "nt" and windows_is_supervised_pid(pid, owner, processes)
+                    statuses.append("AIW" if own else "CONFLICT" if system == "nt" else "UNKNOWN")
                     names.append(str(process.get("name", "unknown")) + " (PID " + str(pid) + ")")
             label = ("CONFLICT" if "CONFLICT" in statuses else
                      "UNKNOWN" if "UNKNOWN" in statuses else "AIW")
@@ -1407,9 +1410,18 @@ def native(folder: Path, action: str, process: str | None) -> None:
     env["PROC_COMP_CONFIG"] = str(folder)
     env["PC_LOG_LEVEL"] = "warn"
     if os.name == "nt":
+        if action == "status" and not port_accepts_connections(port):
+            print("[INFO] AIW supervisor management port is not listening; "
+                  "no supervisor control was attempted.")
+            show_service_ports(folder)
+            return
+        if action == "down" and not windows_supervisor_state_path(folder).exists():
+            if port_accepts_connections(port):
+                raise ConfigError("Untracked management port listener; refusing Stop.")
+            print("[OK] No AIW supervisor recorded; nothing was stopped.")
+            show_service_ports(folder)
+            return
         if action == "up":
-            print("Starting ONLY configured native processes under Process Compose.")
-            print("Management: 127.0.0.1:", port, "| config:", project)
             service_ports = (windows_native_service_ports(folder)
                              if project.read_text(encoding="utf-8").startswith(
                                  "# AIW native-host project") else [])
@@ -1445,6 +1457,8 @@ def native(folder: Path, action: str, process: str | None) -> None:
                           str(result.returncode) + ").")
     if action == "down" and os.name == "nt":
         windows_wait_for_shutdown(folder, record, shutdown_ports)
+    elif action == "status":
+        show_service_ports(folder)
 
     elif action == "check":
         print("[OK] Explicit private Process Compose project validated. Nothing started.")
@@ -1454,7 +1468,7 @@ def run(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Native host services and S02 client identities")
     parser.add_argument("--directory", type=Path, default=default_dir())
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for k in ("init", "where", "install", "check", "up", "tui", "status", "down", "logs", "logs-file"):
+    for k in ("init", "where", "install", "check", "up", "tui", "status", "ports", "down", "logs", "logs-file"):
         p = sub.add_parser(k)
         if k in {"logs", "logs-file"}:
             p.add_argument("name", nargs="?")
@@ -1517,6 +1531,8 @@ def run(argv: list[str] | None = None) -> None:
         native_host_setup(folder, args.action, args.service, apply=args.apply)
     elif args.cmd == "logs-file":
         saved_service_logs(folder, args.name, args.lines)
+    elif args.cmd == "ports":
+        show_service_ports(folder)
     elif args.cmd == "where":
         doc = read_settings(folder)
         print("Configuration:", settings_path(folder))
@@ -1562,7 +1578,15 @@ def run(argv: list[str] | None = None) -> None:
         elif args.client_cmd == "remove":
             client_remove(folder, args.name)
     else:
-        native(folder, args.cmd, getattr(args, "name", None))
+        try:
+            native(folder, args.cmd, getattr(args, "name", None))
+        except ConfigError:
+            if args.cmd in {"up", "status", "tui", "down", "start", "restart"}:
+                try:
+                    show_service_ports(folder)
+                except ConfigError as diagnostic:
+                    print("[?] Port inventory unavailable: " + str(diagnostic))
+            raise
 
 
 if __name__ == "__main__":
