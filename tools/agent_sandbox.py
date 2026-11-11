@@ -286,8 +286,9 @@ def start(workspace_name: str, env_name: str) -> str:
     info = entry(env_name)
     original = workspace(workspace_name)
     identifier = uuid.uuid4().hex[:12]
+    private_dir(STATE / "sessions")
     folder = session_dir(identifier)
-    private_dir(folder)
+    folder.mkdir(mode=0o700, exist_ok=False)
     baseline = stage(original, folder / "work")
     save_json(folder / "baseline.json", baseline)
     volume = "aiw-agent-home-" + identifier
@@ -453,6 +454,9 @@ def promote(name: str) -> None:
     record["active"] = revision
     data["environments"][name] = record
     save_catalog(data)
+    # Reviewed recipe is now versioned under recipes/, so the candidate name is
+    # free for a future explicit --upgrade proposal.
+    shutil.rmtree(folder)
     print(f"Approved {name}: {image}. Standard unchanged.")
 
 def rollback(name: str, revision: str) -> None:
