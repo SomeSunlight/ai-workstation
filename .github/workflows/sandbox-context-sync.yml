@@ -20,6 +20,8 @@ jobs:
       - name: Rebuild exact pinned official context
         run: |
           uvx --from 'git+https://github.com/SomeSunlight/context-canon.git@786c50957c4c06f9209ebacfa021609b592c0b07' contextcanon build --all .
+          uvx --from 'git+https://github.com/SomeSunlight/context-canon.git@786c50957c4c06f9209ebacfa021609b592c0b07' contextcanon propagate --yes --all .
+          uvx --from 'git+https://github.com/SomeSunlight/context-canon.git@786c50957c4c06f9209ebacfa021609b592c0b07' contextcanon build --all .
           uvx --from 'git+https://github.com/SomeSunlight/context-canon.git@786c50957c4c06f9209ebacfa021609b592c0b07' contextcanon check --all .
       - name: Commit generated output to this review branch only
         run: |
