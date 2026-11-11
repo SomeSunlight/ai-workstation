@@ -868,6 +868,7 @@ def _windows_launch_supervisor_locked(folder: Path, binary: str, cmd: list[str],
                                       status_command: list[str], port: int, env: dict,
                                       service_ports: list[int], preflight) -> None:
     if windows_prepare_start(folder, binary, port, service_ports):
+        windows_show_existing_status(folder, port, status_command, env)
         return
     if preflight is not None:
         preflight()
@@ -1260,6 +1261,32 @@ def show_service_ports(folder: Path, *, system: str | None = None) -> None:
     print("AIW = verified supervisor/descendant; CONFLICT = other known process; "
           "UNKNOWN = owner not safely determined.")
     print("This report never starts, stops or takes over a service.")
+
+
+
+def windows_show_existing_status(folder: Path, port: int,
+                                 status_command: list[str], env: dict) -> None:
+    """Read status when Start finds an existing owned supervisor; never attach blindly."""
+    if not port_accepts_connections(port):
+        print("[INFO] Supervisor process is running; management port " + str(port) +
+              " is not listening yet. No new process started.")
+        show_service_ports(folder)
+        return
+    listeners, _ = windows_tcp_process_inventory({port})
+    owned_pid = verified_windows_supervisor_pid(folder)
+    if (owned_pid is None or not listeners or
+            any(type(entry.get("pid")) is not int or entry["pid"] != owned_pid
+                for entry in listeners)):
+        raise ConfigError("Management port " + str(port) +
+                          " has an unverified owner. Refusing to attach or start a duplicate.")
+    print("[OK] Existing AIW supervisor service status:")
+    try:
+        result = subprocess.run(status_command, env=env, check=False, timeout=15)
+    except (OSError, subprocess.TimeoutExpired):
+        raise ConfigError("Existing supervisor status could not be inspected.") from None
+    if result.returncode:
+        print("[?] Existing supervisor was identified, but its service status is unavailable.")
+    show_service_ports(folder)
 
 
 def windows_wait_for_shutdown(folder: Path, identity: dict, ports: list[int],

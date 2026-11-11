@@ -130,12 +130,14 @@ class NativeOperationDiagnostics(unittest.TestCase):
     def test_running_supervisor_does_not_run_preflight_or_start(self):
         with (mock.patch.object(module, "windows_start_lock", return_value=nullcontext()),
               mock.patch.object(module, "windows_prepare_start", return_value=True),
+              mock.patch.object(module, "windows_show_existing_status") as status,
               mock.patch.object(module.subprocess, "Popen") as popen):
             probe = mock.Mock()
             module.windows_launch_supervisor(self.folder, self.binary, [], [], 19011,
                                              {}, [8080], preflight=probe)
         probe.assert_not_called()
         popen.assert_not_called()
+        status.assert_called_once()
 
     def test_preflight_remains_mandatory_before_launch(self):
         with (mock.patch.object(module, "windows_start_lock", return_value=nullcontext()),
@@ -194,6 +196,16 @@ class NativeOperationDiagnostics(unittest.TestCase):
                      "CONFLICT", "FREE", "foreign (PID 90)"):
             self.assertIn(text, report)
         self.assertNotIn("Adobe", report)
+
+    def test_existing_supervisor_status_checks_actual_management_port_pid(self):
+        with (mock.patch.object(module, "port_accepts_connections", return_value=True),
+              mock.patch.object(module, "verified_windows_supervisor_pid", return_value=50),
+              mock.patch.object(module, "windows_tcp_process_inventory",
+                                return_value=([{"port": 19011, "pid": 91}], {})),
+              mock.patch.object(module.subprocess, "run") as run):
+            with self.assertRaisesRegex(module.ConfigError, "unverified owner"):
+                module.windows_show_existing_status(self.folder, 19011, [], {})
+        run.assert_not_called()
 
     def test_windows_listener_probe_fails_closed(self):
         with mock.patch.object(module.subprocess, "run",
