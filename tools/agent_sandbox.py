@@ -9,7 +9,10 @@ from __future__ import annotations
 import argparse
 import contextlib
 import datetime as dt
-import fcntl
+try:
+    import fcntl
+except ImportError:  # native Windows may validate recipes; execution is WSL/Linux only
+    fcntl = None
 import hashlib
 import json
 import os
@@ -79,6 +82,8 @@ def entry(name: str) -> dict:
 
 @contextlib.contextmanager
 def owner_lock(exclusive: bool = True):
+    if fcntl is None:
+        raise Refused("Run the agent sandbox service inside WSL/Linux, not native Windows.")
     config = private_dir(Path.home() / ".config/ai-workstation")
     fd = os.open(config / "goose-maintenance.lock", os.O_CREAT | os.O_RDWR, 0o600)
     try:
@@ -301,10 +306,12 @@ def run_session(identifier: str, goose_args: list[str]) -> None:
            "--mount", f"type=bind,src={folder / 'work'},dst=/workspace",
            "--mount", f"type=volume,src={meta['home_volume']},dst=/home/goose",
            "--workdir", "/workspace", "--user", f"{os.getuid()}:{os.getgid()}",
-           "--env", "HOME=/home/goose", "--env", "GOOSE_DISABLE_KEYRING=1",
-           "--env", "GOOSE_DISABLE_TELEMETRY=1"]
+           ]
     if env.exists():
         cmd += ["--env-file", str(env)]
+    # Explicit policy values win over optional env-file entries.
+    cmd += ["--env", "HOME=/home/goose", "--env", "GOOSE_DISABLE_KEYRING=1",
+            "--env", "GOOSE_DISABLE_TELEMETRY=1"]
     if sys.stdin.isatty() and sys.stdout.isatty():
         cmd += ["-it"]
     else:
