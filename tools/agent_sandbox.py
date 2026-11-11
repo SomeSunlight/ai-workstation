@@ -341,7 +341,7 @@ def inventory(identifier: str) -> list[tuple[str, str]]:
     folder, meta = current_session(identifier)
     output = docker("run", "--rm", "--pull", "never", "--network", "none",
                     "--read-only", "--tmpfs", "/tmp:rw,noexec,size=64m",
-                    "--mount", f"type=volume,src={meta['home_volume']},dst=/home/goose,readonly",
+                    "--mount", f"type=volume,src={meta['home_volume']},dst=/home/goose",
                     "--user", f"{os.getuid()}:{os.getgid()}",
                     "--env", "HOME=/home/goose", "--env", "UV_CACHE_DIR=/tmp/uv",
                     "--entrypoint", "/usr/local/bin/uv",
