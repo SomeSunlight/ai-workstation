@@ -1,3 +1,32 @@
+## Issue #64 — operator-facing agent sandbox UX (2026-11-12, draft first slice)
+
+**Baseline:** PR #60 was squash-merged into `main` before this work; this branch
+`feat/64-sandbox-operator-ux` starts from `a8b4e55ea9a0614cafe7edd1d18b236ec1ec0a50`.
+Preserve the established isolation, approved image pins, typed approvals,
+private Goose homes and currently running services. Git-powered project merge
+must not be mixed with environment recipe promotion.
+
+- [x] Confirm #60 merged and inspect #64, current source, operator menu and Docker CI.
+- [x] First independent slice: human-readable mutable session titles with immutable IDs;
+  numbered session/workspace/environment/revision selection; active status and pending
+  proposals; guided recipe preview/approval for new and upgraded named environments,
+  rollback/rebuild and cancellation using the existing safety operations.
+- [x] Add focused offline and disposable Docker regression checks plus operator guide.
+- [ ] Run exact-head offline Linux/Windows and disposable Docker CI, and owner WSL acceptance
+  for real Goose data/history, r1→r2→rollback and existing running services.
+- [ ] ContextCanon: existing general/English UX and agent-isolation rules in
+  `CONTEXT.src.md` already apply; verify pinned build/check and generated Child packages
+  are unchanged before marking this complete. Do not hand-edit generated packages.
+- [ ] **Second independent #64 PR:** Git-powered batch changeset review, select all/files/hunks,
+  baseline/current/proposal conflict handling and non-Git project coverage; retain host-side
+  approval, backups, safe paths and explicit operator merge, not agent writes.
+- [ ] **Real Windows crash/restart follow-up (not yet tested):** verify recovery and stale
+  supervisor state when a crash occurs naturally (occasionally after hardware changes).
+  Do not deliberately crash Windows merely to close this checkbox.
+- [ ] Owner reviews and explicitly approves each Draft PR before any squash-merge.
+
+---
+
 # AI Workstation Plan
 
 ## Issue #59 — PR 1: disposable Goose agent sandbox (WSL-tested; pending merge, 2026-11-12)
