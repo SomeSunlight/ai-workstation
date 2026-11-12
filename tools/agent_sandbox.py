@@ -428,20 +428,67 @@ def candidate(identifier: str, name: str, upgrade: bool = False) -> None:
     print(f"Candidate recipe: {directory / 'Dockerfile'}")
     print("Review/edit as operator; no image built or approved yet.")
 
+def pending_environment_updates() -> list[dict]:
+    """Unapproved environment revisions, including archived pre-cockpit test data.
+
+    These are status records, not an independent kind of user workspace.
+    """
+    directory = STATE / "candidates"
+    if directory.is_symlink():
+        raise Refused("Unsafe pending environment directory; inspect private state.")
+    if not directory.is_dir():
+        return []
+    result = []
+    for folder in sorted(directory.iterdir()):
+        if folder.is_symlink():
+            raise Refused("Unsafe linked pending environment update; nothing changed.")
+        metadata = folder / "candidate.json"
+        if folder.is_dir() and metadata.exists():
+            record = load_json(metadata)
+            result.append({"folder": folder.name, "environment": record.get("name", folder.name),
+                           "session": record.get("session", ""),
+                           "empty_tools": not record.get("detected_uv_tools")})
+    return result
+
+
 def discard_candidate(name: str) -> None:
-    """Discard ONLY an unapproved recipe, never a session or approved image."""
-    validate_name(name)
+    """Discard an unapproved revision, including narrowly recognized archived tests.
+
+    Names created for current revisions must still pass the strict environment
+    validator. Earlier operator-archived *directories* may be longer than 40
+    characters and differ from the actual environment name in candidate.json.
+    Those can be deleted (never promoted), but only after verifying the full
+    archive name, session identity, directory contents and typed approval.
+    """
+    if not name or Path(name).name != name or name in (".", "..") or "\\" in name:
+        raise Refused("Unsafe pending environment update selector; nothing removed.")
     directory = STATE / "candidates" / name
     if directory.is_symlink() or not directory.is_dir():
-        raise Refused(f"No safe unapproved proposal exists for {name!r}; nothing removed.")
+        raise Refused(f"No safe unapproved environment update exists for {name!r}.")
     proposal = load_json(directory / "candidate.json")
-    if proposal.get("name") != name:
-        raise Refused("Proposal metadata/name mismatch; nothing removed.")
-    confirm(f"Discard only the unapproved recipe for {name!r}? "
-            "Approved environments, tools and sessions remain unchanged.",
-            "DISCARD PROPOSAL " + name)
+    environment = validate_name(proposal.get("name", ""))
+    session = proposal.get("session", "")
+    archived_name = f"{environment}-from-wrong-session-{session}"
+    is_archived = (name == archived_name and
+                   re.fullmatch(r"[0-9a-f]{12}", session) is not None)
+    if name != environment and not is_archived:
+        raise Refused("Pending environment update folder/name mismatch; "
+                      "not a recognized archived test, nothing removed.")
+    files = list(directory.iterdir())
+    if {file.name for file in files} != {"candidate.json", "Dockerfile"} or any(
+            file.is_symlink() or not file.is_file() or file.stat().st_nlink != 1
+            for file in files):
+        raise Refused("Unexpected files or links in pending environment update; "
+                      "inspect it manually, nothing removed.")
+    if is_archived:
+        print(f"Archived earlier test for {environment!r}, originally from "
+              f"session {session}. This is NOT an approved environment version.")
+    confirm(f"Discard ONLY this unapproved environment update ({name})? "
+            "Approved environments/revisions, project files, Goose profiles and "
+            "sessions remain unchanged.", "DISCARD PROPOSAL " + name)
     shutil.rmtree(directory)
-    print(f"Discarded unapproved proposal for {name!r}; approved environments unchanged.")
+    print(f"Discarded unapproved environment update {name!r}; "
+          "approved environments and sessions unchanged.")
 
 
 def inspect_recipe(text: str) -> list[tuple[str, str]]:
@@ -583,13 +630,13 @@ def pending_changes(identifier: str) -> int:
 
 def require_no_pending_environment_update(identifier: str) -> None:
     """Avoid orphaning unapproved recipes that still refer to this session."""
-    for directory in (STATE / "candidates").glob("*/candidate.json"):
-        proposal = load_json(directory)
-        if proposal.get("session") == identifier:
-            raise Refused(f"Session has an unapproved environment update "
-                          f"{proposal.get('name', directory.parent.name)!r}. "
-                          "Approve or discard that pending environment update before "
-                          "discarding its source session; no session data was removed.")
+    for update in pending_environment_updates():
+        if update["session"] == identifier:
+            raise Refused(f"Session {identifier} is linked to an unfinished "
+                          f"environment update for {update['environment']!r} "
+                          f"(stored as {update['folder']!r}). "
+                          "Review or discard the environment update first; "
+                          "no session data was removed.")
 
 
 
