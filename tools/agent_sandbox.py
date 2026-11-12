@@ -581,6 +581,17 @@ def pending_changes(identifier: str) -> int:
     folder, _ = current_session(identifier)
     return len(changes(load_json(folder / "baseline.json"), scan_tree(folder / "work")))
 
+def require_no_pending_environment_update(identifier: str) -> None:
+    """Avoid orphaning unapproved recipes that still refer to this session."""
+    for directory in (STATE / "candidates").glob("*/candidate.json"):
+        proposal = load_json(directory)
+        if proposal.get("session") == identifier:
+            raise Refused(f"Session has an unapproved environment update "
+                          f"{proposal.get('name', directory.parent.name)!r}. "
+                          "Approve or discard that pending environment update before "
+                          "discarding its source session; no session data was removed.")
+
+
 
 def _discard_data(folder: Path, meta: dict) -> None:
     """Internal destructive primitive; must follow an explicit, scoped approval."""
@@ -606,6 +617,7 @@ def destroy(identifier: str) -> None:
     with owner_lock():
         folder, meta = current_session(identifier)
         identifier = meta["id"]
+        require_no_pending_environment_update(identifier)
         print(f"Session {meta.get('title') or identifier!r}: "
               f"{pending_changes(identifier)} unreviewed project change(s).")
         confirm("Discard this private session, its tools and all its new Goose history? "
@@ -627,6 +639,7 @@ def discard_empty_sessions(identifiers: list[str]) -> None:
         targets = []
         for identifier in identifiers:
             folder, meta = current_session(identifier)
+            require_no_pending_environment_update(meta["id"])
             if pending_changes(meta["id"]):
                 raise Refused(f"Session {meta.get('title') or meta['id']!r} has proposed "
                               "project changes; inspect and discard it individually.")
