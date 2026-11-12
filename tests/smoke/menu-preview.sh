@@ -67,8 +67,9 @@ output="$(printf '5\n' | "$CLI" 2>&1 || true)"
 assert_contains "$output" 'Command to run: aiw help'
 assert_absent "$output" 'AI Workstation command line'
 
-# Nested standard menu: cancellation must not call Docker or require it.
-output="$(printf '1\n1\n7\nn\nb\nq\nq\n' | "$CLI" 2>&1)"
+# Existing direct Goose commands remain available behind the explicit legacy menu;
+# cancelling their previews must not invoke Docker.
+output="$(printf '1\n1\n2\n7\nn\nb\nb\nq\nq\n' | "$CLI" 2>&1)"
 assert_contains "$output" 'Command to run: aiw goose pull'
 assert_absent "$output" 'Docker is not installed'
 
@@ -82,13 +83,13 @@ assert_absent "$output" 'Docker is not installed'
 for spec in '9|configure' '10|env' '11|check'; do
     choice="${spec%%|*}"
     subcommand="${spec#*|}"
-    output="$(printf '1\n1\n%s\nn\nb\nq\nq\n' "$choice" | "$CLI" 2>&1)"
+    output="$(printf '1\n1\n2\n%s\nn\nb\nb\nq\nq\n' "$choice" | "$CLI" 2>&1)"
     assert_contains "$output" "Command to run: aiw goose $subcommand"
     assert_absent "$output" 'Docker is not installed'
 done
 
 # Informational actions have public CLI equivalents too.
-output="$(printf '1\n1\n6\ny\n\nb\nq\nq\n' | "$CLI" 2>&1)"
+output="$(printf '1\n1\n2\n6\ny\n\nb\nb\nq\nq\n' | "$CLI" 2>&1)"
 assert_contains "$output" 'Command to run: aiw goose quick-help'
 assert_contains "$output" 'Goose quick help'
 output="$("$CLI" goose quick-help 2>&1)"
