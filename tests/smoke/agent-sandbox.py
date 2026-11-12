@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline #59 contract tests. No Docker daemon, project deployment or secrets."""
 import contextlib
+import io
 import json
 import os
 import sys
@@ -13,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 import agent_sandbox as service
 import agent_sandbox_core as core
+import agent_sandbox_ux as ux
 
 
 class ConfirmationMessages(unittest.TestCase):
@@ -29,6 +31,98 @@ class ConfirmationMessages(unittest.TestCase):
                 service.confirm("Approve image?", "APPROVE python-tools")
         with mock.patch("builtins.input", return_value="APPROVE python-tools"):
             service.confirm("Approve image?", "APPROVE python-tools")
+
+
+
+class SessionOperatorUX(unittest.TestCase):
+    """No Docker or live profile; metadata and menu selections are host-local."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.state_patch = mock.patch.object(service, "STATE", Path(self.tmp.name))
+        self.state_patch.start()
+        self.addCleanup(self.state_patch.stop)
+
+    def add_session(self, identifier, title=None):
+        folder = service.session_dir(identifier)
+        folder.mkdir(parents=True)
+        meta = {"id": identifier, "workspace": "example",
+                "environment": "standard", "revision": "1",
+                "created": "2026-11-12T00:00:00+00:00", "image_id": "sha256:" + "a" * 64,
+                "home_volume": "aiw-agent-home-" + identifier, "applied": []}
+        if title is not None:
+            meta["title"] = title
+        core.save_json(folder / "session.json", meta)
+        core.save_json(folder / "baseline.json", {})
+        (folder / "work").mkdir()
+        return folder
+
+    def test_titles_rename_and_legacy_metadata_preserve_stable_ids(self):
+        sid = "abcdef123456"
+        self.add_session(sid, "Add black to python-tools")
+        self.assertEqual(service.resolve_session("add BLACK to python-tools"), sid)
+        self.assertEqual(service.resolve_session(sid), sid)
+        service.rename_session(sid, "Review this project")
+        self.assertEqual(service.resolve_session("Review this project"), sid)
+        self.assertEqual(service.current_session(sid)[1]["id"], sid)
+        self.assertEqual(service.current_session(sid)[1]["title"], "Review this project")
+        legacy = "aabbcc001122"
+        self.add_session(legacy)
+        self.assertEqual(service.resolve_session("example"), legacy)
+        self.assertEqual(service.current_session(legacy)[1]["id"], legacy)
+        with contextlib.redirect_stdout(io.StringIO()) as captured:
+            service.report()
+        self.assertIn("Review this project", captured.getvalue())
+        self.assertIn("0 proposed file(s)", captured.getvalue())
+
+    def test_duplicate_title_is_not_silently_accepted(self):
+        self.add_session("abcdef123456", "Same intention")
+        self.add_session("123456abcdef", "same INTENTION")
+        with self.assertRaisesRegex(core.Refused, "Ambiguous session title"):
+            service.resolve_session("Same intention")
+        self.assertEqual(service.resolve_session("abcdef123456"), "abcdef123456")
+
+    def test_title_and_malformed_input_are_rejected_without_writes(self):
+        sid = "abcdef123456"
+        self.add_session(sid, "Safe")
+        for title in ("", " x ", "x\nsecret", "x" * 81):
+            with self.assertRaises(core.Refused, msg=repr(title)):
+                service.rename_session(sid, title)
+        self.assertEqual(service.current_session(sid)[1]["title"], "Safe")
+        with self.assertRaisesRegex(core.Refused, "No retained session"):
+            service.resolve_session("Nonexistent")
+        self.assertEqual([m["id"] for m in service.list_sessions()], [sid])
+
+    def test_numbered_selection_and_cancel_are_bounded(self):
+        with mock.patch("builtins.input", side_effect=["not an index", "3", "2"]):
+            with contextlib.redirect_stdout(io.StringIO()):
+                selected = ux.choose("Sessions", [("id1", "One"), ("id2", "Two")])
+        self.assertEqual(selected, "id2")
+        with mock.patch("builtins.input", return_value="b"):
+            self.assertIsNone(ux.choose("Sessions", [("id1", "One")]))
+        with mock.patch("builtins.input", return_value=""):
+            self.assertIsNone(ux.ask("Title"))
+
+    def test_candidate_records_immutable_id_not_mutable_title(self):
+        sid = "abcdef123456"
+        self.add_session(sid, "Install ruff")
+        with mock.patch.object(service, "inventory", return_value=[("ruff", "0.14.1")]):
+            service.candidate("Install ruff", "ruff-tools")
+        record = core.load_json(service.STATE / "candidates" / "ruff-tools" / "candidate.json")
+        self.assertEqual(record["session"], sid)
+        self.assertEqual(record["parent"], "standard")
+
+    def test_empty_inventory_stops_guided_environment_save(self):
+        sid = "abcdef123456"
+        self.add_session(sid, "Wrong session")
+        with (mock.patch.object(service, "inventory", return_value=[]),
+              mock.patch.object(service, "candidate") as prepare,
+              mock.patch("builtins.input", return_value="1"),
+              contextlib.redirect_stdout(io.StringIO()) as captured):
+            ux.save_session_tools(service)
+        self.assertIn("Wrong session?", captured.getvalue())
+        prepare.assert_not_called()
 
 
 class ProjectBoundary(unittest.TestCase):
@@ -155,8 +249,9 @@ class CatalogueAndContainerBoundary(unittest.TestCase):
               mock.patch.object(service, "owner_lock", return_value=contextlib.nullcontext()),
               mock.patch.object(service.subprocess, "call", return_value=0) as call,
               mock.patch.object(service, "inspect_volume", return_value=True)):
-            sid = service.start("demo", "standard")
-            service.run_session(sid, [])
+            sid = service.start("demo", "standard", title="Isolated testing")
+            service.run_session("Isolated testing", [])
+            self.assertEqual(service.current_session(sid)[1]["title"], "Isolated testing")
             argv = call.call_args.args[0]
             self.assertIn("docker", argv)
             self.assertNotIn(str(self.original), " ".join(argv))
