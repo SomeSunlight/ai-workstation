@@ -2,19 +2,34 @@
 
 **Reproducible infrastructure. Controlled agent autonomy.** The sandbox adapter is opt-in. Regular `aiw goose session`, existing Docker Compose Goose, its credentials/history and running services are untouched. Native Windows runs this adapter inside WSL; Linux works directly.
 
-## Start here: selectable menu (Linux / WSL2)
+## Your sandbox cockpit (Linux / WSL2)
 
-Run `aiw` → **Goose → Sandboxes** (or `aiw goose sandbox menu`). The compact menu separates **Sessions**, **Environments**, **Setup** and **Help**. Select registered workspaces, retained sessions and approved environment revisions by **number**; you do not need to memorize the internal 12-character IDs.
+Start `aiw` → **Goose → Work safely in a sandbox** (or `aiw goose sandbox menu`). **The first screen is the overview**: your registered original project folders, *all* retained sessions with their titles, environment/revision and proposed file-change counts, and approved reusable tool environments. It does not list the same objects twice under separate submenus.
 
-1. **Setup:** back up/migrate the legacy Goose profile once and build the pinned `standard` image, each with its existing typed approval. Registered projects are managed under Goose → Manage workspaces.
-2. **Sessions → Create:** select a registered original workspace and an approved environment, give the session an intention/title, then optionally run Goose. The agent works on a private copy.
-3. **Sessions → Select:** resume, review the proposed project changes, rename the session or discard its private work/history. The original is never mounted. Discard still requires typing `DESTROY <stable-id>`.
-4. **Environments → Save tools:** select the *correct* session (shown with its title, workspace, pinned environment/revision and stable ID). See its installed `uv tool` inventory, choose new named image or upgrade the session's named parent, review the proposed pinned recipe, then explicitly type `APPROVE <name>` before AIW builds/verifies and activates it. Incomplete proposals remain unapproved for later review or can be discarded separately after typed approval; discarding a proposal never discards its source session or any approved revision.
-5. **Environments → Rollback / Rebuild:** choose the named environment and approved revision by number. Rollback changes **only future session selection** and requires typed `ROLLBACK <name>`; existing sessions stay pinned. Rebuild only verifies and never activates an image.
+The default action is **Start a new safe Goose session**:
 
-Example: an approved `python-tools` r1 contains `ruff`. Create session **Add black** from `python-tools` r1, install `black==25.1.0` with `uv tool` inside Goose, then choose Environments → Save tools → Update python-tools. Review r2's proposed recipe and approve it. A newly created r2 session sees both tools; rolling back to r1 makes future sessions use r1 while existing r2 sessions remain unchanged.
+1. Choose the registered original project. If it is missing, use **Manage project folders** to register its path. This reuses the existing validated `aiw goose workspace add/remove` commands; unregistering never deletes actual project files.
+2. Choose `standard` (offered first and recommended for a clean start), or an existing named environment such as `python-tools`. You **do not** need a new environment for each session.
+3. Give this session a memorable intention, e.g. **Explore the project** or **Add Black**.
+4. Start Goose straight away, or leave the prepared session for later. Its working directory is **a private copy**. Goose cannot change your registered original directly.
 
-**Vocabulary:** a *workspace* is the registered original project. A *session* is an isolated working copy with its own Goose home and tools, backed by an immutable internal ID and a human-editable title. An *environment* is an approved, pinned image: `standard` or a named revision. A *candidate* is only an unapproved environment **recipe**, not a proposed project merge and not a separately managed user inventory type. *Review* reads proposed project differences; *apply* writes only explicitly accepted files after host-side hash checks and approval.
+From the same cockpit, select **Continue or inspect a session** to resume, rename, see the full proposed project diff or (after explicit approval) discard its private copy and Goose history. **Manage reusable tool environments** selects an existing environment and only then offers relevant actions: start a session with it, create an improved revision from one of its sessions, choose active revision for future sessions, verify or deactivate it. Technical, unapproved recipes appear only as *pending changes to an environment*.
+
+### Clearing old experiments without a destructive global reset
+
+Choose **Tidy up earlier test sessions**. The cockpit separates sessions with zero *project* changes from those with unreviewed changes. It can discard the zero-change sessions together with **one typed approval** (`DISCARD N EMPTY SESSIONS`). **Empty here means no project file changes, not empty Goose conversation history**: discarding irreversibly removes each selected session's private history and tools. You can instead choose a specific session, inspect its proposed changes and discard it after the separate `DESTROY <ID>` confirmation.
+
+This does **not** delete original project folders, registrations, approved `standard` or named images, revision history, the verified Goose profile/backup, or legacy Goose history. A full reset is neither necessary nor recommended just to begin the new guided tests. Your existing approved `standard` r1 is ready to use immediately. For the prior `pr1-test` run, three sessions have no proposed project changes and one has two: **review the latter before deciding to discard it**.
+
+### Example: refine a reusable environment
+
+Start a session **Add black to Python tools** from `python-tools` r1, install `black==25.1.0` using `uv tool`, then select that session → **Create or upgrade a reusable environment from this session's tools** (or select `python-tools` → improve it). The menu shows which session and tool pins are being used. Review the proposed recipe; only typed `APPROVE python-tools` builds, verifies and activates r2. A new r2 session sees both tools. Rollback to r1 changes only **future sessions**; existing r2 sessions retain their pinned image.
+
+**Vocabulary:** *Project* = your original registered folder; *session* = a private copy, its temporary Goose home/tools and an immutable internal ID; *environment* = an approved, reusable image such as `standard r1`; *pending environment revision* = an unapproved pinned recipe, not project files. *Review* never writes originals; a later, separately approved *apply/merge* operation does. The first cockpit iteration keeps the existing explicit file-path CLI apply; a Git-based batch changeset review/merge belongs to the second #64 PR.
+
+### What about the previous Goose mode?
+
+The regular `aiw goose session` / `aiw goose run` commands remain under **Goose → Existing Goose sessions and configuration (legacy; direct project access)**. They still write **directly** to their selected original registered project, unlike safe sandbox sessions. This intentional compatibility/recovery route preserves existing credentials and ongoing history while the new default is tested. It must not be deleted until the owner approves a separate migration/deprecation decision. Do not confuse a project workspace registration with granting the sandbox direct write access.
 
 ## CLI for scripting / advanced use
 
@@ -32,7 +47,7 @@ aiw goose sandbox rollback python-tools 1                   # typed approval
 aiw goose sandbox rebuild python-tools 1                    # verification only
 ```
 
-**Project-merge limitation (planned separate #64 PR):** the first UX slice improves selection and environment revision approval; it does **not** yet provide batch Git staging or hunk/3-way merge. The existing reviewed CLI `apply` still accepts explicit relative files and refuses drift. Do not confuse saving session tools with applying project edits. No session action grants the agent direct access to the original.
+**Project-merge limitation (planned separate #64 PR):** the cockpit improves selection and environment revision approval; it does **not** yet provide batch Git staging or hunk/3-way merge. The existing reviewed CLI `apply` still accepts explicit relative files and refuses drift. Do not confuse saving session tools with applying project edits. No session action grants the agent direct access to the original.
 
 ### Migration and recovery
 
