@@ -192,6 +192,18 @@ def approve_candidate(api, name=None):
         return
     folder = api.STATE / "candidates" / name
     proposal = api.load_json(folder / "candidate.json")
+    if proposal.get("name") != name:
+        print(f"\nArchived earlier test of environment {proposal.get('name')!r}. "
+              "Its saved folder name is different from the approved environment name. "
+              "It is NOT an approved revision and cannot be activated.")
+        print(f"Source session: {proposal.get('session')} | "
+              f"saved tool inventory: {'empty' if not proposal.get('detected_uv_tools') else 'present'}")
+        action = choose("Archived environment test:", [
+            ("discard", "Discard this old unapproved test (approval required)"),
+            ("later", "Keep it for later")])
+        if action == "discard":
+            api.discard_candidate(name)
+        return
     source = api.current_session(proposal["session"])[1]
     print(f"\nEnvironment update awaiting review: {name} from session {source.get('title', source['id'])!r} "
           f"(id {proposal['session']})")
@@ -264,6 +276,10 @@ def print_cockpit(api):
     projects = workspace_entries()
     sessions = api.list_sessions()
     environments = api.catalogue()["environments"]
+    pending = api.pending_environment_updates()
+    linked = {}
+    for update in pending:
+        linked.setdefault(update["session"], []).append(update["environment"])
     print("\n" + "=" * 52)
     print("Goose sandbox cockpit — your projects, sessions and tools")
     print("=" * 52)
@@ -274,15 +290,19 @@ def print_cockpit(api):
         print("  (none: register a project folder below)")
     print(f"\nYour sessions ({len(sessions)} private working copy/copies):")
     for index, meta in enumerate(sessions, 1):
-        print(f"  {index}. {session_label(meta, api)}")
+        waiting = linked.get(meta["id"], [])
+        print(f"  {index}. {session_label(meta, api)}"
+              + (f" | unfinished tool update: {', '.join(waiting)}" if waiting else ""))
     if not sessions:
         print("  (none: start a new safe session below)")
     print(f"\nYour environments ({len(environments)} approved tool image(s)):")
     for name, record in sorted(environments.items(), key=lambda pair: (pair[0] != "standard", pair[0])):
         active = record.get("active")
         status = f"r{active} active" if active else "inactive"
+        waiting = [u for u in pending if u["environment"] == name]
         print(f"  {name}: {status} | {len(record['versions'])} approved revision(s)"
-              + (" | ready to use" if active else ""))
+              + (" | ready to use" if active else "")
+              + (f" | {len(waiting)} unfinished tool update(s)" if waiting else ""))
     if not environments:
         print("  (none: perform initial setup below)")
     path = api.STATE / "migration.json"
@@ -335,30 +355,57 @@ def workspace_menu(api):
 
 
 def cleanup_sessions(api):
-    """Cleanup is not a global reset: keep profiles, approved images and originals."""
+    """Housekeeping follows session status; unapproved tool updates are inline."""
     sessions = api.list_sessions()
     if not sessions:
         print("No retained sessions to clean up. Ready for your first safe session.")
         return
-    empty = []
-    print("\nReview cleanup candidates (even empty sessions contain Goose history):")
+    pending = api.pending_environment_updates()
+    linked = {}
+    for update in pending:
+        linked.setdefault(update["session"], []).append(update)
+    empty, blocked = [], []
+    print("\nYour earlier sessions (even unchanged sessions may contain Goose history):")
     for meta in sessions:
-        count = api.pending_changes(meta["id"])
-        print(f"  {session_label(meta)} | {count} proposed file change(s)")
-        if count == 0:
-            empty.append(meta["id"])
-    print(f"\n{len(empty)} session(s) have no proposed project changes.")
-    print("Cleanup keeps all approved environments/revisions, the standard image,"
-          " the backed-up Goose profile, legacy history and original projects.")
-    action = choose("Clean up earlier experiments:", [
-        ("empty", f"Discard {len(empty)} sessions with no project changes (ONE typed approval)"),
-        ("one", "Inspect/discard a particular session, including one with changes"),
-    ])
+        sid = meta["id"]
+        count = api.pending_changes(sid)
+        updates = linked.get(sid, [])
+        if updates:
+            detail = "; ".join(f"{u['environment']} (unfinished environment update)"
+                               for u in updates)
+            blocked.append(sid)
+        else:
+            detail = ""
+        print(f"  {session_label(meta)} | {count} project file change(s)"
+              + (f" | {detail}" if detail else ""))
+        if count == 0 and not updates:
+            empty.append(sid)
+    print(f"\n{len(empty)} unchanged session(s) ready to discard; "
+          f"{len(blocked)} session(s) have unfinished environment updates.")
+    print("Only PRIVATE session copies/history/tools will be removed. Your projects,"
+          " approved environment revisions, migrated Goose profile and legacy history remain.")
+    actions = [
+        ("empty", f"Discard {len(empty)} ready sessions (ONE typed approval)"),
+    ]
+    if blocked:
+        actions.append(("resolve", "Inspect the unfinished tool-environment update blocking cleanup"))
+    actions.append(("one", "Inspect/discard a specific session, including one with project changes"))
+    action = choose("Tidy up:", actions)
     if action == "empty":
         if empty:
             api.discard_empty_sessions(empty)
         else:
-            print("Nothing to discard. All remaining sessions have changes to review.")
+            print("No sessions are ready to discard. Inspect remaining changes or "
+                  "saved environment updates first.")
+    elif action == "resolve":
+        updates = [u for u in pending if u["session"] in blocked]
+        folder = choose("Choose a session's unfinished environment update:", [
+            (u["folder"], f"Environment {u['environment']} | "
+             f"session ...{u['session'][-6:]} | "
+             f"{'empty tool list' if u['empty_tools'] else 'saved tools'}")
+            for u in updates])
+        if folder is not None:
+            approve_candidate(api, folder)
     elif action == "one":
         existing_session(api)
 
