@@ -22,7 +22,7 @@ grep -Fq 'Setup Intel SYCL runtime (WSL / Ubuntu 24.04)' <<< "$local_menu_output
 
 # Safe sandbox cockpit is the default entry; legacy direct-workspace Goose stays
 # accessible on purpose, behind an explicit advanced choice.
-cockpit_output="$(printf '1\n1\nb\nb\nq\n' | HOME="$temp_home" "$cli")"
+cockpit_output="$(printf '1\n1\n1\nb\nb\nb\nq\n' | HOME="$temp_home" "$cli")"
 assert_menu_has() {
     local actual="$1" needle="$2" stage="$3"
     if ! grep -Fq -- "$needle" <<< "$actual"; then
@@ -35,7 +35,7 @@ assert_menu_has "$cockpit_output" 'Your projects (' cockpit
 assert_menu_has "$cockpit_output" 'Your sessions (' cockpit
 assert_menu_has "$cockpit_output" 'Your environments (' cockpit
 assert_menu_has "$cockpit_output" 'Start a NEW safe Goose session' cockpit
-goose_menu_output="$(printf '1\n2\n8\nb\n\nb\nb\nq\n' | "$cli")"
+goose_menu_output="$(printf '1\n1\n2\n8\nb\n\nb\nb\nq\n' | "$cli")"
 assert_menu_has "$goose_menu_output" 'Update application' legacy-Goose
 assert_menu_has "$goose_menu_output" 'Latest stable official release' legacy-Goose
 assert_menu_has "$goose_menu_output" 'Enter a specific stable version' legacy-Goose
