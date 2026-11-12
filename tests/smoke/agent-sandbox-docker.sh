@@ -81,6 +81,18 @@ PY
 )"
 [[ "$active" == "1" ]] || { echo 'Rollback did not restore r1' >&2; exit 1; }
 # Disable migration is reversible at the legacy entrance, with no volume deletion.
+# A clean takeoff requires no global reset: discard ONLY two empty session
+# copies with a single typed permission. Approved tool revisions and legacy
+# Goose volumes must remain available.
+printf 'DISCARD 2 EMPTY SESSIONS\n' | python3 -c '
+import sys
+sys.path.insert(0, sys.argv[1] + "/tools")
+import agent_sandbox as sandbox
+sandbox.discard_empty_sessions(sys.argv[2:])
+' "$root" "$session" "$session2"
+if docker volume inspect "aiw-agent-home-$session" >/dev/null 2>&1; then
+    echo 'Discarded private Goose session volume still exists' >&2; exit 1
+fi
 printf 'DISABLE\n' | python3 "$root/tools/agent_sandbox.py" migrate-disable
 if python3 "$root/tools/agent_sandbox.py" create ci-project --environment standard >/dev/null 2>&1; then
     echo 'Disabled sandbox unexpectedly allowed new session' >&2
