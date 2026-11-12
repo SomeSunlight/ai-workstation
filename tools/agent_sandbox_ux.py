@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from pathlib import Path
 import subprocess
-import re
 
 
 def choose(heading: str, items: list[tuple[str, str]], *, default: str | None = None) -> str | None:
@@ -48,7 +47,7 @@ def ask(prompt: str, *, default: str = "") -> str | None:
 def choose_session(api):
     sessions = api.list_sessions()
     return choose("Select a session to continue or inspect:", [
-        (m["id"], f"{session_label(m)}")
+        (m["id"], session_label(m, api))
         for m in sessions
     ])
 
@@ -61,7 +60,7 @@ def choose_environment(api, *, named_only=False, include_inactive=False):
             options.append((name, f"{name} | "
                           f"{'active r' + active if active else 'inactive'} | "
                           f"{len(record['versions'])} approved revision(s)"))
-    return choose("Approved environments (only new sessions use the active revision):", options)
+    return choose("Choose a reusable environment (new sessions use the active version):", options)
 
 
 def choose_revision(api, name):
@@ -123,7 +122,7 @@ def new_session(api, environment=None, project=None):
         if not choices:
             print("No approved environment yet. Choose 'Initial setup' in the cockpit first.")
             return
-        environment = choose("Choose tools for this session (Enter = standard):",
+        environment = choose("Choose tools for this session (Enter = first recommended choice):",
                              choices, default=choices[0][0])
     if environment is None:
         return
@@ -157,7 +156,7 @@ def save_session_tools(api, sid=None):
     action_items = [("new", "Create a new named environment from this session")]
     if meta["environment"] != "standard" and meta["environment"] in existing:
         action_items.append(("upgrade", f"Update {meta['environment']} to a new approved revision"))
-    action = choose("Save session tools as a reusable environment:", action_items)
+    action = choose("Turn the installed tools into a reusable environment:", action_items)
     if action is None:
         return
     if action == "new":
@@ -188,17 +187,17 @@ def approve_candidate(api, name=None):
             for folder in sorted(path.iterdir()):
                 if folder.is_dir() and (folder / "candidate.json").is_file():
                     items.append((folder.name, folder.name))
-        name = choose("Unapproved environment proposals:", items)
+        name = choose("Prepared environment updates awaiting your approval:", items)
     if name is None:
         return
     folder = api.STATE / "candidates" / name
     proposal = api.load_json(folder / "candidate.json")
     source = api.current_session(proposal["session"])[1]
-    print(f"\nProposal: {name} from session {source.get('title', source['id'])!r} "
+    print(f"\nEnvironment update awaiting review: {name} from session {source.get('title', source['id'])!r} "
           f"(id {proposal['session']})")
     print(f"Approved parent: {proposal['parent']} (pinned image {proposal['parent_image_id']})")
     recipe = (folder / "Dockerfile").read_text()
-    print("\nProposed pinned recipe:\n" + recipe)
+    print("\nTools recipe for the next approved environment version:\n" + recipe)
     api.inspect_recipe(recipe)
     if not proposal.get("detected_uv_tools"):
         print("This proposal recorded an EMPTY session tool inventory. It may be from "
@@ -208,7 +207,7 @@ def approve_candidate(api, name=None):
                                        ("later", "Keep for manual inspection")]) == "discard":
             api.discard_candidate(name)
         return
-    print("This is NOT an approved environment until the separate typed approval. "
+    print("This is NOT an approved environment version until separate typed approval. "
           "You may edit the private Dockerfile outside Goose, then review it again.")
     action = choose("Proceed?", [
         ("approve", "Verify/build/activate (requires typed approval)"),
@@ -431,7 +430,7 @@ def environments_menu(api):
         ]
         options += [
             ("create-from-session", "Create a NEW reusable environment from a session's installed tools"),
-            ("pending", "Review pending changes to reusable environments"),
+            ("pending", "Review prepared environment updates awaiting approval"),
             ("standard-setup", "Build/upgrade the standard environment"),
         ]
         choice = choose("Select an environment, or create one from a session:", options)
