@@ -3,16 +3,19 @@
 ## Current #64 operator UX branch (2026-11-12)
 
 PR #60 has been squash-merged to `main`; #64 is being implemented in independent
-reviewable slices. First branch `feat/64-sandbox-operator-ux` adds persistent session
-titles, numbered selection and guided approved environment revision workflows on top
-of the unchanged sandbox isolation engine. No service start/stop or private Goose
+reviewable slices. First branch `feat/64-sandbox-operator-ux` now adds a **single operator cockpit**
+with projects, sessions and environments together, a recommended fresh-session
+path, contextual revision actions, and explicit no-changes session cleanup.
+Legacy direct Goose remains accessible under a clearly advanced label.
+The existing sandbox isolation/approval engine is retained. No service start/stop or private Goose
 volume migration was performed by the author; the existing Goose/Windows services
 remain entirely under operator control. Git-based batch project merge is a distinct
 follow-up, not silently substituted for the current explicit selected-path apply.
 
-**CI verified:** [Validate #43172164520](https://github.com/SomeSunlight/ai-workstation/actions/runs/43172164520)
-passed Linux/ContextCanon, Windows and disposable real Docker tests for #64's
-first functional slice. **Pending:** owner's real WSL acceptance; a real Windows
+**Earlier CI verified:** [Validate #43172594030](https://github.com/SomeSunlight/ai-workstation/actions/runs/43172594030)
+passed Linux/ContextCanon, Windows and disposable real Docker for the earlier
+menu. The revised integrated cockpit requires new exact-head CI and owner's
+real WSL acceptance; a real Windows
 crash/restart durability test is expressly **unchecked** until a naturally occurring
 incident supplies evidence. See `PLAN.md` and #64.
 
