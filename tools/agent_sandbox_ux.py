@@ -94,7 +94,7 @@ def session_label(meta: dict, api=None) -> str:
     if api is not None:
         try:
             count = api.pending_changes(meta["id"])
-            changes = f" | {count} proposed change(s)"
+            changes = f" | {count} project file change(s)"
         except (api.Refused, OSError) as exc:
             changes = f" | review unavailable: {exc}"
     return (f"{name} | project {meta['workspace']} | "
