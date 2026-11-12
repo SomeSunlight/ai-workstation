@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# Preserve the failing command/line when nested menu input changes unexpectedly.
+trap 'printf "Interactive menu regression failed at line %s: %s\\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 cli="${ROOT}/bin/aiw"
 temp_home="$(mktemp -d)"
