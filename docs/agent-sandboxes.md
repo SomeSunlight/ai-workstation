@@ -15,9 +15,28 @@ The default action is **Start a new safe Goose session**:
 
 From the same cockpit, select **Continue or inspect a session** to resume, rename, see the full proposed project diff or (after explicit approval) discard its private copy and Goose history. **Manage reusable tool environments** selects an existing environment and only then offers relevant actions: start a session with it, create an improved revision from one of its sessions, choose active revision for future sessions, verify or deactivate it. Technical, unapproved recipes appear only as *pending changes to an environment*.
 
+### Two kinds of changes — you normally need only one
+
+**Project files:** Goose works on the session's private copy. Any added, removed
+or content-changed project file in that copy (except intentionally excluded
+credentials and private paths) is automatically detected by comparing it with
+the session's original snapshot. You do **not** prepare a separate "proposal".
+Changes that are undone during the session disappear from the diff. Review
+doesn't write to the original; the later Git-based batch review/merge PR will
+make selective acceptance straightforward. Until then, the advanced CLI can
+approve selected file paths with drift checks.
+
+**Reusable tools:** A `uv tool install` in a session changes its own tool
+inventory, **not** the original project's files and **not** the approved image.
+Only when you explicitly select "Create or upgrade a reusable environment from
+this session's tools" does AIW prepare a version-pinned environment update.
+You review and approve that separate update; nothing is activated
+automatically. `candidate` / `proposal` are internal storage terms, not
+extra objects you must create to review ordinary project file changes.
+
 ### Clearing old experiments without a destructive global reset
 
-Choose **Tidy up earlier test sessions**. The cockpit separates sessions with zero *project* changes from those with unreviewed changes. It can discard the zero-change sessions together with **one typed approval** (`DISCARD N EMPTY SESSIONS`). **Empty here means no project file changes, not empty Goose conversation history**: discarding irreversibly removes each selected session's private history and tools. You can instead choose a specific session, inspect its proposed changes and discard it after the separate `DESTROY <ID>` confirmation.
+Choose **Tidy up earlier test sessions**. The cockpit separates sessions with zero *project* changes from those with unreviewed changes. An unchanged session that is still the source of an unfinished tool-environment update is flagged explicitly; you can inspect and discard that old update directly from the cleanup menu. The remaining ready sessions can be discarded together with **one typed approval** (`DISCARD N EMPTY SESSIONS`). **Empty here means no project file changes, not empty Goose conversation history**: discarding irreversibly removes each selected session's private history and tools. You can instead choose a specific session, inspect its proposed changes and discard it after the separate `DESTROY <ID>` confirmation.
 
 This does **not** delete original project folders, registrations, approved `standard` or named images, revision history, the verified Goose profile/backup, or legacy Goose history. A full reset is neither necessary nor recommended just to begin the new guided tests. If `standard` is already approved, you can reuse it immediately. If any old session has proposed project changes, **review those changes before deciding to discard that session**.
 
