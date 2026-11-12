@@ -15,6 +15,22 @@ import agent_sandbox as service
 import agent_sandbox_core as core
 
 
+class ConfirmationMessages(unittest.TestCase):
+    def test_invalid_confirmation_explains_required_phrase(self):
+        with mock.patch("builtins.input", return_value="APPROVE"):
+            with self.assertRaises(core.Refused) as result:
+                service.confirm("Approve image?", "APPROVE python-tools")
+        self.assertIn("Expected exactly 'APPROVE python-tools'", str(result.exception))
+        self.assertIn("nothing was approved", str(result.exception))
+
+    def test_empty_confirmation_cancel_and_valid_phrase(self):
+        with mock.patch("builtins.input", return_value=""):
+            with self.assertRaisesRegex(core.Refused, "cancelled"):
+                service.confirm("Approve image?", "APPROVE python-tools")
+        with mock.patch("builtins.input", return_value="APPROVE python-tools"):
+            service.confirm("Approve image?", "APPROVE python-tools")
+
+
 class ProjectBoundary(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

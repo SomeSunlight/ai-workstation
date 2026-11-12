@@ -27,7 +27,12 @@ docker run --rm --network none --user 0 --entrypoint /bin/sh \
     --mount type=volume,src=ai-workstation_goose-home,dst=/home/goose "$image" \
     -c 'mkdir -p /home/goose/.config/goose /home/goose/.local/share/goose/sessions; printf "active_provider: synthetic\n" > /home/goose/.config/goose/config.yaml; echo synthetic-history > /home/goose/.local/share/goose/sessions/ci.txt'
 printf 'MIGRATE\n' | python3 "$root/tools/agent_sandbox.py" migrate
-printf 'BUILD\n' | python3 "$root/tools/agent_sandbox.py" build-standard
+build_log="$tmp/build-standard.log"
+printf 'BUILD\n' | python3 "$root/tools/agent_sandbox.py" build-standard 2>&1 | tee "$build_log"
+if grep -Eq 'InvalidDefaultArgInFrom|Failed to initialize logging' "$build_log"; then
+    echo 'Standard build emitted a Dockerfile or Goose startup warning' >&2
+    exit 1
+fi
 "$root/bin/aiw" goose workspace add ci-project "$tmp/project"
 session="$(python3 "$root/tools/agent_sandbox.py" create ci-project --environment standard | sed -n 's/^Session ID: //p')"
 [[ "$session" =~ ^[0-9a-f]{12}$ ]]
@@ -42,7 +47,12 @@ docker run --rm --pull never --read-only --user "$(id -u):$(id -g)" \
     --mount "type=volume,src=aiw-agent-home-$session,dst=/home/goose" "$image_id" \
     -c 'set -eu; test -f /home/goose/.local/share/goose/sessions/ci.txt; uv tool install --no-cache --python 3.12.12 ruff==0.14.1; ruff --version'
 python3 "$root/tools/agent_sandbox.py" candidate "$session" python-data
-printf 'APPROVE python-data\n' | python3 "$root/tools/agent_sandbox.py" promote python-data
+promotion_log="$tmp/promote-python-data.log"
+printf 'APPROVE python-data\n' | python3 "$root/tools/agent_sandbox.py" promote python-data 2>&1 | tee "$promotion_log"
+if grep -Eq 'InvalidDefaultArgInFrom|Failed to initialize logging' "$promotion_log"; then
+    echo 'Candidate build emitted a Dockerfile or Goose startup warning' >&2
+    exit 1
+fi
 python3 "$root/tools/agent_sandbox.py" rebuild python-data 1
 derived="$(python3 - "$tmp/state/catalog.json" <<'PY'
 import json,sys

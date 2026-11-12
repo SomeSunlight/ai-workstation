@@ -1,3 +1,5 @@
+# check=skip=InvalidDefaultArgInFrom
+# FROM inputs deliberately have no defaults: AIW supplies reviewed registry digests.
 # AIW operator-reviewed image only. Docker build receives immutable registry digests.
 # Build context contains this Dockerfile alone; no secrets or project files.
 ARG UV_BASE

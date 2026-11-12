@@ -98,8 +98,14 @@ def owner_lock(exclusive: bool = True):
 
 def confirm(prompt: str, expected: str) -> None:
     print(prompt)
-    if input(f"Type {expected!r} to proceed: ").strip() != expected:
-        raise Refused("Cancelled; no approval recorded.")
+    try:
+        answer = input(f"Type exactly {expected!r} to proceed (empty = cancel): ").strip()
+    except EOFError:
+        raise Refused("Confirmation input unavailable; nothing was approved.") from None
+    if not answer:
+        raise Refused("Confirmation cancelled; nothing was approved.")
+    if answer != expected:
+        raise Refused(f"Incorrect confirmation. Expected exactly {expected!r}; nothing was approved.")
 
 def host_selected_goose_image() -> str:
     env = Path(os.environ.get("AIW_RUNTIME_ENV_FILE", ROOT / ".env"))
@@ -234,7 +240,9 @@ def build_standard(upgrade: bool) -> None:
     local_tag = f"aiw-agent-standard:r{revision}"
     image = build_image(recipe, base, local_tag, uv_base)
     docker("run", "--rm", "--pull", "never", "--network", "none",
-           "--read-only", "--entrypoint", "/bin/sh", image,
+           "--read-only", "--tmpfs",
+           "/home/goose:rw,nosuid,nodev,size=64m,uid=1000,gid=1000,mode=0700",
+           "--entrypoint", "/bin/sh", image,
            "-c", "uv --version && python3 --version && git --version && goose --version", show=True)
     record["versions"][revision] = {
         "image_id": image, "local_tag": local_tag, "parent": None,
@@ -357,7 +365,9 @@ def candidate(identifier: str, name: str, upgrade: bool = False) -> None:
         raise Refused("Candidate already exists.")
     tools = inventory(identifier)
     private_dir(directory)
-    recipe = ["# Proposed from installed uv tools; no session filesystem snapshot.",
+    recipe = ["# check=skip=InvalidDefaultArgInFrom",
+              "# BASE is mandatory and supplied from an approved pinned parent image.",
+              "# Proposed from installed uv tools; no session filesystem snapshot.",
               "# uvx cache/manual/apt installs are NOT captured.",
               "ARG BASE", "FROM ${BASE}", "USER goose"]
     for package, version in tools:
