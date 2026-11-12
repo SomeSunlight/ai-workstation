@@ -1,3 +1,5 @@
+# AI Workstation Plan
+
 ## Issue #64 — operator-facing agent sandbox UX (2026-11-12, draft first slice)
 
 **Baseline:** PR #60 was squash-merged into `main` before this work; this branch
@@ -12,11 +14,13 @@ must not be mixed with environment recipe promotion.
   proposals; guided recipe preview/approval for new and upgraded named environments,
   rollback/rebuild and cancellation using the existing safety operations.
 - [x] Add focused offline and disposable Docker regression checks plus operator guide.
-- [ ] Run exact-head offline Linux/Windows and disposable Docker CI, and owner WSL acceptance
-  for real Goose data/history, r1→r2→rollback and existing running services.
-- [ ] ContextCanon: existing general/English UX and agent-isolation rules in
-  `CONTEXT.src.md` already apply; verify pinned build/check and generated Child packages
-  are unchanged before marking this complete. Do not hand-edit generated packages.
+- [x] Linux, Windows and disposable real-Docker CI all passed on PR #65's functional
+  implementation: [Validate #43172164520](https://github.com/SomeSunlight/ai-workstation/actions/runs/43172164520).
+- [x] Pinned ContextCanon read-only `check --all` passed in CI. Existing general/English
+  operator-UX and agent-isolation rules in `CONTEXT.src.md` already cover this
+  slice; no authored rule or generated Parent/Child package needed modification.
+- [ ] Owner WSL acceptance for real Goose data/history, titled session resume,
+  python-tools r1→r2→rollback and coexistence with existing running services.
 - [ ] **Second independent #64 PR:** Git-powered batch changeset review, select all/files/hunks,
   baseline/current/proposal conflict handling and non-Git project coverage; retain host-side
   approval, backups, safe paths and explicit operator merge, not agent writes.
@@ -27,9 +31,7 @@ must not be mixed with environment recipe promotion.
 
 ---
 
-# AI Workstation Plan
-
-## Issue #59 — PR 1: disposable Goose agent sandbox (WSL-tested; pending merge, 2026-11-12)
+## Issue #59 — PR 1: disposable Goose agent sandbox (historical pre-merge plan; #60 now merged)
 
 **Scope:** separate opt-in sandbox service + Goose adapter only. No live Docker migration, running Windows service change, GitHub merge or PR 2 security profile. Branch `feat/59-sandbox-lifecycle-pr1` from current `main`.
 
@@ -44,7 +46,7 @@ must not be mixed with environment recipe promotion.
 - [x] Record operator usability gaps and safe next steps in [#64](https://github.com/SomeSunlight/ai-workstation/issues/64): human titles, selectable sessions/revisions, guided environment saving and Git-backed changeset review/merge.
 - [x] Resolve closing operator warnings: mandatory base-image Dockerfile lint without unsafe fallback defaults, ephemeral writable Goose home in the read-only version probe, actionable invalid confirmation; gate warnings in real Docker CI.
 - [ ] Nonstandard native extension/history continuity and cold-reboot package durability are not separately proven by the owner; do not present as verified.
-- [ ] Owner explicitly authorizes and performs the squash merge; PR 2 stays separate.
+- [x] Owner squash-merged PR #60 into `main` before #64 began; PR 2 remains separate.
 
 **Known first-slice limits:** approved recipes capture version-pinned `uv tool` installs, not opaque `uvx` caches/arbitrary runtime installs; pre-migration Goose history is copied as a snapshot, newer histories stay with resumable sessions and are not silently merged. Direct legacy Goose sessions still have their historical RW workspace. Sandbox Docker bridge networking, tool permissions and unknown external extensions are not hardened against a malicious actor until PR 2. Native Windows launches this Linux adapter only via WSL. Multi-file apply keeps verified private backups but is not a transaction.
 
