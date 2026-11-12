@@ -34,8 +34,12 @@ if grep -Eq 'InvalidDefaultArgInFrom:|Failed to initialize logging' "$build_log"
     exit 1
 fi
 "$root/bin/aiw" goose workspace add ci-project "$tmp/project"
-session="$(python3 "$root/tools/agent_sandbox.py" create ci-project --environment standard | sed -n 's/^Session ID: //p')"
+session="$(python3 "$root/tools/agent_sandbox.py" create ci-project --environment standard --title 'Install ruff in sandbox' | sed -n 's/^Session ID: //p')"
 [[ "$session" =~ ^[0-9a-f]{12}$ ]]
+python3 "$root/tools/agent_sandbox.py" list | grep -Fq 'Install ruff in sandbox'
+python3 "$root/tools/agent_sandbox.py" rename "$session" 'Install ruff (renamed)'
+python3 "$root/tools/agent_sandbox.py" review 'Install ruff (renamed)' | grep -Fq 'No project changes'
+python3 "$root/tools/agent_sandbox.py" list | grep -Fq 'Install ruff (renamed)'
 image_id="$(python3 - "$tmp/state/catalog.json" <<'PY'
 import json,sys
 e=json.load(open(sys.argv[1]))["environments"]["standard"]
