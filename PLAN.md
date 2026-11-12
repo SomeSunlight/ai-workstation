@@ -16,10 +16,11 @@ must not be mixed with environment recipe promotion.
   guarded cleanup of empty test sessions. Existing legacy Goose entrypoints remain
   available but are labelled direct-project/advanced.
 - [x] Add focused offline and disposable Docker regression checks plus operator guide.
-- [ ] **Revised cockpit exact-head CI:** rerun Linux/ContextCanon, Windows, real Docker
-  and interactive menu after owner first-impression changes. The earlier #65 menu
-  passed [Validate #43172594030](https://github.com/SomeSunlight/ai-workstation/actions/runs/43172594030);
-  this new menu/navigation must pass independently.
+- [x] **Revised cockpit functional head:** Linux/ContextCanon, Windows and disposable
+  real Docker (including the guided empty-session cleanup) all passed
+  [Validate #43253533626](https://github.com/SomeSunlight/ai-workstation/actions/runs/43253533626).
+  Menu navigation tests were updated for the default safe cockpit and explicitly
+  nested legacy Goose commands.
 - [x] Pinned ContextCanon read-only `check --all` passed in CI. Existing general/English
   operator-UX and agent-isolation rules in `CONTEXT.src.md` already cover this
   slice; no authored rule or generated Parent/Child package needed modification.
