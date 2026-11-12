@@ -428,6 +428,22 @@ def candidate(identifier: str, name: str, upgrade: bool = False) -> None:
     print(f"Candidate recipe: {directory / 'Dockerfile'}")
     print("Review/edit as operator; no image built or approved yet.")
 
+def discard_candidate(name: str) -> None:
+    """Discard ONLY an unapproved recipe, never a session or approved image."""
+    validate_name(name)
+    directory = STATE / "candidates" / name
+    if directory.is_symlink() or not directory.is_dir():
+        raise Refused(f"No safe unapproved proposal exists for {name!r}; nothing removed.")
+    proposal = load_json(directory / "candidate.json")
+    if proposal.get("name") != name:
+        raise Refused("Proposal metadata/name mismatch; nothing removed.")
+    confirm(f"Discard only the unapproved recipe for {name!r}? "
+            "Approved environments, tools and sessions remain unchanged.",
+            "DISCARD PROPOSAL " + name)
+    shutil.rmtree(directory)
+    print(f"Discarded unapproved proposal for {name!r}; approved environments unchanged.")
+
+
 def inspect_recipe(text: str) -> list[tuple[str, str]]:
     if len(text) > 32768 or any(ord(c) < 32 and c not in "\n\t" for c in text):
         raise Refused("Unreviewable recipe.")
