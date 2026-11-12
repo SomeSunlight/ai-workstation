@@ -312,6 +312,21 @@ aiw goose version
 aiw goose help
 ```
 
+## Goose agent sandbox (opt-in)
+
+For a private disposable project copy and reusable pinned tool environments, use
+**Goose → Sandboxes** in `aiw` or run `aiw goose sandbox menu`.
+The selectable workbench names sessions by intention, shows retained sessions
+and pending changes, and guides reviewed `uv tool` environment revisions with
+explicit approval and rollback. The session ID remains stable for scripts and
+can still be used with the direct CLI. Original project files are **never mounted
+inside** the agent container. Saving installed tools and accepting project changes
+are separate operations. The Git-based batch project review/merge is a separate
+#64 step and is **not** part of this menu change.
+
+See [Agent sandbox operator guide](docs/agent-sandboxes.md) for the
+`python-tools` r1/r2 walkthrough, approval/rollback and security limitations.
+
 ## Open WebUI
 
 Open WebUI runs as a persistent Docker service. No Linux desktop GUI is needed:
