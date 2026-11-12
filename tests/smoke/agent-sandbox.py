@@ -193,7 +193,7 @@ class SessionOperatorUX(unittest.TestCase):
         self.assertEqual(set(discard.call_args.args[0]),
                          {"abcdef123456", "aabbcc001122"})
         self.assertNotIn("123456abcdef", discard.call_args.args[0])
-        self.assertIn("1 proposed file change(s)", captured.getvalue())
+        self.assertIn("1 project file change(s)", captured.getvalue())
 
     @unittest.skipIf(os.name == "nt", "Linux Docker cleanup locking")
     def test_cleanup_bulk_requires_approval_and_preserves_nonempty_sessions(self):
@@ -235,7 +235,7 @@ class SessionOperatorUX(unittest.TestCase):
               mock.patch.object(service, "inspect_volume", return_value=True),
               mock.patch.object(service, "docker") as docker,
               mock.patch("builtins.input", return_value="DISCARD 1 EMPTY SESSIONS")):
-            with self.assertRaisesRegex(core.Refused, "unapproved environment update"):
+            with self.assertRaisesRegex(core.Refused, "unfinished environment update"):
                 service.discard_empty_sessions([sid])
             docker.assert_not_called()
         self.assertTrue(service.session_dir(sid).exists())
