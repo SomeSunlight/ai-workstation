@@ -9,18 +9,24 @@ private Goose homes and currently running services. Git-powered project merge
 must not be mixed with environment recipe promotion.
 
 - [x] Confirm #60 merged and inspect #64, current source, operator menu and Docker CI.
-- [x] First independent slice: human-readable mutable session titles with immutable IDs;
-  numbered session/workspace/environment/revision selection; active status and pending
-  proposals; guided recipe preview/approval for new and upgraded named environments,
-  rollback/rebuild and cancellation using the existing safety operations.
+- [x] First independent slice: human-readable session titles and stable IDs,
+  an integrated project/session/environment **cockpit** (not duplicate menus),
+  immediate safe takeoff with recommended `standard`, contextual revision management,
+  project-folder registration reusing the existing Bash authority, and approval-
+  guarded cleanup of empty test sessions. Existing legacy Goose entrypoints remain
+  available but are labelled direct-project/advanced.
 - [x] Add focused offline and disposable Docker regression checks plus operator guide.
-- [x] Linux, Windows and disposable real-Docker CI all passed on PR #65's functional
-  implementation: [Validate #43172164520](https://github.com/SomeSunlight/ai-workstation/actions/runs/43172164520).
+- [ ] **Revised cockpit exact-head CI:** rerun Linux/ContextCanon, Windows, real Docker
+  and interactive menu after owner first-impression changes. The earlier #65 menu
+  passed [Validate #43172594030](https://github.com/SomeSunlight/ai-workstation/actions/runs/43172594030);
+  this new menu/navigation must pass independently.
 - [x] Pinned ContextCanon read-only `check --all` passed in CI. Existing general/English
   operator-UX and agent-isolation rules in `CONTEXT.src.md` already cover this
   slice; no authored rule or generated Parent/Child package needed modification.
-- [ ] Owner WSL acceptance for real Goose data/history, titled session resume,
-  python-tools r1→r2→rollback and coexistence with existing running services.
+- [ ] Owner WSL acceptance: optionally review/clear earlier `pr1-test` sessions
+  using the cockpit (no full reset), create a titled safe session from `standard`,
+  resume/review it, then try the optional `python-tools` revision update/rollback.
+  Check continued legacy Goose history and running-service independence.
 - [ ] **Second independent #64 PR:** Git-powered batch changeset review, select all/files/hunks,
   baseline/current/proposal conflict handling and non-Git project coverage; retain host-side
   approval, backups, safe paths and explicit operator merge, not agent writes.
