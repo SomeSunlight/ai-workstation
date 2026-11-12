@@ -260,12 +260,37 @@ OPENROUTER_API_KEY=replace-with-your-key
 The `.env` file is ignored by Git and changed to mode `600` by `aiw`. Do not put
 credentials in `.env.example`, Compose files, images or commits.
 
-## Goose: explicit isolated workspaces
+## Goose agent sandbox: recommended working mode
 
-A Goose session never receives the complete WSL home directory. Each session
-starts a short-lived container and mounts exactly one registered workspace
-read-write. The container is removed when the session ends; Goose state and
-session history remain in the persistent `goose-home` volume.
+Use `aiw` → **Goose → Work safely in a sandbox**, or
+`aiw goose sandbox menu`. The first screen is a **single cockpit** showing
+your original project folders, all retained private sessions (titles and pending
+changes), and your approved reusable environments. **Start a new safe session**
+is the default action: choose a project, choose the already approved
+`standard` environment (or a named one), give the session a memorable title,
+and start Goose in a private copy.
+
+The original project is not mounted in that agent container. Later you may
+review its proposed changes without writing the original, or explicitly approve
+a transfer using the existing CLI. Guided environment updates and rollback
+are separate from project review. **Tidy up earlier test sessions** safely
+discards selected sessions with no proposed project changes after one typed
+approval, preserving the legacy Goose profile and reusable environments.
+Sessions with pending project changes require individual inspection/disposal.
+A full reset is not needed for a clean start.
+
+[Agent sandbox operator guide](docs/agent-sandboxes.md) explains the workflow,
+the `python-tools` r1/r2 example, and the security limitations. A Git-based
+batch project review/merge remains a separate #64 PR.
+
+## Goose: existing direct-workspace mode (legacy / advanced)
+
+The older direct `aiw goose session` workflow is intentionally retained for
+compatibility and recovery under **Goose → Existing Goose sessions and
+configuration**. It is **not** the reviewed sandbox: it mounts one registered
+original workspace **read-write**. The container is removed when the session
+ends; Goose state/history remain in the original persistent `goose-home` volume.
+Do not confuse this legacy direct mode with the new default sandbox.
 
 The repository is registered automatically as the first workspace:
 
@@ -281,7 +306,7 @@ aiw goose workspace list
 aiw goose workspace remove confluence-dump
 ```
 
-Start Goose through the interactive chooser:
+For the **legacy** direct-workspace interface, start the advanced Goose menu:
 
 ```bash
 aiw
@@ -311,21 +336,6 @@ aiw goose update
 aiw goose version
 aiw goose help
 ```
-
-## Goose agent sandbox (opt-in)
-
-For a private disposable project copy and reusable pinned tool environments, use
-**Goose → Sandboxes** in `aiw` or run `aiw goose sandbox menu`.
-The selectable workbench names sessions by intention, shows retained sessions
-and pending changes, and guides reviewed `uv tool` environment revisions with
-explicit approval and rollback. The session ID remains stable for scripts and
-can still be used with the direct CLI. Original project files are **never mounted
-inside** the agent container. Saving installed tools and accepting project changes
-are separate operations. The Git-based batch project review/merge is a separate
-#64 step and is **not** part of this menu change.
-
-See [Agent sandbox operator guide](docs/agent-sandboxes.md) for the
-`python-tools` r1/r2 walkthrough, approval/rollback and security limitations.
 
 ## Open WebUI
 
