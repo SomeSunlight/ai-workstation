@@ -1,5 +1,5 @@
 # ai-workstation — Local Context Source
-<!-- ctx:node id="aea56adf-2a26-43f0-b712-3bbeab7a3097" name="ai-workstation" version="0.2.2" adapters="agents,goose" -->
+<!-- ctx:node id="aea56adf-2a26-43f0-b712-3bbeab7a3097" name="ai-workstation" version="0.2.3" adapters="agents,goose" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
@@ -88,6 +88,10 @@ Details: CONTEXT-format.md
 - **Keep secrets out of Git images and Compose:** Secrets must not be committed, copied into images or stored in Compose files.
   Why: Keeps credentials out of durable repository history and built artifacts.
   <!-- ctx:rule id="ONB-DCF5EB952F7D" -->
+
+- **Keep agent mutations inside disposable boundaries:** AIW owns installation, persistent native configuration, approved sandbox definitions and original projects; an agent application and its tools/subagents may change only an explicitly scoped disposable session. Durable environments and project changes require a separate operator-reviewed promotion or apply operation. Neither instructions to an agent nor ordinary Docker isolation establish strong hostile-code or network security.
+  Why: Keep agent autonomy useful without silently turning experiments into persistent machine state or unreviewed changes to originals.
+  <!-- ctx:rule id="RULE-59A1B2C3D4E5" -->
 
 - **Keep shipped product behavior general and English-language:** Design and document AI Workstation for native Windows, Linux under WSL and native Linux using platform-specific adapters where needed. Keep public code, menu/CLI text, default examples and documentation in English regardless of the conversation language. Personal hostnames, usernames, domains, provider preferences and password-manager choices belong in private operator configuration, not product assumptions.
   Why: A reusable workstation must remain understandable and portable across owners, operating systems and future hardware; distinguish intended compatibility from actually validated platform support.

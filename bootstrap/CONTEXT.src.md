@@ -1,5 +1,5 @@
 # Bootstrap — Local Context Source
-<!-- ctx:node id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" name="Bootstrap" version="0.2.2-draft" -->
+<!-- ctx:node id="f78265e4-e023-4d7a-9b26-9a917ef68a4a" name="Bootstrap" version="0.2.3-draft" -->
 
 <!-- contextcanon:format Node
 Format: Node metadata follows the # title: ctx:node id="..." name="..." version="...". Preserve existing identity.
@@ -21,8 +21,8 @@ Details: CONTEXT-format.md
 -->
 
 <!-- contextcanon-placement-parent:start -->
-- [ai-workstation](..) — `0.2.2` — `relationship=parent`
-  <!-- ctx:source id="aea56adf-2a26-43f0-b712-3bbeab7a3097" version="0.2.2" normalized-digest="72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9" package-digest="3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0" -->
+- [ai-workstation](..) — `0.2.3` — `relationship=parent`
+  <!-- ctx:source id="aea56adf-2a26-43f0-b712-3bbeab7a3097" version="0.2.3" normalized-digest="2f565077baa4f83651279d9fa31b00727443e43d8be51d3568b320f2b29e78b7" package-digest="fb084389762c54d3e940f0b8fcd8552f66e843b4a1f9f4579cdcf36f9638462e" -->
 <!-- contextcanon-placement-parent:end -->
 
 ## Local Overview

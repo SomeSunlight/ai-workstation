@@ -9,7 +9,7 @@ compiler_version: "0.8.0"
 node:
   id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
   name: "ai-workstation"
-  version: "0.2.2"
+  version: "0.2.3"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
 parents: []
@@ -47,6 +47,7 @@ local:
     - {"id": "ONB-02E2C1B8C47B", "title": "Keep versions documentation and tests aligned", "group": "Onboarding placement"}
     - {"id": "ONB-BE08FE3A5E3D", "title": "Run release check before committing", "group": "Onboarding placement"}
     - {"id": "ONB-DCF5EB952F7D", "title": "Keep secrets out of Git images and Compose", "group": "Onboarding placement"}
+    - {"id": "RULE-59A1B2C3D4E5", "title": "Keep agent mutations inside disposable boundaries", "group": "Onboarding placement"}
     - {"id": "RULE-81304E42320A", "title": "Keep shipped product behavior general and English-language", "group": "Onboarding placement"}
     - {"id": "RULE-7E9AB1D9A8A0", "title": "Make operator workflows discoverable with little memorization", "group": "Onboarding placement"}
   changes: []
@@ -75,6 +76,7 @@ official:
     - {"id": "ONB-02E2C1B8C47B", "title": "Keep versions documentation and tests aligned", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": true, "overrides": []}
     - {"id": "ONB-BE08FE3A5E3D", "title": "Run release check before committing", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": true, "overrides": []}
     - {"id": "ONB-DCF5EB952F7D", "title": "Keep secrets out of Git images and Compose", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": true, "overrides": []}
+    - {"id": "RULE-59A1B2C3D4E5", "title": "Keep agent mutations inside disposable boundaries", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": true, "overrides": []}
     - {"id": "RULE-81304E42320A", "title": "Keep shipped product behavior general and English-language", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": true, "overrides": []}
     - {"id": "RULE-7E9AB1D9A8A0", "title": "Make operator workflows discoverable with little memorization", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": true, "overrides": []}
   removed_rules: []
@@ -119,5 +121,5 @@ resources:
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9"
-  package_digest: "3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0"
+  normalized_digest: "2f565077baa4f83651279d9fa31b00727443e43d8be51d3568b320f2b29e78b7"
+  package_digest: "fb084389762c54d3e940f0b8fcd8552f66e843b4a1f9f4579cdcf36f9638462e"

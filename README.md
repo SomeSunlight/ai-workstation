@@ -1,5 +1,7 @@
 # AI Workstation
 
+**Reproducible infrastructure. Controlled agent autonomy.** AIW keeps durable configuration and originals under operator control; agent experiments belong in explicit disposable sandboxes, with reviewed promotion or file acceptance. The first **opt-in Goose sandbox preview** is documented in [Agent sandboxes](docs/agent-sandboxes.md). It is ordinary Docker isolation, not a guarantee against hostile code or network exfiltration. Existing Goose sessions remain available unchanged.
+
 **Rebuild a complete AI-capable Linux workstation on a supported Windows laptop — without days of manual setup.** One repeatable PowerShell entry point handles Windows/WSL provisioning and hands off to automated Linux installation. Useful for a new computer, a hardware replacement, or a corporate laptop that has been completely reset.
 
 The goal is a **fast, reproducible start-to-finish installation**, across supported hardware, with minimal Linux/Docker expertise:

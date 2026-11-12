@@ -2,8 +2,8 @@
   "changes": [],
   "compiler_version": "0.8.0",
   "digests": {
-    "normalized": "72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9",
-    "package": "3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0"
+    "normalized": "2f565077baa4f83651279d9fa31b00727443e43d8be51d3568b320f2b29e78b7",
+    "package": "fb084389762c54d3e940f0b8fcd8552f66e843b4a1f9f4579cdcf36f9638462e"
   },
   "files": [
     {
@@ -13,8 +13,8 @@
     },
     {
       "path": "CONTEXT.md",
-      "sha256": "01e98f2334c2a0243f8a6b6659a6e910e6a6e99c63369c4bf97b47bac31b2bca",
-      "size": 9600
+      "sha256": "56f1345a9e6b19bc5aa7c23afd54e28c00c652af5c57ffb0b94276ebec2c908c",
+      "size": 10113
     },
     {
       "path": "CONTEXT/README.md",
@@ -65,7 +65,7 @@
   "node": {
     "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
     "name": "ai-workstation",
-    "version": "0.2.2"
+    "version": "0.2.3"
   },
   "parents": [],
   "removed_rules": [],
@@ -239,6 +239,16 @@
       "statement": "Secrets must not be committed, copied into images or stored in Compose files.",
       "title": "Keep secrets out of Git images and Compose",
       "why": "Keeps credentials out of durable repository history and built artifacts."
+    },
+    {
+      "group": "Onboarding placement",
+      "id": "RULE-59A1B2C3D4E5",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "AIW owns installation, persistent native configuration, approved sandbox definitions and original projects; an agent application and its tools/subagents may change only an explicitly scoped disposable session. Durable environments and project changes require a separate operator-reviewed promotion or apply operation. Neither instructions to an agent nor ordinary Docker isolation establish strong hostile-code or network security.",
+      "title": "Keep agent mutations inside disposable boundaries",
+      "why": "Keep agent autonomy useful without silently turning experiments into persistent machine state or unreviewed changes to originals."
     },
     {
       "group": "Onboarding placement",

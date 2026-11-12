@@ -1,5 +1,27 @@
 # AI Workstation Plan
 
+## Issue #59 — PR 1: disposable Goose agent sandbox (WSL-tested; pending merge, 2026-11-12)
+
+**Scope:** separate opt-in sandbox service + Goose adapter only. No live Docker migration, running Windows service change, GitHub merge or PR 2 security profile. Branch `feat/59-sandbox-lifecycle-pr1` from current `main`.
+
+- [x] Read current #59 and inspect Goose Compose, native config/maintenance, context source and existing CI.
+- [x] Stage isolated non-Git/Git-compatible file copies with private SHA-256 baselines, operator review and explicit selected-file apply. No original is mounted inside the sandbox.
+- [x] Define opt-in backed-up migration, disposable session home, pinned standard image recipe and owner-only named recipe catalogue with explicit candidate/promotion/rollback.
+- [x] Preserve all existing legacy Goose entrypoints and private volume unchanged in the repository and deployment.
+- [x] Add offline synthetic source/Markdown, binary, conflict, path and session-mount tests; document limits and operation.
+- [x] Run pinned ContextCanon source build, reviewed Parent-to-Child propagation and check --all . (nine OK); generated packages committed by the temporary branch CI helper, now removed. [Generation run #43030879288](https://github.com/SomeSunlight/ai-workstation/actions/runs/43030879288).
+- [x] Pass real disposable Ubuntu Docker acceptance: synthetic legacy-home backup/verification, Goose/uv/Python standard image build, private session uv tool install, named promotion/rebuild, versioned upgrade/rollback and opt-out. Pass offline project conflict/binary/Markdown/path tests, ContextCanon gate and Windows regression tests. [Validate #43034717195](https://github.com/SomeSunlight/ai-workstation/actions/runs/43034717195), three green jobs on prior exact head `6d94094a` (closing fix CI tracked separately). No operator machine or production services touched.
+- [x] **Owner WSL acceptance:** the existing `aiw` launcher resolved the checked-out PR; Goose connected to the selected Dispatcher model, created isolated project copies under `~/projects`, changed files subject to review/selected apply, installed `uv tool` packages, built named `python-tools` r1/r2, and rolled back to r1. No services changed by PR authoring.
+- [x] Record operator usability gaps and safe next steps in [#64](https://github.com/SomeSunlight/ai-workstation/issues/64): human titles, selectable sessions/revisions, guided environment saving and Git-backed changeset review/merge.
+- [x] Resolve closing operator warnings: mandatory base-image Dockerfile lint without unsafe fallback defaults, ephemeral writable Goose home in the read-only version probe, actionable invalid confirmation; gate warnings in real Docker CI.
+- [ ] Nonstandard native extension/history continuity and cold-reboot package durability are not separately proven by the owner; do not present as verified.
+- [ ] Owner explicitly authorizes and performs the squash merge; PR 2 stays separate.
+
+**Known first-slice limits:** approved recipes capture version-pinned `uv tool` installs, not opaque `uvx` caches/arbitrary runtime installs; pre-migration Goose history is copied as a snapshot, newer histories stay with resumable sessions and are not silently merged. Direct legacy Goose sessions still have their historical RW workspace. Sandbox Docker bridge networking, tool permissions and unknown external extensions are not hardened against a malicious actor until PR 2. Native Windows launches this Linux adapter only via WSL. Multi-file apply keeps verified private backups but is not a transaction.
+
+---
+
+
 ## Owner acceptance checkpoint — Issue #53: native Strata integrity and shell-free launch (2026-11-10)
 
 **Review:** [Draft PR #54](https://github.com/SomeSunlight/ai-workstation/pull/54) is a clean, independent `main`-based #53 change; the obsolete #45-stacked ancestry was removed earlier. The owner has completed the primary **live Speedy** acceptance and intends to squash-merge after the final review. This plan records verified evidence, not an automated deployment or an already completed merge.

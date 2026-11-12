@@ -2,8 +2,8 @@
   "changes": [],
   "compiler_version": "0.8.0",
   "digests": {
-    "normalized": "70c03ba00f6bbc4291b5cc41646aaedfa7be2ae9fbea41bd679e5e5f28b86f18",
-    "package": "e61e66f0a4d264e42597a1a735345a915d87c3c548ea07e11b594a692c82d178"
+    "normalized": "629da1b24dd3d3e7979692730c8b582a77239ebf202cd10e263a2234f3969dcc",
+    "package": "581ab40853e59e2652fd5ebdc9bcb7b6c8ae440fad7925c085159e5a96971b1d"
   },
   "files": [
     {
@@ -13,8 +13,8 @@
     },
     {
       "path": "CONTEXT.md",
-      "sha256": "0d4fd2818574879d530f933eaff6b55ffbe27c5bedf429457c9976b6665b5e3f",
-      "size": 9008
+      "sha256": "722bd4909913171dd32a6d574ab64a98d6d0892972389ae802d9a148cb58387f",
+      "size": 9521
     },
     {
       "path": "CONTEXT/README.md",
@@ -64,16 +64,16 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9",
-      "package_digest": "3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0",
-      "version": "0.2.2",
+      "normalized_digest": "2f565077baa4f83651279d9fa31b00727443e43d8be51d3568b320f2b29e78b7",
+      "package_digest": "fb084389762c54d3e940f0b8fcd8552f66e843b4a1f9f4579cdcf36f9638462e",
+      "version": "0.2.3",
       "why": null
     }
   ],
   "node": {
     "id": "6417ee7c-a9d0-40c7-ada3-6762d4a3900b",
     "name": "aiw operator interface",
-    "version": "0.2.2-draft"
+    "version": "0.2.3-draft"
   },
   "parents": [],
   "removed_rules": [],
@@ -250,6 +250,16 @@
     },
     {
       "group": "Onboarding placement",
+      "id": "RULE-59A1B2C3D4E5",
+      "modifications": [],
+      "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
+      "origin_node_name": "ai-workstation",
+      "statement": "AIW owns installation, persistent native configuration, approved sandbox definitions and original projects; an agent application and its tools/subagents may change only an explicitly scoped disposable session. Durable environments and project changes require a separate operator-reviewed promotion or apply operation. Neither instructions to an agent nor ordinary Docker isolation establish strong hostile-code or network security.",
+      "title": "Keep agent mutations inside disposable boundaries",
+      "why": "Keep agent autonomy useful without silently turning experiments into persistent machine state or unreviewed changes to originals."
+    },
+    {
+      "group": "Onboarding placement",
       "id": "RULE-81304E42320A",
       "modifications": [],
       "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
@@ -274,10 +284,10 @@
     {
       "id": "aea56adf-2a26-43f0-b712-3bbeab7a3097",
       "name": "ai-workstation",
-      "normalized_digest": "72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9",
-      "package_digest": "3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0",
+      "normalized_digest": "2f565077baa4f83651279d9fa31b00727443e43d8be51d3568b320f2b29e78b7",
+      "package_digest": "fb084389762c54d3e940f0b8fcd8552f66e843b4a1f9f4579cdcf36f9638462e",
       "relationship": "parent",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "why": null
     }
   ],

@@ -9,7 +9,7 @@ compiler_version: "0.8.0"
 node:
   id: "3fd2ae4e-d712-4232-917a-7059b03a3cd4"
   name: "Goose"
-  version: "0.2.2-draft"
+  version: "0.2.3-draft"
 
 # Accepted semantic Parent packages. Locators are discovery metadata; build uses only exact pins.
 parents: []
@@ -18,11 +18,11 @@ parents: []
 sources:
   - id: "90dd976e-8753-495b-a631-d708b13878d1"
     name: "Containerized application runtimes"
-    version: "0.2.2-draft"
+    version: "0.2.3-draft"
     relationship: "parent"
     locator: ".."
-    normalized_digest: "fd96d1bb7decd28a8ef518f1ed0a1df8aad6e8646bdb319627f242b075cae3a8"
-    package_digest: "13249e3eff44e555cbcd8f6d2482ff4fc46155b670410a5ebb2cd1acf45de0ba"
+    normalized_digest: "7dec874fd1a0de009a10e48695a2cc7e4219a61ad074b4985e6d1e13d6416262"
+    package_digest: "393aa021248f9b19629d25fb357b3ef881b7cd0630c9b9941c6c404593bc3301"
 
 # Direct informational References. Their Rules are not effective and they are not exported to Children.
 references: []
@@ -37,14 +37,14 @@ imports:
     why: "We want to use the same successful development workflow from context-canon for this project too. Feel free to use also other workflowss, if you like. Then put it here."
   - id: "aea56adf-2a26-43f0-b712-3bbeab7a3097"
     name: "ai-workstation"
-    version: "0.2.2"
-    normalized_digest: "72c14b6f6322f4a87356e73c0b28c2ab93c9824b866cfd4d370fdda2725d95a9"
-    package_digest: "3ed99859f780cf0cba266d708b10d414a642622ca76d50ee69e861de3f2ad8b0"
+    version: "0.2.3"
+    normalized_digest: "2f565077baa4f83651279d9fa31b00727443e43d8be51d3568b320f2b29e78b7"
+    package_digest: "fb084389762c54d3e940f0b8fcd8552f66e843b4a1f9f4579cdcf36f9638462e"
   - id: "90dd976e-8753-495b-a631-d708b13878d1"
     name: "Containerized application runtimes"
-    version: "0.2.2-draft"
-    normalized_digest: "fd96d1bb7decd28a8ef518f1ed0a1df8aad6e8646bdb319627f242b075cae3a8"
-    package_digest: "13249e3eff44e555cbcd8f6d2482ff4fc46155b670410a5ebb2cd1acf45de0ba"
+    version: "0.2.3-draft"
+    normalized_digest: "7dec874fd1a0de009a10e48695a2cc7e4219a61ad074b4985e6d1e13d6416262"
+    package_digest: "393aa021248f9b19629d25fb357b3ef881b7cd0630c9b9941c6c404593bc3301"
 
 # Elements authored in this Node's CONTEXT.src.md.
 local:
@@ -83,6 +83,7 @@ official:
     - {"id": "ONB-02E2C1B8C47B", "title": "Keep versions documentation and tests aligned", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-BE08FE3A5E3D", "title": "Run release check before committing", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-DCF5EB952F7D", "title": "Keep secrets out of Git images and Compose", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
+    - {"id": "RULE-59A1B2C3D4E5", "title": "Keep agent mutations inside disposable boundaries", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "RULE-81304E42320A", "title": "Keep shipped product behavior general and English-language", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "RULE-7E9AB1D9A8A0", "title": "Make operator workflows discoverable with little memorization", "origin_node_id": "aea56adf-2a26-43f0-b712-3bbeab7a3097", "origin_node_name": "ai-workstation", "local": false, "overrides": []}
     - {"id": "ONB-C582F0CA4FCE", "title": "Application containers do not receive the Docker socket", "origin_node_id": "90dd976e-8753-495b-a631-d708b13878d1", "origin_node_name": "Containerized application runtimes", "local": false, "overrides": []}
@@ -138,5 +139,5 @@ resources:
 
 # Exact deterministic identities. package_digest covers CONTEXT.md plus CONTEXT/ resources.
 package:
-  normalized_digest: "c0f709d5aba053cb1ac49b80abd0ee9b5e6f765f4a87aa52a96cb0fff70e12d6"
-  package_digest: "a04fd6a7987003d7a436167330c774494bdf8a71fea1248bff456f71c55bde4e"
+  normalized_digest: "ba44fdb177ac2723d24100c2322764ddb0f7700172862f8fd2232570363f186b"
+  package_digest: "19be847e7d0b81deef6b6921ec7c0bf0f864509bdbd59d8b9a6080fa37ee737f"

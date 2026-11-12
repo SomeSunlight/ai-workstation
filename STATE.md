@@ -1,5 +1,14 @@
 # AI Workstation Current State
 
+## WSL operator acceptance — #59 PR 1 (pending owner merge; 2026-11-12)
+
+The opt-in Goose adapter on branch `feat/59-sandbox-lifecycle-pr1` passed the **owner's actual WSL functional trial**: backed-up Goose migration, pinned standard sandbox, existing `aiw` launcher resolving the checked-out branch, working selected Dispatcher model, isolated project file edits and explicit review/apply. A named `python-tools` image derived from private `uv tool` installs was upgraded from r1 to r2 (`black==25.1.0`) then rolled back to r1. Existing live services were not changed by the PR author; PR #60 is not merged. Earlier pinned ContextCanon generation/check (nine OK) and Ubuntu/Windows/real-Docker CI are documented in PR #60. Closing fixes for Dockerfile lint, Goose read-only version probe and confirmation messaging require final CI on the new head.
+
+Operator UX follow-up [#64](https://github.com/SomeSunlight/ai-workstation/issues/64) covers human-editable session titles, menu selections and environment revision management, plus Git-backed batch review/conflict-aware project merge. These remain outside PR #60. Full history/extension continuity and post-reboot durability are not comprehensively verified. Ordinary Docker bridge networking and agent-accessible provider credentials are **not** PR 2's adversarial security boundary.
+
+---
+
+
 ## Accepted PR #42 baseline (2026-11-03)
 
 [AI Workstation PR #42](https://github.com/SomeSunlight/ai-workstation/pull/42)

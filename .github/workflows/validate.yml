@@ -44,6 +44,7 @@ jobs:
           bash tests/smoke/local-inference-runtime.sh
           bash tests/smoke/local-inference-service.sh
           bash tests/smoke/goose-runtime.sh
+          python tests/smoke/agent-sandbox.py
           bash tests/smoke/open-webui-runtime.sh
           bash tests/smoke/interactive-menu.sh
           uv run --frozen python tests/smoke/services-registry.py
@@ -89,6 +90,16 @@ jobs:
           uv run --frozen ansible-playbook ansible/playbooks/workstation.yml --syntax-check
           uv run --frozen ansible-playbook ansible/playbooks/verify.yml --syntax-check
 
+  sandbox-docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Verify actual disposable Docker home and approved image inheritance
+        run: |
+          docker info >/dev/null
+          bash tests/smoke/agent-sandbox-docker.sh
+
   windows-shortcuts:
     runs-on: windows-2025
     steps:
@@ -109,6 +120,12 @@ jobs:
             tools/aiw-native-health.ps1
             tools/aiw-native-integrity.ps1
             config/versions.json
+            tools/agent_sandbox.py
+            tools/agent_sandbox_core.py
+            tests/smoke/agent-sandbox.py
+      - name: Verify cross-platform sandbox recipe/path handling (no Docker daemon)
+        shell: pwsh
+        run: python tests/smoke/agent-sandbox.py
       - name: Verify Windows shortcut creation and safe rename migration
         shell: pwsh
         run: ./tests/windows/shortcuts.ps1
