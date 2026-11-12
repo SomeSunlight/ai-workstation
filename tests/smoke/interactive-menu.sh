@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# Preserve the failing command/line when nested menu input changes unexpectedly.
+trap 'printf "Interactive menu regression failed at line %s: %s\\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 cli="${ROOT}/bin/aiw"
 temp_home="$(mktemp -d)"
@@ -18,10 +20,25 @@ grep -Fq 'List llama.cpp builds' <<< "$local_menu_output"
 grep -Fq 'Setup generic Vulkan runtime' <<< "$local_menu_output"
 grep -Fq 'Setup Intel SYCL runtime (WSL / Ubuntu 24.04)' <<< "$local_menu_output"
 
-goose_menu_output="$(printf '1\n1\n8\nb\n\nb\nq\nq\n' | "$cli")"
-grep -Fq 'Update application' <<< "$goose_menu_output"
-grep -Fq 'Latest stable official release' <<< "$goose_menu_output"
-grep -Fq 'Enter a specific stable version' <<< "$goose_menu_output"
+# Safe sandbox cockpit is the default entry; legacy direct-workspace Goose stays
+# accessible on purpose, behind an explicit advanced choice.
+cockpit_output="$(printf '1\n1\n1\nb\nb\nb\nq\n' | HOME="$temp_home" "$cli")"
+assert_menu_has() {
+    local actual="$1" needle="$2" stage="$3"
+    if ! grep -Fq -- "$needle" <<< "$actual"; then
+        printf 'Missing %s in %s menu. Actual output:\n%s\n' "$needle" "$stage" "$actual" >&2
+        return 1
+    fi
+}
+assert_menu_has "$cockpit_output" 'Goose sandbox cockpit' cockpit
+assert_menu_has "$cockpit_output" 'Your projects (' cockpit
+assert_menu_has "$cockpit_output" 'Your sessions (' cockpit
+assert_menu_has "$cockpit_output" 'Your environments (' cockpit
+assert_menu_has "$cockpit_output" 'Start a NEW safe Goose session' cockpit
+goose_menu_output="$(printf '1\n1\n2\n8\nb\n\nb\nb\nq\n' | "$cli")"
+assert_menu_has "$goose_menu_output" 'Update application' legacy-Goose
+assert_menu_has "$goose_menu_output" 'Latest stable official release' legacy-Goose
+assert_menu_has "$goose_menu_output" 'Enter a specific stable version' legacy-Goose
 
 webui_menu_output="$(printf '1\n2\n10\nb\n\nb\nq\nq\n' | "$cli")"
 grep -Fq 'Update application (includes data backup)' <<< "$webui_menu_output"

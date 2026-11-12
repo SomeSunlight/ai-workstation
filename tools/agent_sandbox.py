@@ -23,8 +23,8 @@ import sys
 import tempfile
 import uuid
 from pathlib import Path
-from agent_sandbox_core import (Refused, apply, load_json, private_dir,
-                                review, save_json, stage, validate_name)
+from agent_sandbox_core import (Refused, apply, changes, load_json, private_dir,
+                                review, save_json, scan_tree, stage, validate_name)
 
 ROOT = Path(__file__).resolve().parent.parent
 STATE = Path(os.environ.get("AIW_AGENT_SANDBOX_DIR",
@@ -271,9 +271,52 @@ def session_dir(identifier: str) -> Path:
         raise Refused("Invalid session identifier.")
     return STATE / "sessions" / identifier
 
+def session_title(title: str) -> str:
+    """User-facing title is not a path, command or identity."""
+    if (not title or len(title) > 80 or title != title.strip()
+            or any(ord(c) < 32 or ord(c) == 127 for c in title)):
+        raise Refused("Session title must contain 1–80 visible characters, with no control characters.")
+    return title
+
+
+def list_sessions() -> list[dict]:
+    result = []
+    for path in (STATE / "sessions").glob("*/session.json"):
+        meta = load_json(path)
+        if meta.get("id") != path.parent.name or not re.fullmatch(r"[0-9a-f]{12}", path.parent.name):
+            raise Refused("Session metadata and directory identity disagree; inspect private state.")
+        result.append(meta)
+    return sorted(result, key=lambda m: (m["created"], m["id"]), reverse=True)
+
+
+def resolve_session(selector: str) -> str:
+    """IDs are immutable; titles are only an unambiguous convenience."""
+    if re.fullmatch(r"[0-9a-f]{12}", selector):
+        return selector
+    matches = [m["id"] for m in list_sessions()
+               if m.get("title", m.get("workspace", "")).casefold() == selector.casefold()]
+    if not matches:
+        raise Refused(f"No retained session titled {selector!r}. Run 'aiw goose sandbox list' to select a session.")
+    if len(matches) != 1:
+        raise Refused(f"Ambiguous session title {selector!r}; use a stable ID: {', '.join(matches)}")
+    return matches[0]
+
+
 def current_session(identifier: str) -> tuple[Path, dict]:
-    folder = session_dir(identifier)
-    return folder, load_json(folder / "session.json")
+    folder = session_dir(resolve_session(identifier))
+    meta = load_json(folder / "session.json")
+    if meta.get("id") != folder.name:
+        raise Refused("Session metadata identity mismatch; nothing changed.")
+    return folder, meta
+
+
+def rename_session(identifier: str, title: str) -> None:
+    folder, meta = current_session(identifier)
+    title = session_title(title)
+    meta["title"] = title
+    save_json(folder / "session.json", meta)
+    print(f"Renamed session {meta['id']} to {title!r}; session contents and Goose history unchanged.")
+
 
 def clone_profile(home_volume: str, image: str) -> None:
     uid, gid = os.getuid(), os.getgid()
@@ -281,7 +324,8 @@ def clone_profile(home_volume: str, image: str) -> None:
                    f"type=volume,src={home_volume},dst=/target"],
            f"set -eu; cp -a /profile/. /target/; chown -R {uid}:{gid} /target")
 
-def start(workspace_name: str, env_name: str) -> str:
+def start(workspace_name: str, env_name: str, title: str | None = None) -> str:
+    title = session_title(title if title is not None else f"Work on {workspace_name}")
     require_migration()
     goose_env()
     info = entry(env_name)
@@ -293,20 +337,21 @@ def start(workspace_name: str, env_name: str) -> str:
     baseline = stage(original, folder / "work")
     save_json(folder / "baseline.json", baseline)
     volume = "aiw-agent-home-" + identifier
-    metadata = {"id": identifier, "created": now(), "original": str(original),
+    metadata = {"id": identifier, "title": title, "created": now(), "original": str(original),
                 "workspace": workspace_name, "environment": env_name,
                 "image_id": info["image"], "revision": info["revision"],
                 "home_volume": volume, "applied": []}
     save_json(folder / "session.json", metadata)
     docker("volume", "create", volume)
     clone_profile(volume, info["image"])
-    print(f"Prepared {identifier} from {env_name} r{info['revision']}.")
+    print(f"Prepared {title!r} (id {identifier}) from {env_name} r{info['revision']}.")
     print(f"Original not mounted: {original}")
     print(f"Review: aiw goose sandbox review {identifier}")
     return identifier
 
 def run_session(identifier: str, goose_args: list[str]) -> None:
     folder, meta = current_session(identifier)
+    identifier = meta["id"]  # never derive Docker names or labels from a mutable title
     if inspect_image(meta["image_id"])["Id"] != meta["image_id"]:
         raise Refused("Approved image unavailable or changed.")
     if not inspect_volume(meta["home_volume"]):
@@ -360,6 +405,7 @@ def candidate(identifier: str, name: str, upgrade: bool = False) -> None:
     if bool(catalogue()["environments"].get(name)) != upgrade:
         raise Refused("Use --upgrade for existing names; new names cannot request upgrades.")
     folder, meta = current_session(identifier)
+    identifier = meta["id"]  # persist the immutable identity, not the display title
     directory = STATE / "candidates" / name
     if directory.exists():
         raise Refused("Candidate already exists.")
@@ -381,6 +427,69 @@ def candidate(identifier: str, name: str, upgrade: bool = False) -> None:
                "uncaptured": ["uvx cache", "manual and apt installations"]})
     print(f"Candidate recipe: {directory / 'Dockerfile'}")
     print("Review/edit as operator; no image built or approved yet.")
+
+def pending_environment_updates() -> list[dict]:
+    """Unapproved environment revisions, including archived pre-cockpit test data.
+
+    These are status records, not an independent kind of user workspace.
+    """
+    directory = STATE / "candidates"
+    if directory.is_symlink():
+        raise Refused("Unsafe pending environment directory; inspect private state.")
+    if not directory.is_dir():
+        return []
+    result = []
+    for folder in sorted(directory.iterdir()):
+        if folder.is_symlink():
+            raise Refused("Unsafe linked pending environment update; nothing changed.")
+        metadata = folder / "candidate.json"
+        if folder.is_dir() and metadata.exists():
+            record = load_json(metadata)
+            result.append({"folder": folder.name, "environment": record.get("name", folder.name),
+                           "session": record.get("session", ""),
+                           "empty_tools": not record.get("detected_uv_tools")})
+    return result
+
+
+def discard_candidate(name: str) -> None:
+    """Discard an unapproved revision, including narrowly recognized archived tests.
+
+    Names created for current revisions must still pass the strict environment
+    validator. Earlier operator-archived *directories* may be longer than 40
+    characters and differ from the actual environment name in candidate.json.
+    Those can be deleted (never promoted), but only after verifying the full
+    archive name, session identity, directory contents and typed approval.
+    """
+    if not name or Path(name).name != name or name in (".", "..") or "\\" in name:
+        raise Refused("Unsafe pending environment update selector; nothing removed.")
+    directory = STATE / "candidates" / name
+    if directory.is_symlink() or not directory.is_dir():
+        raise Refused(f"No safe unapproved environment update exists for {name!r}.")
+    proposal = load_json(directory / "candidate.json")
+    environment = validate_name(proposal.get("name", ""))
+    session = proposal.get("session", "")
+    archived_name = f"{environment}-from-wrong-session-{session}"
+    is_archived = (name == archived_name and
+                   re.fullmatch(r"[0-9a-f]{12}", session) is not None)
+    if name != environment and not is_archived:
+        raise Refused("Pending environment update folder/name mismatch; "
+                      "not a recognized archived test, nothing removed.")
+    files = list(directory.iterdir())
+    if {file.name for file in files} != {"candidate.json", "Dockerfile"} or any(
+            file.is_symlink() or not file.is_file() or file.stat().st_nlink != 1
+            for file in files):
+        raise Refused("Unexpected files or links in pending environment update; "
+                      "inspect it manually, nothing removed.")
+    if is_archived:
+        print(f"Archived earlier test for {environment!r}, originally from "
+              f"session {session}. This is NOT an approved environment version.")
+    confirm(f"Discard ONLY this unapproved environment update ({name})? "
+            "Approved environments/revisions, project files, Goose profiles and "
+            "sessions remain unchanged.", "DISCARD PROPOSAL " + name)
+    shutil.rmtree(directory)
+    print(f"Discarded unapproved environment update {name!r}; "
+          "approved environments and sessions unchanged.")
+
 
 def inspect_recipe(text: str) -> list[tuple[str, str]]:
     if len(text) > 32768 or any(ord(c) < 32 and c not in "\n\t" for c in text):
@@ -515,37 +624,131 @@ def remove_environment(name: str) -> None:
     data["environments"][name]["active"] = None
     save_catalog(data)
 
-def destroy(identifier: str) -> None:
-    folder, meta = current_session(identifier)
-    confirm("Destroy isolated work, tools and its temporary Goose history? "
-            "Original and legacy data remain untouched.", "DESTROY " + identifier)
-    subprocess.run(["docker", "rm", "-f", "aiw-agent-session-" + identifier],
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+def pending_changes(identifier: str) -> int:
+    folder, _ = current_session(identifier)
+    return len(changes(load_json(folder / "baseline.json"), scan_tree(folder / "work")))
+
+def require_no_pending_environment_update(identifier: str) -> None:
+    """Avoid orphaning unapproved recipes that still refer to this session."""
+    for update in pending_environment_updates():
+        if update["session"] == identifier:
+            raise Refused(f"Session {identifier} is linked to an unfinished "
+                          f"environment update for {update['environment']!r} "
+                          f"(stored as {update['folder']!r}). "
+                          "Review or discard the environment update first; "
+                          "no session data was removed.")
+
+
+
+def _discard_data(folder: Path, meta: dict) -> None:
+    """Internal destructive primitive; must follow an explicit, scoped approval."""
+    identifier = meta["id"]
+    if folder != session_dir(identifier) or meta.get("home_volume") != "aiw-agent-home-" + identifier:
+        raise Refused("Session identity or Docker volume mismatch; no data removed.")
+    # Never interrupt a Goose process to tidy up a test. This check is made
+    # again after approval, under the same owner lock as run_session().
+    status = subprocess.run(
+        ["docker", "container", "inspect", "--format", "{{.State.Running}}",
+         "aiw-agent-session-" + identifier],
+        capture_output=True, text=True, check=False)
+    if status.returncode == 0 and status.stdout.strip() == "true":
+        raise Refused(f"Session {identifier} is running. Exit Goose before discarding.")
+    if not inspect_volume(meta["home_volume"]):
+        raise Refused(f"Session {identifier} Docker home missing; metadata retained for manual recovery.")
     docker("volume", "rm", meta["home_volume"])
     shutil.rmtree(folder)
-    print(f"Discarded {identifier}; original unchanged.")
+    print(f"Discarded session {meta.get('title', identifier)!r}; original and legacy Goose data unchanged.")
 
-def report() -> None:
-    print("Approved sandbox environments:")
-    for name, record in sorted(catalogue()["environments"].items()):
-        active = record.get("active")
-        suffix = f"r{active} {record['versions'][active]['image_id']}" if active else "inactive"
-        print(f"  {name}: {suffix}")
-    print("Retained sessions:")
-    for path in sorted((STATE / "sessions").glob("*/session.json")):
-        m = load_json(path)
-        print(f"  {m['id']}  {m['workspace']}  {m['environment']}  {m['created']}")
+
+def destroy(identifier: str) -> None:
+    with owner_lock():
+        folder, meta = current_session(identifier)
+        identifier = meta["id"]
+        require_no_pending_environment_update(identifier)
+        print(f"Session {meta.get('title') or identifier!r}: "
+              f"{pending_changes(identifier)} unreviewed project change(s).")
+        confirm("Discard this private session, its tools and all its new Goose history? "
+                "Any unreviewed changes are lost. The original project and legacy Goose "
+                "history remain unchanged.", "DESTROY " + identifier)
+        _discard_data(folder, meta)
+
+
+def discard_empty_sessions(identifiers: list[str]) -> None:
+    """Single approved cleanup of selected sessions with no project changes.
+
+    Does not reset the approved environment catalogue, migration/profile,
+    original projects or unrelated Docker volumes. Non-empty sessions require
+    individual review and disposal.
+    """
+    if not identifiers or len(identifiers) != len(set(identifiers)):
+        raise Refused("Select at least one distinct session to clean up.")
+    with owner_lock():
+        targets = []
+        for identifier in identifiers:
+            folder, meta = current_session(identifier)
+            require_no_pending_environment_update(meta["id"])
+            if pending_changes(meta["id"]):
+                raise Refused(f"Session {meta.get('title') or meta['id']!r} has proposed "
+                              "project changes; inspect and discard it individually.")
+            if meta.get("home_volume") != "aiw-agent-home-" + meta["id"]:
+                raise Refused("Session Docker home mismatch; nothing removed.")
+            if not inspect_volume(meta["home_volume"]):
+                raise Refused("Session Docker home missing; nothing removed.")
+            targets.append((folder, meta))
+        print("The following EMPTY sessions will lose their private Goose history and tools:")
+        for _, meta in targets:
+            print(f"  {meta.get('title') or '[old unnamed session]'} | "
+                  f"workspace {meta['workspace']} | id {meta['id']}")
+        confirm("No original project, approved image, shared Goose profile or "
+                "legacy history will be deleted.", f"DISCARD {len(targets)} EMPTY SESSIONS")
+        for folder, meta in targets:
+            if pending_changes(meta["id"]):
+                raise Refused("Session was modified after approval; stopping cleanup.")
+            _discard_data(folder, meta)
+
+
+def report(section: str = "all") -> None:
+    if section not in ("all", "environments", "sessions"):
+        raise Refused("Unknown inventory section.")
+    if section in ("all", "environments"):
+        print("Approved sandbox environments (active selection applies to NEW sessions):")
+        for name, record in sorted(catalogue()["environments"].items()):
+            active = record.get("active")
+            suffix = (f"active r{active}, {len(record['versions'])} revision(s), "
+                      f"image {record['versions'][active]['image_id'][:19]}…" if active else "inactive")
+            print(f"  {name}: {suffix}")
+    if section in ("all", "sessions"):
+        print("Retained sessions (private copies; original unchanged until explicit apply):")
+        sessions = list_sessions()
+        if not sessions:
+            print("  (none)")
+        for m in sessions:
+            try:
+                status = f"{pending_changes(m['id'])} proposed file(s)"
+            except (Refused, OSError) as exc:
+                status = f"review unavailable: {exc}"
+            print(f"  {m.get('title') or '[older unnamed session]'} | {m['workspace']} | "
+                  f"{m['environment']} r{m['revision']} | created {m['created']} | "
+                  f"retained, {status} | id {m['id']}")
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="AIW reviewed agent sandboxes (Goose adapter)")
+    parser = argparse.ArgumentParser(
+        description="AIW reviewed agent sandboxes (Goose adapter)",
+        epilog=("A workspace is the registered ORIGINAL; a session is its private copy. "
+                "An environment is an approved pinned tool image; a candidate is an "
+                "UNAPPROVED recipe, not project files. Review shows changes; apply "
+                "writes selected original files only after approval. "
+                "For selectable sessions and guided environment revisions run "
+                "'aiw goose sandbox menu'. Stable IDs remain valid for scripting."))
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("list", "migrate", "migrate-disable"):
+    for name in ("list", "migrate", "migrate-disable", "menu"):
         sub.add_parser(name)
     b = sub.add_parser("build-standard")
     b.add_argument("--upgrade", action="store_true")
     c = sub.add_parser("create")
     c.add_argument("workspace")
     c.add_argument("--environment", default="standard")
+    c.add_argument("--title", help="Human-readable session title (quote spaces); IDs remain immutable")
     r = sub.add_parser("run")
     r.add_argument("id")
     r.add_argument("goose_args", nargs=argparse.REMAINDER)
@@ -557,6 +760,9 @@ def main() -> int:
     a.add_argument("--allow-binary", action="store_true")
     d = sub.add_parser("discard")
     d.add_argument("id")
+    rn = sub.add_parser("rename")
+    rn.add_argument("id")
+    rn.add_argument("title")
     n = sub.add_parser("candidate")
     n.add_argument("id")
     n.add_argument("name")
@@ -575,6 +781,9 @@ def main() -> int:
     try:
         if args.command == "list":
             report()
+        elif args.command == "menu":
+            import agent_sandbox_ux
+            agent_sandbox_ux.menu(sys.modules[__name__])
         elif args.command == "migrate":
             migration("enable")
         elif args.command == "migrate-disable":
@@ -582,7 +791,7 @@ def main() -> int:
         elif args.command == "build-standard":
             build_standard(args.upgrade)
         elif args.command == "create":
-            print("Session ID: " + start(args.workspace, args.environment))
+            print("Session ID: " + start(args.workspace, args.environment, args.title))
         elif args.command == "run":
             run_session(args.id, args.goose_args)
         elif args.command == "review":
@@ -592,11 +801,13 @@ def main() -> int:
         elif args.command == "apply":
             folder, meta = current_session(args.id)
             print(review(folder)[1])
-            confirm("Apply only selected files after hash/conflict verification?", "APPLY " + args.id)
+            confirm("Apply only selected files after hash/conflict verification?", "APPLY " + meta["id"])
             print("Accepted: " + ", ".join(apply(folder, args.files,
                                                 allow_binary=args.allow_binary)))
         elif args.command == "discard":
             destroy(args.id)
+        elif args.command == "rename":
+            rename_session(args.id, args.title)
         elif args.command == "candidate":
             candidate(args.id, args.name, args.upgrade)
         elif args.command == "rollback":

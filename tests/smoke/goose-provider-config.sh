@@ -136,7 +136,9 @@ cp "$temp_dir/environment-backup" "$AIW_GOOSE_ENV_FILE"
 
 # Configuration, checks and editing are reachable from the existing menus.
 : > "$MOCK_DOCKER_LOG"
-printf '1\n1\n9\n\n10\n\n11\n\nb\nq\nq\n' | EDITOR=test-editor VISUAL= aiw > "$temp_dir/menu"
+# Existing direct-config commands are intentionally one level below the safe
+# sandbox cockpit; their security and legacy behavior must stay unchanged.
+printf '1\n1\n2\n9\n\n10\n\n11\n\nb\nb\nq\nq\n' | EDITOR=test-editor VISUAL= aiw > "$temp_dir/menu"
 grep -Fq 'goose configure' "$MOCK_DOCKER_LOG"
 ! grep -Fq -- '--volume' "$MOCK_DOCKER_LOG"
 grep -Fq '10) Edit Goose environment' "$temp_dir/menu"

@@ -34,8 +34,12 @@ if grep -Eq 'InvalidDefaultArgInFrom:|Failed to initialize logging' "$build_log"
     exit 1
 fi
 "$root/bin/aiw" goose workspace add ci-project "$tmp/project"
-session="$(python3 "$root/tools/agent_sandbox.py" create ci-project --environment standard | sed -n 's/^Session ID: //p')"
+session="$(python3 "$root/tools/agent_sandbox.py" create ci-project --environment standard --title 'Install ruff in sandbox' | sed -n 's/^Session ID: //p')"
 [[ "$session" =~ ^[0-9a-f]{12}$ ]]
+python3 "$root/tools/agent_sandbox.py" list | grep -Fq 'Install ruff in sandbox'
+python3 "$root/tools/agent_sandbox.py" rename "$session" 'Install ruff (renamed)'
+python3 "$root/tools/agent_sandbox.py" review 'Install ruff (renamed)' | grep -Fq 'No project changes'
+python3 "$root/tools/agent_sandbox.py" list | grep -Fq 'Install ruff (renamed)'
 image_id="$(python3 - "$tmp/state/catalog.json" <<'PY'
 import json,sys
 e=json.load(open(sys.argv[1]))["environments"]["standard"]
@@ -77,6 +81,18 @@ PY
 )"
 [[ "$active" == "1" ]] || { echo 'Rollback did not restore r1' >&2; exit 1; }
 # Disable migration is reversible at the legacy entrance, with no volume deletion.
+# A clean takeoff requires no global reset: discard ONLY two empty session
+# copies with a single typed permission. Approved tool revisions and legacy
+# Goose volumes must remain available.
+printf 'DISCARD 2 EMPTY SESSIONS\n' | python3 -c '
+import sys
+sys.path.insert(0, sys.argv[1] + "/tools")
+import agent_sandbox as sandbox
+sandbox.discard_empty_sessions(sys.argv[2:])
+' "$root" "$session" "$session2"
+if docker volume inspect "aiw-agent-home-$session" >/dev/null 2>&1; then
+    echo 'Discarded private Goose session volume still exists' >&2; exit 1
+fi
 printf 'DISABLE\n' | python3 "$root/tools/agent_sandbox.py" migrate-disable
 if python3 "$root/tools/agent_sandbox.py" create ci-project --environment standard >/dev/null 2>&1; then
     echo 'Disabled sandbox unexpectedly allowed new session' >&2

@@ -148,8 +148,9 @@ if MOCK_VOLUME_MISSING=1 "$cli" goose inspect > "$temp/output" 2>&1; then exit 1
 if MOCK_IMAGE_MISSING=1 "$cli" goose inspect > "$temp/output" 2>&1; then exit 1; fi
 if "$cli" goose shell </dev/null > "$temp/output" 2>&1; then exit 1; fi
 
-# New menu entries are discoverable; no Docker change required for menu navigation.
-output="$(printf '1\n1\nb\nq\nq\n' | "$cli")"
+# Existing maintenance entries remain discoverable under explicit legacy/advanced
+# navigation; no Docker change required for the menu smoke.
+output="$(printf '1\n1\n2\nb\nb\nq\nq\n' | "$cli")"
 grep -Fq '7) Pull selected Goose image (same version)' <<< "$output"
 grep -Fq '8) Update application (Goose: latest stable or specific version)' <<< "$output"
 grep -Fq '12) Show Goose version' <<< "$output"

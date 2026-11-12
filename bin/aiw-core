@@ -643,55 +643,9 @@ goose_sandbox() {
 }
 
 goose_sandbox_menu() {
-    local choice work env session name paths
-    local -a selected_paths=()
-    while true; do
-        cat <<'EOF_MENU'
-
-Goose sandboxes (opt-in)
-========================
-1) List approved environments and retained sessions
-2) Back up/migrate Goose settings and history (one-time)
-3) Build pinned standard environment
-4) Create isolated working copy
-5) Run/resume Goose in an isolated session
-6) Review proposed project file changes
-7) Accept selected project files after review
-8) Create named environment candidate
-9) Review and approve candidate image
-10) Discard session and its temporary tools
-11) Remove approved environment name
-b) Back
-EOF_MENU
-        read -r -p 'Select: ' choice || return
-        case "$choice" in
-            1) run_menu_action goose_sandbox list ;;
-            2) run_menu_action goose_sandbox migrate ;;
-            3) run_menu_action goose_sandbox build-standard ;;
-            4) read -r -p 'Registered workspace name: ' work || return
-               read -r -p 'Approved environment [standard]: ' env || return
-               run_menu_action goose_sandbox create "$work" --environment "${env:-standard}" ;;
-            5) read -r -p 'Session ID: ' session || return
-               run_menu_action goose_sandbox run "$session" ;;
-            6) read -r -p 'Session ID: ' session || return
-               run_menu_action goose_sandbox review "$session" ;;
-            7) read -r -p 'Session ID: ' session || return
-               read -r -p 'Relative file paths (space-separated; CLI for paths containing spaces): ' paths || return
-               read -r -a selected_paths <<< "$paths"
-               run_menu_action goose_sandbox apply "$session" "${selected_paths[@]}" ;;
-            8) read -r -p 'Session ID: ' session || return
-               read -r -p 'New environment name: ' name || return
-               run_menu_action goose_sandbox candidate "$session" "$name" ;;
-            9) read -r -p 'Candidate name: ' name || return
-               run_menu_action goose_sandbox promote "$name" ;;
-            10) read -r -p 'Session ID: ' session || return
-                run_menu_action goose_sandbox discard "$session" ;;
-            11) read -r -p 'Environment name: ' name || return
-                run_menu_action goose_sandbox remove "$name" ;;
-            b|B) return ;;
-            *) printf 'Unknown selection.\n' ;;
-        esac
-    done
+    # The Python workbench offers numbered selection and calls existing host-side
+    # approval gates. Legacy Goose Compose commands remain untouched.
+    goose_sandbox menu
 }
 
 # Open WebUI -----------------------------------------------------------------
@@ -1047,13 +1001,13 @@ EOF_MENU
     done
 }
 
-goose_menu() {
+goose_legacy_menu() {
     local choice
     while true; do
         cat <<'EOF_MENU'
 
-Goose
-=====
+Goose (existing direct-workspace commands — advanced)
+====================================================
 1) Start session
 2) Resume session
 3) Run one task
@@ -1069,11 +1023,10 @@ Goose
 13) Inspect Goose configuration
 14) Edit Goose configuration (advanced)
 15) Maintenance shell (read-only, advanced)
-16) Sandboxes (opt-in: isolated projects and reviewed environments)
 b) Back
 q) Exit
 EOF_MENU
-        read -r -p 'Select: ' choice || return
+        read -r -p 'Select: ' choice || return 0
         case "$choice" in
             1) run_menu_action menu_start_goose_session ;;
             2) run_menu_action menu_resume_goose_session ;;
@@ -1090,7 +1043,29 @@ EOF_MENU
             13) run_menu_action goose_maintenance_inspect ;;
             14) run_menu_action goose_maintenance_edit ;;
             15) run_menu_action goose_maintenance_shell ;;
-            16) goose_sandbox_menu ;;
+            b|B) return ;;
+            q|Q) exit 0 ;;
+            *) printf 'Unknown selection.\n' ;;
+        esac
+    done
+}
+
+goose_menu() {
+    local choice
+    while true; do
+        cat <<'EOF_MENU'
+
+Goose
+=====
+1) Work safely in a sandbox (recommended cockpit)
+2) Existing Goose sessions and configuration (legacy; direct project access)
+b) Back
+q) Exit
+EOF_MENU
+        read -r -p 'Select: ' choice || return 0
+        case "$choice" in
+            1) goose_sandbox_menu ;;
+            2) goose_legacy_menu ;;
             b|B) return ;;
             q|Q) exit 0 ;;
             *) printf 'Unknown selection.\n' ;;
@@ -1153,7 +1128,7 @@ AI Workstation
 5) Command help
 q) Exit
 EOF_MENU
-        read -r -p 'Select: ' choice || return
+        read -r -p 'Select: ' choice || return 0
         case "$choice" in
             1) goose_menu ;;
             2) open_webui_menu ;;
