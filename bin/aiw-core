@@ -1001,13 +1001,13 @@ EOF_MENU
     done
 }
 
-goose_menu() {
+goose_legacy_menu() {
     local choice
     while true; do
         cat <<'EOF_MENU'
 
-Goose
-=====
+Goose (existing direct-workspace commands — advanced)
+====================================================
 1) Start session
 2) Resume session
 3) Run one task
@@ -1023,7 +1023,6 @@ Goose
 13) Inspect Goose configuration
 14) Edit Goose configuration (advanced)
 15) Maintenance shell (read-only, advanced)
-16) Sandboxes (opt-in: isolated projects and reviewed environments)
 b) Back
 q) Exit
 EOF_MENU
@@ -1044,7 +1043,29 @@ EOF_MENU
             13) run_menu_action goose_maintenance_inspect ;;
             14) run_menu_action goose_maintenance_edit ;;
             15) run_menu_action goose_maintenance_shell ;;
-            16) goose_sandbox_menu ;;
+            b|B) return ;;
+            q|Q) exit 0 ;;
+            *) printf 'Unknown selection.\n' ;;
+        esac
+    done
+}
+
+goose_menu() {
+    local choice
+    while true; do
+        cat <<'EOF_MENU'
+
+Goose
+=====
+1) Work safely in a sandbox (recommended cockpit)
+2) Existing Goose sessions and configuration (legacy; direct project access)
+b) Back
+q) Exit
+EOF_MENU
+        read -r -p 'Select: ' choice || return
+        case "$choice" in
+            1) goose_sandbox_menu ;;
+            2) goose_legacy_menu ;;
             b|B) return ;;
             q|Q) exit 0 ;;
             *) printf 'Unknown selection.\n' ;;
