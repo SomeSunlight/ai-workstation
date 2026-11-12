@@ -241,6 +241,80 @@ class SessionOperatorUX(unittest.TestCase):
         self.assertTrue(service.session_dir(sid).exists())
         self.assertTrue((proposed / "candidate.json").exists())
 
+    def test_archived_wrong_session_environment_update_can_be_discarded_safely(self):
+        """Reproduces the real WSL log: name too long for normal environment IDs."""
+        sid = "9280f4c7954b"
+        self.add_session(sid)
+        name = "python-tools-from-wrong-session-" + sid
+        folder = service.STATE / "candidates" / name
+        folder.mkdir(parents=True)
+        core.save_json(folder / "candidate.json", {
+            "name": "python-tools", "session": sid,
+            "parent": "python-tools", "detected_uv_tools": []})
+        (folder / "Dockerfile").write_text(
+            "# Old empty tool experiment\nARG BASE\nFROM pinned-parent\nUSER goose\n")
+        self.assertGreater(len(name), 40)
+        self.assertEqual(service.pending_environment_updates(), [{
+            "folder": name, "environment": "python-tools",
+            "session": sid, "empty_tools": True}])
+        with mock.patch("builtins.input", return_value="not approved"):
+            with self.assertRaisesRegex(core.Refused, "Expected exactly"):
+                service.discard_candidate(name)
+        self.assertTrue(folder.is_dir())
+        with mock.patch("builtins.input", return_value="DISCARD PROPOSAL " + name):
+            service.discard_candidate(name)
+        self.assertFalse(folder.exists())
+        self.assertTrue(service.session_dir(sid).exists())
+        self.assertEqual(service.pending_environment_updates(), [])
+
+    def test_archived_environment_update_cannot_delete_mismatched_metadata_or_extra_files(self):
+        sid = "9280f4c7954b"
+        self.add_session(sid)
+        name = "python-tools-from-wrong-session-" + sid
+        folder = service.STATE / "candidates" / name
+        folder.mkdir(parents=True)
+        core.save_json(folder / "candidate.json", {
+            "name": "wrong-tools", "session": sid})
+        (folder / "Dockerfile").write_text("FROM safe")
+        with mock.patch("builtins.input") as confirmation:
+            with self.assertRaisesRegex(core.Refused, "mismatch"):
+                service.discard_candidate(name)
+        confirmation.assert_not_called()
+        core.save_json(folder / "candidate.json", {
+            "name": "python-tools", "session": sid})
+        (folder / "unexpected-file").write_text("keep me")
+        with mock.patch("builtins.input") as confirmation:
+            with self.assertRaisesRegex(core.Refused, "Unexpected files"):
+                service.discard_candidate(name)
+        confirmation.assert_not_called()
+        self.assertTrue((folder / "unexpected-file").exists())
+
+    def test_cleanup_shows_and_routes_blocked_environment_update(self):
+        safe = "abcdef123456"
+        blocked = "9280f4c7954b"
+        self.add_session(safe, "Ready to clean")
+        self.add_session(blocked, "Old tool experiment")
+        folder_name = "python-tools-from-wrong-session-" + blocked
+        folder = service.STATE / "candidates" / folder_name
+        folder.mkdir(parents=True)
+        core.save_json(folder / "candidate.json", {
+            "name": "python-tools", "session": blocked,
+            "detected_uv_tools": []})
+        (folder / "Dockerfile").write_text("ARG BASE\nFROM parent\nUSER goose\n")
+        with (mock.patch("builtins.input", side_effect=[
+                "2", "1", "1", "DISCARD PROPOSAL " + folder_name]),
+              contextlib.redirect_stdout(io.StringIO()) as captured):
+            ux.cleanup_sessions(service)
+        self.assertIn("1 unchanged session(s) ready to discard", captured.getvalue())
+        self.assertIn("1 session(s) have unfinished environment updates", captured.getvalue())
+        self.assertFalse(folder.exists())
+        self.assertTrue(service.session_dir(blocked).exists())
+        with (mock.patch.object(service, "discard_empty_sessions") as discard,
+              mock.patch("builtins.input", return_value="1"),
+              contextlib.redirect_stdout(io.StringIO())):
+            ux.cleanup_sessions(service)
+        self.assertEqual(set(discard.call_args.args[0]), {safe, blocked})
+
     def test_project_registration_reuses_existing_bash_boundary(self):
         with (mock.patch.object(ux, "workspace_entries", return_value=[]),
               mock.patch.object(service, "list_sessions", return_value=[]),
