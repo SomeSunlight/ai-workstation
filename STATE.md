@@ -14,8 +14,9 @@ follow-up, not silently substituted for the current explicit selected-path apply
 
 **Earlier CI verified:** [Validate #43172594030](https://github.com/SomeSunlight/ai-workstation/actions/runs/43172594030)
 passed Linux/ContextCanon, Windows and disposable real Docker for the earlier
-menu. The revised integrated cockpit requires new exact-head CI and owner's
-real WSL acceptance; a real Windows
+menu. The revised integrated cockpit passed Linux/ContextCanon, Windows and real Docker
+[Validate #43253533626](https://github.com/SomeSunlight/ai-workstation/actions/runs/43253533626);
+the owner's real WSL acceptance is still pending; a real Windows
 crash/restart durability test is expressly **unchecked** until a naturally occurring
 incident supplies evidence. See `PLAN.md` and #64.
 
