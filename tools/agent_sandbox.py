@@ -577,39 +577,99 @@ def remove_environment(name: str) -> None:
     data["environments"][name]["active"] = None
     save_catalog(data)
 
-def destroy(identifier: str) -> None:
-    folder, meta = current_session(identifier)
+def pending_changes(identifier: str) -> int:
+    folder, _ = current_session(identifier)
+    return len(changes(load_json(folder / "baseline.json"), scan_tree(folder / "work")))
+
+
+def _discard_data(folder: Path, meta: dict) -> None:
+    """Internal destructive primitive; must follow an explicit, scoped approval."""
     identifier = meta["id"]
-    confirm(f"Destroy session {meta.get('title', identifier)!r} ({identifier}), its isolated "
-            "work, tools and temporary Goose history? Original and legacy data remain "
-            "untouched.", "DESTROY " + identifier)
-    subprocess.run(["docker", "rm", "-f", "aiw-agent-session-" + identifier],
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if folder != session_dir(identifier) or meta.get("home_volume") != "aiw-agent-home-" + identifier:
+        raise Refused("Session identity or Docker volume mismatch; no data removed.")
+    # Never interrupt a Goose process to tidy up a test. This check is made
+    # again after approval, under the same owner lock as run_session().
+    status = subprocess.run(
+        ["docker", "container", "inspect", "--format", "{{.State.Running}}",
+         "aiw-agent-session-" + identifier],
+        capture_output=True, text=True, check=False)
+    if status.returncode == 0 and status.stdout.strip() == "true":
+        raise Refused(f"Session {identifier} is running. Exit Goose before discarding.")
+    if not inspect_volume(meta["home_volume"]):
+        raise Refused(f"Session {identifier} Docker home missing; metadata retained for manual recovery.")
     docker("volume", "rm", meta["home_volume"])
     shutil.rmtree(folder)
-    print(f"Discarded {identifier}; original unchanged.")
+    print(f"Discarded session {meta.get('title', identifier)!r}; original and legacy Goose data unchanged.")
 
-def report() -> None:
-    print("Approved sandbox environments (active selection applies to NEW sessions):")
-    for name, record in sorted(catalogue()["environments"].items()):
-        active = record.get("active")
-        suffix = (f"active r{active}, {len(record['versions'])} revision(s), "
-                  f"image {record['versions'][active]['image_id'][:19]}…" if active else "inactive")
-        print(f"  {name}: {suffix}")
-    print("Retained sessions (private copies; original unchanged until explicit apply):")
-    sessions = list_sessions()
-    if not sessions:
-        print("  (none)")
-    for m in sessions:
-        folder = session_dir(m["id"])
-        try:
-            pending = len(changes(load_json(folder / "baseline.json"), scan_tree(folder / "work")))
-            status = f"{pending} proposed file(s)"
-        except (Refused, OSError) as exc:
-            status = f"review unavailable: {exc}"
-        print(f"  {m.get('title') or m['workspace']} | {m['workspace']} | "
-              f"{m['environment']} r{m['revision']} | created {m['created']} | "
-              f"retained, {status} | id {m['id']}")
+
+def destroy(identifier: str) -> None:
+    with owner_lock():
+        folder, meta = current_session(identifier)
+        identifier = meta["id"]
+        print(f"Session {meta.get('title') or identifier!r}: "
+              f"{pending_changes(identifier)} unreviewed project change(s).")
+        confirm("Discard this private session, its tools and all its new Goose history? "
+                "Any unreviewed changes are lost. The original project and legacy Goose "
+                "history remain unchanged.", "DESTROY " + identifier)
+        _discard_data(folder, meta)
+
+
+def discard_empty_sessions(identifiers: list[str]) -> None:
+    """Single approved cleanup of selected sessions with no project changes.
+
+    Does not reset the approved environment catalogue, migration/profile,
+    original projects or unrelated Docker volumes. Non-empty sessions require
+    individual review and disposal.
+    """
+    if not identifiers or len(identifiers) != len(set(identifiers)):
+        raise Refused("Select at least one distinct session to clean up.")
+    with owner_lock():
+        targets = []
+        for identifier in identifiers:
+            folder, meta = current_session(identifier)
+            if pending_changes(meta["id"]):
+                raise Refused(f"Session {meta.get('title') or meta['id']!r} has proposed "
+                              "project changes; inspect and discard it individually.")
+            if meta.get("home_volume") != "aiw-agent-home-" + meta["id"]:
+                raise Refused("Session Docker home mismatch; nothing removed.")
+            if not inspect_volume(meta["home_volume"]):
+                raise Refused("Session Docker home missing; nothing removed.")
+            targets.append((folder, meta))
+        print("The following EMPTY sessions will lose their private Goose history and tools:")
+        for _, meta in targets:
+            print(f"  {meta.get('title') or '[old unnamed session]'} | "
+                  f"workspace {meta['workspace']} | id {meta['id']}")
+        confirm("No original project, approved image, shared Goose profile or "
+                "legacy history will be deleted.", f"DISCARD {len(targets)} EMPTY SESSIONS")
+        for folder, meta in targets:
+            if pending_changes(meta["id"]):
+                raise Refused("Session was modified after approval; stopping cleanup.")
+            _discard_data(folder, meta)
+
+
+def report(section: str = "all") -> None:
+    if section not in ("all", "environments", "sessions"):
+        raise Refused("Unknown inventory section.")
+    if section in ("all", "environments"):
+        print("Approved sandbox environments (active selection applies to NEW sessions):")
+        for name, record in sorted(catalogue()["environments"].items()):
+            active = record.get("active")
+            suffix = (f"active r{active}, {len(record['versions'])} revision(s), "
+                      f"image {record['versions'][active]['image_id'][:19]}…" if active else "inactive")
+            print(f"  {name}: {suffix}")
+    if section in ("all", "sessions"):
+        print("Retained sessions (private copies; original unchanged until explicit apply):")
+        sessions = list_sessions()
+        if not sessions:
+            print("  (none)")
+        for m in sessions:
+            try:
+                status = f"{pending_changes(m['id'])} proposed file(s)"
+            except (Refused, OSError) as exc:
+                status = f"review unavailable: {exc}"
+            print(f"  {m.get('title') or '[older unnamed session]'} | {m['workspace']} | "
+                  f"{m['environment']} r{m['revision']} | created {m['created']} | "
+                  f"retained, {status} | id {m['id']}")
 
 def main() -> int:
     parser = argparse.ArgumentParser(
