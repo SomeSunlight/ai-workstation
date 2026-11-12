@@ -222,6 +222,25 @@ class SessionOperatorUX(unittest.TestCase):
                     service.discard_empty_sessions(["123456abcdef"])
             self.assertTrue(modified.exists())
 
+    @unittest.skipIf(os.name == "nt", "Linux Docker cleanup locking")
+    def test_cleanup_rejects_sessions_referenced_by_pending_environment_revision(self):
+        sid = "abcdef123456"
+        self.add_session(sid, "Tool experiment")
+        proposed = service.STATE / "candidates" / "toolbox"
+        proposed.mkdir(parents=True)
+        core.save_json(proposed / "candidate.json", {
+            "name": "toolbox", "session": sid, "parent": "standard"})
+        with (mock.patch.object(service, "owner_lock",
+                                return_value=contextlib.nullcontext()),
+              mock.patch.object(service, "inspect_volume", return_value=True),
+              mock.patch.object(service, "docker") as docker,
+              mock.patch("builtins.input", return_value="DISCARD 1 EMPTY SESSIONS")):
+            with self.assertRaisesRegex(core.Refused, "unapproved environment update"):
+                service.discard_empty_sessions([sid])
+            docker.assert_not_called()
+        self.assertTrue(service.session_dir(sid).exists())
+        self.assertTrue((proposed / "candidate.json").exists())
+
     def test_project_registration_reuses_existing_bash_boundary(self):
         with (mock.patch.object(ux, "workspace_entries", return_value=[]),
               mock.patch.object(service, "list_sessions", return_value=[]),
