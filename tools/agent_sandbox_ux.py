@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from pathlib import Path
 import subprocess
+import re
 
 
-def choose(heading: str, items: list[tuple[str, str]]) -> str | None:
+def choose(heading: str, items: list[tuple[str, str]], *, default: str | None = None) -> str | None:
     """Numbered choices; never interpret user text as an ID or command."""
     print("\n" + heading)
     if not items:
@@ -17,14 +18,18 @@ def choose(heading: str, items: list[tuple[str, str]]) -> str | None:
         return None
     for number, (_, label) in enumerate(items, 1):
         print(f"  {number}) {label}")
+    if default is not None:
+        print("  Enter) Use recommended choice")
     print("  b) Back / cancel")
     while True:
         try:
             value = input("Select: ").strip()
         except EOFError:
             return None
-        if value.lower() in ("b", "q", ""):
+        if value.lower() in ("b", "q"):
             return None
+        if not value:
+            return default
         if value.isascii() and value.isdecimal() and 1 <= int(value) <= len(items):
             return items[int(value) - 1][0]
         print("Enter a listed number or b to cancel. No changes made.")
@@ -42,9 +47,8 @@ def ask(prompt: str, *, default: str = "") -> str | None:
 
 def choose_session(api):
     sessions = api.list_sessions()
-    return choose("Retained sessions (private projects; no original writes):", [
-        (m["id"], f"{m.get('title') or m['workspace']} | {m['workspace']} | "
-         f"{m['environment']} r{m['revision']} | {m['created']} | id {m['id']}")
+    return choose("Select a session to continue or inspect:", [
+        (m["id"], f"{session_label(m)}")
         for m in sessions
     ])
 
@@ -69,30 +73,69 @@ def choose_revision(api, name):
     ])
 
 
-def choose_workspace(api):
+def workspace_entries() -> list[tuple[str, str]]:
+    """Use the pre-existing Bash registry; registration stays Bash-owned."""
     registry = Path.home() / ".config/ai-workstation/goose-workspaces"
-    items = []
-    if registry.is_dir():
-        for link in sorted(registry.iterdir()):
-            if link.is_symlink():
-                # Validation of the canonical target still occurs inside api.start.
-                items.append((link.name, link.name))
-    return choose("Registered original workspaces (never mounted inside the agent):", items)
+    if not registry.is_dir():
+        return []
+    entries = []
+    for link in sorted(registry.iterdir()):
+        if link.is_symlink():
+            try:
+                path = str(link.resolve(strict=True))
+            except (OSError, RuntimeError):
+                path = "(unavailable)"
+            entries.append((link.name, path))
+    return entries
 
 
-def new_session(api):
-    work = choose_workspace(api)
+def session_label(meta: dict, api=None) -> str:
+    name = meta.get("title") or "[older untitled session]"
+    changes = ""
+    if api is not None:
+        try:
+            count = api.pending_changes(meta["id"])
+            changes = f" | {count} proposed change(s)"
+        except (api.Refused, OSError) as exc:
+            changes = f" | review unavailable: {exc}"
+    return (f"{name} | project {meta['workspace']} | "
+            f"{meta['environment']} r{meta['revision']}{changes} "
+            f"| created {meta['created']} | id …{meta['id'][-6:]}")
+
+
+def choose_workspace(api):
+    return choose("Choose the ORIGINAL project to copy into your safe session:", [
+        (name, f"{name} | {path}") for name, path in workspace_entries()
+    ])
+
+
+def new_session(api, environment=None, project=None):
+    work = project or choose_workspace(api)
     if work is None:
+        print("Register a project folder from the cockpit first; no session created.")
         return
-    env = choose_environment(api)
-    if env is None:
+    envs = api.catalogue()["environments"]
+    if environment is None:
+        choices = [(name, f"{name} r{record['active']}"
+                    + (" (recommended for a fresh start)" if name == "standard" else ""))
+                   for name, record in sorted(envs.items(), key=lambda pair: (pair[0] != "standard", pair[0]))
+                   if record.get("active")]
+        if not choices:
+            print("No approved environment yet. Choose 'Initial setup' in the cockpit first.")
+            return
+        environment = choose("Choose tools for this session (Enter = standard):",
+                             choices, default=choices[0][0])
+    if environment is None:
         return
-    title = ask("What will this session do? Title", default=f"Work on {work}")
+    title = ask("What do you want Goose to do? Give the session a memorable title",
+                default=f"Explore {work}")
     if title is None:
         return
-    sid = api.start(work, env, title=title)
-    print(f"Session ready: {title!r} ({sid}). Original project unchanged.")
-    if choose("Next action:", [("run", "Run Goose in this session"), ("back", "Return to sessions")]) == "run":
+    sid = api.start(work, environment, title=title)
+    print(f"Ready: {title!r} | original project {work} untouched | "
+          f"environment {environment}.")
+    if choose("Ready to work?", [("run", "Start Goose safely now"),
+                                 ("later", "Keep session for later")], default="run") == "run":
         api.run_session(sid, [])
 
 
