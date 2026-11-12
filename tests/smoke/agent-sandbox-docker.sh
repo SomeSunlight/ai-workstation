@@ -29,7 +29,7 @@ docker run --rm --network none --user 0 --entrypoint /bin/sh \
 printf 'MIGRATE\n' | python3 "$root/tools/agent_sandbox.py" migrate
 build_log="$tmp/build-standard.log"
 printf 'BUILD\n' | python3 "$root/tools/agent_sandbox.py" build-standard 2>&1 | tee "$build_log"
-if grep -Eq 'InvalidDefaultArgInFrom|Failed to initialize logging' "$build_log"; then
+if grep -Eq 'InvalidDefaultArgInFrom:|Failed to initialize logging' "$build_log"; then
     echo 'Standard build emitted a Dockerfile or Goose startup warning' >&2
     exit 1
 fi
@@ -49,7 +49,7 @@ docker run --rm --pull never --read-only --user "$(id -u):$(id -g)" \
 python3 "$root/tools/agent_sandbox.py" candidate "$session" python-data
 promotion_log="$tmp/promote-python-data.log"
 printf 'APPROVE python-data\n' | python3 "$root/tools/agent_sandbox.py" promote python-data 2>&1 | tee "$promotion_log"
-if grep -Eq 'InvalidDefaultArgInFrom|Failed to initialize logging' "$promotion_log"; then
+if grep -Eq 'InvalidDefaultArgInFrom:|Failed to initialize logging' "$promotion_log"; then
     echo 'Candidate build emitted a Dockerfile or Goose startup warning' >&2
     exit 1
 fi
