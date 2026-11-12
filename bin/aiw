@@ -302,7 +302,7 @@ AI Workstation
 7) Native services (Process Compose)
 q) Exit
 EOF
-        read -r -p 'Select: ' choice || return
+        read -r -p 'Select: ' choice || return 0
         case "$choice" in
             1) run_core ;;
             2) local_inference_menu ;;
