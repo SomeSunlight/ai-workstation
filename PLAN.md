@@ -1,6 +1,6 @@
 # AI Workstation Plan
 
-## Issue #59 — PR 1: disposable Goose agent sandbox (draft; 2026-11-11)
+## Issue #59 — PR 1: disposable Goose agent sandbox (WSL-tested; pending merge, 2026-11-12)
 
 **Scope:** separate opt-in sandbox service + Goose adapter only. No live Docker migration, running Windows service change, GitHub merge or PR 2 security profile. Branch `feat/59-sandbox-lifecycle-pr1` from current `main`.
 
@@ -10,9 +10,12 @@
 - [x] Preserve all existing legacy Goose entrypoints and private volume unchanged in the repository and deployment.
 - [x] Add offline synthetic source/Markdown, binary, conflict, path and session-mount tests; document limits and operation.
 - [x] Run pinned ContextCanon source build, reviewed Parent-to-Child propagation and check --all . (nine OK); generated packages committed by the temporary branch CI helper, now removed. [Generation run #43030879288](https://github.com/SomeSunlight/ai-workstation/actions/runs/43030879288).
-- [x] Pass real disposable Ubuntu Docker acceptance: synthetic legacy-home backup/verification, Goose/uv/Python standard image build, private session uv tool install, named promotion/rebuild, versioned upgrade/rollback and opt-out. Pass offline project conflict/binary/Markdown/path tests, ContextCanon gate and Windows regression tests. [Validate #43033881186](https://github.com/SomeSunlight/ai-workstation/actions/runs/43033881186), three green jobs on exact code head `df47e309`. No operator machine or production services touched.
-- [ ] Owner-run real WSL Goose/Dispatcher provider and extension continuity, long-running session/history migration, selected-file review/apply, and package retention after restart. These checks cannot be inferred from synthetic CI fixtures.
-- [ ] Owner reviews the Draft PR, performs an opt-in WSL acceptance if desired, and explicitly authorizes a merge. PR 2 remains separate.
+- [x] Pass real disposable Ubuntu Docker acceptance: synthetic legacy-home backup/verification, Goose/uv/Python standard image build, private session uv tool install, named promotion/rebuild, versioned upgrade/rollback and opt-out. Pass offline project conflict/binary/Markdown/path tests, ContextCanon gate and Windows regression tests. [Validate #43034717195](https://github.com/SomeSunlight/ai-workstation/actions/runs/43034717195), three green jobs on prior exact head `6d94094a` (closing fix CI tracked separately). No operator machine or production services touched.
+- [x] **Owner WSL acceptance:** the existing `aiw` launcher resolved the checked-out PR; Goose connected to the selected Dispatcher model, created isolated project copies under `~/projects`, changed files subject to review/selected apply, installed `uv tool` packages, built named `python-tools` r1/r2, and rolled back to r1. No services changed by PR authoring.
+- [x] Record operator usability gaps and safe next steps in [#64](https://github.com/SomeSunlight/ai-workstation/issues/64): human titles, selectable sessions/revisions, guided environment saving and Git-backed changeset review/merge.
+- [x] Resolve closing operator warnings: mandatory base-image Dockerfile lint without unsafe fallback defaults, ephemeral writable Goose home in the read-only version probe, actionable invalid confirmation; gate warnings in real Docker CI.
+- [ ] Nonstandard native extension/history continuity and cold-reboot package durability are not separately proven by the owner; do not present as verified.
+- [ ] Owner explicitly authorizes and performs the squash merge; PR 2 stays separate.
 
 **Known first-slice limits:** approved recipes capture version-pinned `uv tool` installs, not opaque `uvx` caches/arbitrary runtime installs; pre-migration Goose history is copied as a snapshot, newer histories stay with resumable sessions and are not silently merged. Direct legacy Goose sessions still have their historical RW workspace. Sandbox Docker bridge networking, tool permissions and unknown external extensions are not hardened against a malicious actor until PR 2. Native Windows launches this Linux adapter only via WSL. Multi-file apply keeps verified private backups but is not a transaction.
 
