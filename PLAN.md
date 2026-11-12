@@ -24,10 +24,19 @@ must not be mixed with environment recipe promotion.
 - [x] Pinned ContextCanon read-only `check --all` passed in CI. Existing general/English
   operator-UX and agent-isolation rules in `CONTEXT.src.md` already cover this
   slice; no authored rule or generated Parent/Child package needed modification.
-- [ ] Owner WSL acceptance: optionally review/clear earlier `pr1-test` sessions
-  using the cockpit (no full reset), create a titled safe session from `standard`,
-  resume/review it, then try the optional `python-tools` revision update/rollback.
-  Check continued legacy Goose history and running-service independence.
+- [x] Owner WSL cockpit acceptance (2026-11-12): recovered the earlier archived empty
+  `python-tools` update (archive-name validator bug fixed and regression tested),
+  cleaned up old test sessions, and successfully created and started a newly titled
+  private Goose session. Operator reports the project/session/environment cockpit
+  is understandable and the guided takeoff works. File review / next independent
+  batch merge and resumed Hermes adapter are separate #64 scopes; no claim that
+  the owner ran every advanced environment or original-file transfer path again.
+- [x] Owner approved completing PR #65 after the successful WSL operator flight.
+  Exact-head CI must remain green; owner performs the usual squash merge.
+- [ ] After #65 merges, centrally codify the expanded **agent-neutral autonomy
+  philosophy** into authored `compose/CONTEXT.src.md` (and refine root rules only
+  if needed), propagate packages with pinned ContextCanon and zero generated drift.
+  Requirements are captured in #64; do not disrupt the accepted #65 runtime.
 - [ ] **Second independent #64 PR:** Git-powered batch changeset review, select all/files/hunks,
   baseline/current/proposal conflict handling and non-Git project coverage; retain host-side
   approval, backups, safe paths and explicit operator merge, not agent writes.
