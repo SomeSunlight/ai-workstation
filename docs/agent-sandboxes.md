@@ -1,27 +1,38 @@
-# Agent sandboxes — Issue #59, PR 1 (opt-in Goose adapter)
+# Agent sandboxes — #59 isolation, #64 guided operator workflow
 
-**Reproducible infrastructure. Controlled agent autonomy.** This is a *review candidate*; it is not enabled by the installer. The existing `aiw goose session`, configuration, history, selected provider and Compose volume remain unchanged until the operator explicitly chooses this new workflow. No Windows service manager is involved.
+**Reproducible infrastructure. Controlled agent autonomy.** The sandbox adapter is opt-in. Regular `aiw goose session`, existing Docker Compose Goose, its credentials/history and running services are untouched. Native Windows runs this adapter inside WSL; Linux works directly.
 
-## First use (Linux / WSL2)
+## Start here: selectable menu (Linux / WSL2)
 
-Use **Goose → Sandboxes** in the normal `aiw` menu, or these equivalent direct commands:
+Run `aiw` → **Goose → Sandboxes** (or `aiw goose sandbox menu`). The compact menu separates **Sessions**, **Environments**, **Setup** and **Help**. Select registered workspaces, retained sessions and approved environment revisions by **number**; you do not need to memorize the internal 12-character IDs.
+
+1. **Setup:** back up/migrate the legacy Goose profile once and build the pinned `standard` image, each with its existing typed approval. Registered projects are managed under Goose → Manage workspaces.
+2. **Sessions → Create:** select a registered original workspace and an approved environment, give the session an intention/title, then optionally run Goose. The agent works on a private copy.
+3. **Sessions → Select:** resume, review the proposed project changes, rename the session or discard its private work/history. The original is never mounted. Discard still requires typing `DESTROY <stable-id>`.
+4. **Environments → Save tools:** select the *correct* session (shown with its title, workspace, pinned environment/revision and stable ID). See its installed `uv tool` inventory, choose new named image or upgrade the session's named parent, review the proposed pinned recipe, then explicitly type `APPROVE <name>` before AIW builds/verifies and activates it. Incomplete proposals remain unapproved for later review.
+5. **Environments → Rollback / Rebuild:** choose the named environment and approved revision by number. Rollback changes **only future session selection** and requires typed `ROLLBACK <name>`; existing sessions stay pinned. Rebuild only verifies and never activates an image.
+
+Example: an approved `python-tools` r1 contains `ruff`. Create session **Add black** from `python-tools` r1, install `black==25.1.0` with `uv tool` inside Goose, then choose Environments → Save tools → Update python-tools. Review r2's proposed recipe and approve it. A newly created r2 session sees both tools; rolling back to r1 makes future sessions use r1 while existing r2 sessions remain unchanged.
+
+**Vocabulary:** a *workspace* is the registered original project. A *session* is an isolated working copy with its own Goose home and tools, backed by an immutable internal ID and a human-editable title. An *environment* is an approved, pinned image: `standard` or a named revision. A *candidate* is only an unapproved environment **recipe**, not a proposed project merge and not a separately managed user inventory type. *Review* reads proposed project differences; *apply* writes only explicitly accepted files after host-side hash checks and approval.
+
+## CLI for scripting / advanced use
+
+The menu uses the same existing commands, not a second approval mechanism. For scripting, keep the immutable IDs; for interactive CLI use, a unique exact (case-insensitive) title is accepted as an alternative. Ambiguous titles are rejected with the matching IDs; quote titles containing spaces.
 
 ```bash
 aiw goose sandbox list
-aiw goose sandbox migrate                  # explicit backup and migration consent
-aiw goose sandbox build-standard           # operator-owned image build, no session launch
-aiw goose sandbox create my-project --environment standard
-aiw goose sandbox run SESSION_ID            # real Goose session in staged copy
+aiw goose sandbox create my-project --environment standard --title "Inspect config files"
+aiw goose sandbox rename SESSION_ID "Prepare configuration changes"
+aiw goose sandbox run SESSION_ID
 aiw goose sandbox review SESSION_ID
-aiw goose sandbox apply SESSION_ID README.md src/module.py  # separate typed approval
-aiw goose sandbox discard SESSION_ID        # separate typed approval
+aiw goose sandbox apply SESSION_ID README.md src/module.py  # typed approval, selected paths only
+aiw goose sandbox discard SESSION_ID                        # typed approval, deletes session history
+aiw goose sandbox rollback python-tools 1                   # typed approval
+aiw goose sandbox rebuild python-tools 1                    # verification only
 ```
 
-Register the original project with `aiw goose workspace add my-project /path/to/project` first. `create` prints a 12-character session ID. A retained session can be resumed with another `run SESSION_ID`; its project copy and temporary home remain available until `discard`. A normal session exit never saves an environment and never applies files.
-
-A **session** is a private project copy with temporary Goose state and tools. A **candidate** is different: it is an *unapproved recipe for a reusable environment revision* reconstructed from version-pinned `uv tool` installs. It is **not** a proposal to copy project files. The operator reviews and `promote`s the recipe to a named revision; `rollback` switches only what **new** sessions use, with existing sessions still pinned. If a tool is missing from a candidate, check that the correct session ID was used and that it was installed using `uv tool`.
-
-**PR 1 operator limitation:** project review works, but applying 10–30 files currently requires enumerating relative paths. Human-editable session titles, menu selection instead of opaque IDs, guided environment revisions and Git-backed whole-changeset/diff/merge are deferred to [#64](https://github.com/SomeSunlight/ai-workstation/issues/64). This first slice does not yet support a Git-style batch merge.
+**Project-merge limitation (planned separate #64 PR):** the first UX slice improves selection and environment revision approval; it does **not** yet provide batch Git staging or hunk/3-way merge. The existing reviewed CLI `apply` still accepts explicit relative files and refuses drift. Do not confuse saving session tools with applying project edits. No session action grants the agent direct access to the original.
 
 ### Migration and recovery
 
@@ -35,7 +46,7 @@ A **session** is a private project copy with temporary Goose state and tools. A 
 
 The versioned `standard` recipe is [containers/agent-sandbox/Dockerfile](../containers/agent-sandbox/Dockerfile). At an explicit operator build, AIW reads the locally selected **Goose image digest**, pulls the pinned `uv` image, pins its digest, adds managed Python 3.12.12 and the already present Git/diagnostics, verifies the resulting tools, and records the local immutable **image ID** (content-addressed SHA-256), source digests, recipe hash and approval timestamp. Image builds never use the project or private config as a Docker build context. No automatic `latest` upgrades occur when starting sessions. Runtime `uv`, `uvx`, Python installs, tool caches and binaries go into the **session's own writable home**, not into a shared directory. `/tmp` remains `noexec`.
 
-To have Goose prepare a reusable variant:
+For advanced/automated operation, Goose can prepare a reusable variant directly (the menu is preferred):
 
 ```bash
 aiw goose sandbox create my-project --environment standard
@@ -62,4 +73,4 @@ AIW resolves a **registered** original workspace to a canonical path, stages a p
 
 This first mode is ordinary nonprivileged Docker execution: read-only root filesystem, dropped capabilities, no-new-privileges, separate RW session home, no Docker socket and no writable original project bind. Tool execution, extensions and subagents launched *inside* Goose use this boundary. It does **not** mediate independently configured tools that run outside the container, defend against a malicious container runtime, protect confidential information already copied into the session, or block unrestricted Docker bridge network access. Goose must receive provider credentials to use native authenticated providers. **Do not use this basic profile for hostile code or sensitive projects**, and never interpret CLI instructions as an enforcement barrier. PR 2 will evaluate stronger runtime/network/credential restrictions.
 
-Native Windows runs the Linux Goose adapter in **WSL**; this feature does not put new Goose services on the Windows host. Synthetic CI checks run on Ubuntu. Actual current-Goose image build, WSL/Ubuntu operator migration, credential/extension continuity and a Docker end-to-end test require a voluntary **host-side acceptance run**; until then this is not a validated production security feature. The original Goose path remains the recoverable baseline.
+Native Windows runs the Linux Goose adapter in **WSL**; this feature does not put new Goose services on the Windows host. Synthetic CI checks run on Ubuntu. The #59 baseline was accepted in a real owner WSL trial and disposable Docker CI; further native extension/history continuity and reboot durability remain separate host-side acceptance checks. The original Goose path remains the recoverable baseline.
