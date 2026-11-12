@@ -224,20 +224,20 @@ def approve_candidate(api, name=None):
         print("Proposal retained, unapproved. No active environment changed.")
 
 
-def existing_session(api):
-    sid = choose_session(api)
+def existing_session(api, sid=None):
+    sid = sid or choose_session(api)
     if sid is None:
         return
     while True:
         _, meta = api.current_session(sid)
-        print(f"\nSession: {meta.get('title', sid)!r} | workspace {meta['workspace']} | "
-              f"{meta['environment']} r{meta['revision']} | {meta['created']} | id {sid}")
-        action = choose("Session actions:", [
-            ("run", "Run / resume Goose"),
-            ("review", "Review project changes (read-only; no original writes)"),
-            ("rename", "Rename session title"),
-            ("save", "Save installed uv tools as an approved environment revision"),
-            ("discard", "Discard private session and its Goose history (requires approval)")
+        print("\nYour selected session:")
+        print("  " + session_label(meta, api))
+        action = choose("What next?", [
+            ("run", "Continue working with Goose in this private copy"),
+            ("review", "See all project changes before accepting anything"),
+            ("rename", "Rename this session"),
+            ("save", "Create or upgrade a reusable environment from this session's tools"),
+            ("discard", "Discard this session and its private Goose history (approval required)")
         ])
         if action is None:
             return
@@ -246,10 +246,11 @@ def existing_session(api):
         elif action == "review":
             folder, _ = api.current_session(sid)
             print(api.review(folder)[1])
-            print("No files were applied. The batch Git review/merge is a separate "
-                  "follow-up; the existing explicit CLI apply remains available.")
+            print("Read-only review. No original project files changed. The Git-based "
+                  "batch merge will be added as a separate #64 PR; advanced CLI "
+                  "still supports individually approved file apply.")
         elif action == "rename":
-            title = ask("New title")
+            title = ask("New session title")
             if title is not None:
                 api.rename_session(sid, title)
         elif action == "save":
@@ -259,107 +260,272 @@ def existing_session(api):
             return
 
 
-def sessions_menu(api):
+def print_cockpit(api):
+    """One complete inventory on arrival; no duplicate list command per tab."""
+    projects = workspace_entries()
+    sessions = api.list_sessions()
+    environments = api.catalogue()["environments"]
+    print("\n" + "=" * 52)
+    print("Goose sandbox cockpit — your projects, sessions and tools")
+    print("=" * 52)
+    print(f"\nYour projects ({len(projects)} registered original folder(s)):")
+    for name, path in projects:
+        print(f"  {name}  ->  {path}")
+    if not projects:
+        print("  (none: register a project folder below)")
+    print(f"\nYour sessions ({len(sessions)} private working copy/copies):")
+    for index, meta in enumerate(sessions, 1):
+        print(f"  {index}. {session_label(meta, api)}")
+    if not sessions:
+        print("  (none: start a new safe session below)")
+    print(f"\nYour environments ({len(environments)} approved tool image(s)):")
+    for name, record in sorted(environments.items(), key=lambda pair: (pair[0] != "standard", pair[0])):
+        active = record.get("active")
+        status = f"r{active} active" if active else "inactive"
+        print(f"  {name}: {status} | {len(record['versions'])} approved revision(s)"
+              + (" | ready to use" if active else ""))
+    if not environments:
+        print("  (none: perform initial setup below)")
+    path = api.STATE / "migration.json"
+    if not path.exists():
+        print("\nInitial setup needed: copy/backup existing Goose settings, then build standard.")
+    elif not api.load_json(path).get("enabled"):
+        print("\nSandbox creation disabled (existing sessions are still retained).")
+    print("\nNothing shown here is a live agent process. Your original projects"
+          " are never mounted inside the sandbox.")
+
+
+def workspace_menu(api):
+    """Use the existing Bash implementation as the sole workspace registry writer."""
     while True:
-        action = choose("Sessions (isolated project copies):", [
-            ("list", "Show session status and pending changes"),
-            ("create", "Create session (select project, environment and title)"),
-            ("existing", "Select retained session to run, review, rename or discard")
+        print("\nProject folders Goose may work with (via PRIVATE sandbox copies):")
+        for name, target in workspace_entries():
+            count = sum(m["workspace"] == name for m in api.list_sessions())
+            print(f"  {name} -> {target} | {count} retained session(s)")
+        action = choose("Project folders:", [
+            ("add", "Register another original project folder"),
+            ("remove", "Unregister a project folder (does not delete files)")
         ])
         if action is None:
             return
-        if action == "list":
-            api.report()
-        elif action == "create":
-            new_session(api)
+        if action == "add":
+            name = ask("Short project name (letters, digits, dot, - and _)")
+            if name is None:
+                continue
+            target = ask("Full path to the EXISTING project directory")
+            if target is None:
+                continue
+            # Never use a shell or duplicate the Bash register/unregister policy.
+            subprocess.run([str(api.ROOT / "bin/aiw"), "goose", "workspace",
+                            "add", name, target], check=True)
         else:
-            existing_session(api)
+            entries = workspace_entries()
+            name = choose("Which registered project should be unregistered?", [
+                (n, f"{n} | {target}") for n, target in entries
+            ])
+            if name is None:
+                continue
+            if any(m["workspace"] == name for m in api.list_sessions()):
+                print("This project still has retained sessions. Review/discard those "
+                      "first; its original directory has NOT been changed.")
+                continue
+            api.confirm(f"Only the AIW registration for {name!r} will be removed. "
+                        "The real project files stay where they are.", "UNREGISTER " + name)
+            subprocess.run([str(api.ROOT / "bin/aiw"), "goose", "workspace",
+                            "remove", name], check=True)
+
+
+def cleanup_sessions(api):
+    """Cleanup is not a global reset: keep profiles, approved images and originals."""
+    sessions = api.list_sessions()
+    if not sessions:
+        print("No retained sessions to clean up. Ready for your first safe session.")
+        return
+    empty = []
+    print("\nReview cleanup candidates (even empty sessions contain Goose history):")
+    for meta in sessions:
+        count = api.pending_changes(meta["id"])
+        print(f"  {session_label(meta)} | {count} proposed file change(s)")
+        if count == 0:
+            empty.append(meta["id"])
+    print(f"\n{len(empty)} session(s) have no proposed project changes.")
+    print("Cleanup keeps all approved environments/revisions, the standard image,"
+          " the backed-up Goose profile, legacy history and original projects.")
+    action = choose("Clean up earlier experiments:", [
+        ("empty", f"Discard {len(empty)} sessions with no project changes (ONE typed approval)"),
+        ("one", "Inspect/discard a particular session, including one with changes"),
+    ])
+    if action == "empty":
+        if empty:
+            api.discard_empty_sessions(empty)
+        else:
+            print("Nothing to discard. All remaining sessions have changes to review.")
+    elif action == "one":
+        existing_session(api)
+
+
+def environment_actions(api, name):
+    while True:
+        record = api.catalogue()["environments"].get(name)
+        if record is None:
+            print("Environment no longer exists; returning to cockpit.")
+            return
+        active = record.get("active")
+        print(f"\nReusable environment: {name}"
+              f"\n  Active version: {('r' + active) if active else '(inactive)'}"
+              f"\n  All approved revisions: {', '.join('r' + r for r in sorted(record['versions'], key=int))}")
+        print("Changing the active version affects NEW sessions only; existing "
+              "sessions keep their original tools.")
+        actions = [
+            ("start", "Start safe Goose session using this environment"),
+            ("update", f"Create an improved revision of {name} from a session"),
+            ("rollback", "Choose which approved revision new sessions use"),
+            ("rebuild", "Verify/rebuild an existing approved revision (no activation)"),
+        ]
+        candidate_dir = api.STATE / "candidates" / name
+        if candidate_dir.is_dir():
+            actions.append(("candidate", "Review a prepared but NOT YET approved revision"))
+        if name != "standard":
+            actions.append(("remove", "Deactivate this environment (keep all revisions)"))
+        action = choose(f"What do you want to do with {name}?", actions)
+        if action is None:
+            return
+        if action == "start":
+            if not active:
+                print("Environment inactive. Activate an approved revision first.")
+            else:
+                new_session(api, environment=name)
+        elif action == "update":
+            if name == "standard":
+                print("The standard base is upgraded through Initial setup. To add tools,"
+                      " use a new named environment built from a standard session.")
+                continue
+            eligible = [m for m in api.list_sessions()
+                        if m["environment"] == name and m["revision"] == active]
+            sid = choose(f"Choose a session already using {name} r{active}:", [
+                (m["id"], session_label(m, api)) for m in eligible
+            ])
+            if sid is None:
+                print(f"To update {name}, start a session with its ACTIVE revision,"
+                      " install the desired tools inside Goose, then return here.")
+            else:
+                save_session_tools(api, sid)
+        elif action in ("rollback", "rebuild"):
+            rev = choose_revision(api, name)
+            if rev is not None:
+                (api.rollback if action == "rollback" else api.rebuild)(name, rev)
+        elif action == "candidate":
+            approve_candidate(api, name)
+        elif action == "remove":
+            api.remove_environment(name)
 
 
 def environments_menu(api):
     while True:
-        action = choose("Environments (pinned recipes, not project files):", [
-            ("list", "Show approved environments and revisions"),
-            ("save", "Save tools from a selected session (guided revision)"),
-            ("candidate", "Review existing unapproved proposal"),
-            ("rollback", "Activate an older approved revision for future sessions"),
-            ("rebuild", "Rebuild/verify an approved revision (no activation)"),
-            ("standard", "Build or upgrade the pinned standard base"),
-            ("remove", "Deactivate a named environment (retain recipes and images)")
-        ])
-        if action is None:
+        records = api.catalogue()["environments"]
+        options = [
+            (name, f"{name} | "
+             f"{'r' + record['active'] + ' active' if record.get('active') else 'inactive'}"
+             f" | {len(record['versions'])} approved revision(s)")
+            for name, record in sorted(records.items(), key=lambda pair: (pair[0] != "standard", pair[0]))
+        ]
+        options += [
+            ("create-from-session", "Create a NEW reusable environment from a session's installed tools"),
+            ("pending", "Review pending changes to reusable environments"),
+            ("standard-setup", "Build/upgrade the standard environment"),
+        ]
+        choice = choose("Select an environment, or create one from a session:", options)
+        if choice is None:
             return
-        if action == "list":
-            api.report()
-        elif action == "save":
+        if choice == "create-from-session":
             save_session_tools(api)
-        elif action == "candidate":
+        elif choice == "pending":
             approve_candidate(api)
-        elif action in ("rollback", "rebuild"):
-            env = choose_environment(api, include_inactive=True)
-            if env is not None:
-                rev = choose_revision(api, env)
-                if rev is not None:
-                    (api.rollback if action == "rollback" else api.rebuild)(env, rev)
-        elif action == "standard":
-            record = api.catalogue()["environments"].get("standard", {})
+        elif choice == "standard-setup":
+            record = records.get("standard", {})
             api.build_standard(bool(record.get("active")))
-        elif action == "remove":
-            env = choose_environment(api, named_only=True)
-            if env is not None:
-                api.remove_environment(env)
+        else:
+            environment_actions(api, choice)
 
 
 def help_text():
     print("""
-A workspace is your registered ORIGINAL project. Goose receives only a private copy.
-A session is that private copy + its own Goose home/tools and pinned environment.
-An environment is an approved, versioned tool image: 'standard' or a named one.
-Example: create session 'Add black' from python-tools r1, install black==25.1.0
-with uv tool, then use Environments > Save tools to propose and approve r2.
-The unapproved recipe is internal; nothing is activated until typed approval.
-Rollback chooses r1 for NEW sessions; r2 sessions stay pinned.
-Project review is separate: a diff is NOT permission to write the original.
-Existing CLI apply requires exact file paths and typed consent; a Git-based batch
-review/merge UI is planned separately. No original .git is given to Goose.
-Use 'aiw goose sandbox --help' for stable-ID scripting and advanced commands.
-Bridge networking/provider credentials are NOT a hostile-code security boundary.
+A quick mental model:
+  PROJECT: your real folder. Goose cannot write to it from a sandbox.
+  SESSION: a temporary private copy of that folder + Goose history/tools.
+  ENVIRONMENT: reusable approved tools, e.g. standard r1 or python-tools r2.
+
+Takeoff: select your project -> choose standard (recommended) -> name what
+you want to do -> start Goose. Your original is not mounted in the container.
+When Goose finishes, select that named session to resume or inspect changes.
+Project review shows changes; accepting them is a separate host approval
+(the future Git batch review/merge is NOT yet in this PR).
+
+Example: Use python-tools r1, install black==25.1.0 with uv tool in its
+session, then improve python-tools from THAT session. Review exact tool pins;
+only typed approval makes r2 active for future sessions. Older sessions stay
+on their pinned revisions. Rollback restores r1 for future sessions.
+
+You do not need to learn 'candidate': it is an INTERNAL unapproved recipe
+for a future environment revision. Not a project merge. It may be discarded.
+
+The old direct Goose workflow remains under the separate legacy menu as
+a recovery/compatibility route. It writes its registered project directly.
+The sandbox route is the recommended default, but this is NOT hardened
+against hostile code/network access; provider credentials are accessible
+inside Goose. Inspect the security contract in docs/agent-sandboxes.md.
 """)
 
 
+def setup_menu(api):
+    action = choose("Initial setup / recovery (preserves your legacy Goose data):", [
+        ("migrate", "First-time: verified backup + isolated Goose settings/history"),
+        ("standard", "Build/upgrade the reusable standard environment"),
+        ("disable", "Disable NEW sandbox sessions (keep existing work/history)")
+    ])
+    if action == "migrate":
+        api.migration("enable")
+    elif action == "standard":
+        api.build_standard(bool(api.catalogue()["environments"].get("standard", {}).get("active")))
+    elif action == "disable":
+        api.migration("disable")
+
+
 def menu(api):
-    """Interaction only. Deliberately no new authority or Docker lifecycle."""
+    """Single integrated cockpit; no new Docker or original-project privileges."""
     while True:
         try:
-            action = choose("Goose sandboxes (opt-in):", [
-                ("sessions", "Sessions: create, resume, review, rename, discard"),
-                ("environments", "Environments: approve revisions, rollback, rebuild"),
-                ("setup", "One-time Goose profile setup / standard image"),
-                ("help", "Concepts and safety, with an example")
-            ])
+            print_cockpit(api)
+            action = choose("What would you like to do?", [
+                ("start", "Start a NEW safe Goose session (recommended)"),
+                ("sessions", "Continue or inspect one of your sessions"),
+                ("projects", "Manage the original project folders Goose can work on"),
+                ("environments", "Manage reusable tool environments and revisions"),
+                ("cleanup", "Tidy up earlier test sessions (no full reset)"),
+                ("setup", "Initial setup and recovery (advanced)"),
+                ("help", "How this works — one practical example")
+            ], default="start")
             if action is None:
                 return
-            if action == "sessions":
-                sessions_menu(api)
+            if action == "start":
+                new_session(api)
+            elif action == "sessions":
+                existing_session(api)
+            elif action == "projects":
+                workspace_menu(api)
             elif action == "environments":
                 environments_menu(api)
+            elif action == "cleanup":
+                cleanup_sessions(api)
             elif action == "help":
                 help_text()
             elif action == "setup":
-                step = choose("Setup (legacy Goose volume is never overwritten):", [
-                    ("migrate", "Back up legacy Goose data and initialize isolated profile"),
-                    ("standard", "Build/upgrade pinned standard image"),
-                    ("disable", "Disable creation of new sandboxes (preserve existing)")
-                ])
-                if step == "migrate":
-                    api.migration("enable")
-                elif step == "standard":
-                    api.build_standard(bool(api.catalogue()["environments"].get("standard", {}).get("active")))
-                elif step == "disable":
-                    api.migration("disable")
+                setup_menu(api)
         except (api.Refused, OSError, subprocess.SubprocessError) as exc:
             print(f"Operation blocked: {exc}")
-            print("Check the selected session/environment and try again; no approval was bypassed.")
+            print("Review your selection; no approval was bypassed. "
+                  "A failed multi-step operation may retain a private session/proposal "
+                  "for later inspection.")
         except KeyboardInterrupt:
-            print("\nCancelled. Returning to sandboxes.")
+            print("\nCancelled. Returning to the Goose menu.")
             return
