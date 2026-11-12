@@ -18,7 +18,15 @@ grep -Fq 'List llama.cpp builds' <<< "$local_menu_output"
 grep -Fq 'Setup generic Vulkan runtime' <<< "$local_menu_output"
 grep -Fq 'Setup Intel SYCL runtime (WSL / Ubuntu 24.04)' <<< "$local_menu_output"
 
-goose_menu_output="$(printf '1\n1\n8\nb\n\nb\nq\nq\n' | "$cli")"
+# Safe sandbox cockpit is the default entry; legacy direct-workspace Goose stays
+# accessible on purpose, behind an explicit advanced choice.
+cockpit_output="$(printf '1\n1\nb\nb\nq\n' | HOME="$temp_home" "$cli")"
+grep -Fq 'Goose sandbox cockpit' <<< "$cockpit_output"
+grep -Fq 'Your projects (' <<< "$cockpit_output"
+grep -Fq 'Your sessions (' <<< "$cockpit_output"
+grep -Fq 'Your environments (' <<< "$cockpit_output"
+grep -Fq 'Start a NEW safe Goose session' <<< "$cockpit_output"
+goose_menu_output="$(printf '1\n2\n8\nb\n\nb\nb\nq\n' | "$cli")"
 grep -Fq 'Update application' <<< "$goose_menu_output"
 grep -Fq 'Latest stable official release' <<< "$goose_menu_output"
 grep -Fq 'Enter a specific stable version' <<< "$goose_menu_output"
