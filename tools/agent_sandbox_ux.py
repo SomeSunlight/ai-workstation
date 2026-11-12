@@ -6,6 +6,7 @@ This module only selects objects and sequences their existing approval gates.
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 
 
 def choose(heading: str, items: list[tuple[str, str]]) -> str | None:
@@ -48,12 +49,13 @@ def choose_session(api):
     ])
 
 
-def choose_environment(api, *, named_only=False):
+def choose_environment(api, *, named_only=False, include_inactive=False):
     options = []
     for name, record in sorted(api.catalogue()["environments"].items()):
         active = record.get("active")
-        if active and (not named_only or name != "standard"):
-            options.append((name, f"{name} | active r{active} | "
+        if (active or include_inactive) and (not named_only or name != "standard"):
+            options.append((name, f"{name} | "
+                          f"{'active r' + active if active else 'inactive'} | "
                           f"{len(record['versions'])} approved revision(s)"))
     return choose("Approved environments (only new sessions use the active revision):", options)
 
@@ -155,12 +157,26 @@ def approve_candidate(api, name=None):
     recipe = (folder / "Dockerfile").read_text()
     print("\nProposed pinned recipe:\n" + recipe)
     api.inspect_recipe(recipe)
+    if not proposal.get("detected_uv_tools"):
+        print("This proposal recorded an EMPTY session tool inventory. It may be from "
+              "the wrong session; do not promote it blindly. Discard and re-create "
+              "from the intended session.")
+        if choose("Empty proposal:", [("discard", "Discard unapproved recipe"),
+                                       ("later", "Keep for manual inspection")]) == "discard":
+            api.discard_candidate(name)
+        return
     print("This is NOT an approved environment until the separate typed approval. "
           "You may edit the private Dockerfile outside Goose, then review it again.")
-    if choose("Proceed?", [("approve", "Verify/build/activate (requires typed approval)"),
-                           ("later", "Leave proposal unapproved for later review")]) == "approve":
+    action = choose("Proceed?", [
+        ("approve", "Verify/build/activate (requires typed approval)"),
+        ("later", "Leave proposal unapproved for later review"),
+        ("discard", "Discard this unapproved recipe (requires typed approval)")
+    ])
+    if action == "approve":
         api.promote(name)
         print("Only future sessions use the newly active revision; existing sessions are pinned.")
+    elif action == "discard":
+        api.discard_candidate(name)
     else:
         print("Proposal retained, unapproved. No active environment changed.")
 
@@ -237,7 +253,7 @@ def environments_menu(api):
         elif action == "candidate":
             approve_candidate(api)
         elif action in ("rollback", "rebuild"):
-            env = choose_environment(api)
+            env = choose_environment(api, include_inactive=True)
             if env is not None:
                 rev = choose_revision(api, env)
                 if rev is not None:
@@ -298,7 +314,7 @@ def menu(api):
                     api.build_standard(bool(api.catalogue()["environments"].get("standard", {}).get("active")))
                 elif step == "disable":
                     api.migration("disable")
-        except (api.Refused, OSError) as exc:
+        except (api.Refused, OSError, subprocess.SubprocessError) as exc:
             print(f"Operation blocked: {exc}")
             print("Check the selected session/environment and try again; no approval was bypassed.")
         except KeyboardInterrupt:
