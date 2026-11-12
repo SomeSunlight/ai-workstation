@@ -113,6 +113,28 @@ class SessionOperatorUX(unittest.TestCase):
         self.assertEqual(record["session"], sid)
         self.assertEqual(record["parent"], "standard")
 
+    def test_discard_unapproved_recipe_requires_approval(self):
+        self.add_session("abcdef123456", "Install ruff")
+        with mock.patch.object(service, "inventory", return_value=[("ruff", "0.14.1")]):
+            service.candidate("Install ruff", "ruff-tools")
+        proposed = service.STATE / "candidates" / "ruff-tools"
+        with mock.patch("builtins.input", return_value="incorrect"):
+            with self.assertRaisesRegex(core.Refused, "Expected exactly"):
+                service.discard_candidate("ruff-tools")
+        self.assertTrue(proposed.is_dir())
+        with mock.patch("builtins.input", return_value="DISCARD PROPOSAL ruff-tools"):
+            service.discard_candidate("ruff-tools")
+        self.assertFalse(proposed.exists())
+        self.assertTrue(service.session_dir("abcdef123456").exists())
+
+    def test_inactive_approved_revision_is_selectable(self):
+        with mock.patch.object(service, "catalogue", return_value={
+            "environments": {"python-tools": {
+                "active": None, "versions": {"1": {"image_id": "sha256:" + "a" * 64}}
+            }}
+        }), mock.patch("builtins.input", return_value="1"):
+            self.assertEqual(ux.choose_environment(service, include_inactive=True), "python-tools")
+
     def test_empty_inventory_stops_guided_environment_save(self):
         sid = "abcdef123456"
         self.add_session(sid, "Wrong session")
