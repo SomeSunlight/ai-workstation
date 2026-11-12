@@ -19,7 +19,7 @@ From the same cockpit, select **Continue or inspect a session** to resume, renam
 
 Choose **Tidy up earlier test sessions**. The cockpit separates sessions with zero *project* changes from those with unreviewed changes. It can discard the zero-change sessions together with **one typed approval** (`DISCARD N EMPTY SESSIONS`). **Empty here means no project file changes, not empty Goose conversation history**: discarding irreversibly removes each selected session's private history and tools. You can instead choose a specific session, inspect its proposed changes and discard it after the separate `DESTROY <ID>` confirmation.
 
-This does **not** delete original project folders, registrations, approved `standard` or named images, revision history, the verified Goose profile/backup, or legacy Goose history. A full reset is neither necessary nor recommended just to begin the new guided tests. Your existing approved `standard` r1 is ready to use immediately. For the prior `pr1-test` run, three sessions have no proposed project changes and one has two: **review the latter before deciding to discard it**.
+This does **not** delete original project folders, registrations, approved `standard` or named images, revision history, the verified Goose profile/backup, or legacy Goose history. A full reset is neither necessary nor recommended just to begin the new guided tests. If `standard` is already approved, you can reuse it immediately. If any old session has proposed project changes, **review those changes before deciding to discard that session**.
 
 ### Example: refine a reusable environment
 
