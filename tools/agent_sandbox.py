@@ -351,6 +351,7 @@ def start(workspace_name: str, env_name: str, title: str | None = None) -> str:
 
 def run_session(identifier: str, goose_args: list[str]) -> None:
     folder, meta = current_session(identifier)
+    identifier = meta["id"]  # never derive Docker names or labels from a mutable title
     if inspect_image(meta["image_id"])["Id"] != meta["image_id"]:
         raise Refused("Approved image unavailable or changed.")
     if not inspect_volume(meta["home_volume"]):
@@ -404,6 +405,7 @@ def candidate(identifier: str, name: str, upgrade: bool = False) -> None:
     if bool(catalogue()["environments"].get(name)) != upgrade:
         raise Refused("Use --upgrade for existing names; new names cannot request upgrades.")
     folder, meta = current_session(identifier)
+    identifier = meta["id"]  # persist the immutable identity, not the display title
     directory = STATE / "candidates" / name
     if directory.exists():
         raise Refused("Candidate already exists.")
