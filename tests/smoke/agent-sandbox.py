@@ -147,6 +147,108 @@ class SessionOperatorUX(unittest.TestCase):
         prepare.assert_not_called()
 
 
+    def test_cockpit_one_overview_three_inventories(self):
+        sid = "abcdef123456"
+        self.add_session(sid, "Test readable cockpit")
+        service.save_catalog({"environments": {
+            "standard": {"active": "1", "versions": {
+                "1": {"image_id": "sha256:" + "a" * 64}}}}})
+        with (mock.patch.object(ux, "workspace_entries",
+                                return_value=[("project-one", "/safe/original")]),
+              contextlib.redirect_stdout(io.StringIO()) as captured):
+            ux.print_cockpit(service)
+        output = captured.getvalue()
+        for text in ("Your projects (1", "Your sessions (1",
+                     "Your environments (1", "Test readable cockpit",
+                     "project-one", "standard: r1 active"):
+            self.assertIn(text, output)
+        self.assertEqual(output.count("Your sessions ("), 1)
+        self.assertNotIn("No project changes.", output)
+
+    def test_first_session_recommends_standard_and_keeps_user_title(self):
+        service.save_catalog({"environments": {
+            "standard": {"active": "1", "versions": {"1": {}}},
+            "python-tools": {"active": "2", "versions": {"1": {}, "2": {}}}}})
+        with (mock.patch.object(ux, "workspace_entries",
+                                return_value=[("sandbox-test", "/safe/project")]),
+              mock.patch.object(service, "start", return_value="abcdef123456") as start,
+              mock.patch.object(service, "run_session") as run,
+              mock.patch("builtins.input", side_effect=[
+                  "1", "", "Understand my project", "2"]),
+              contextlib.redirect_stdout(io.StringIO())):
+            ux.new_session(service)
+        start.assert_called_once_with("sandbox-test", "standard",
+                                      title="Understand my project")
+        run.assert_not_called()
+
+    def test_cleanup_only_selects_sessions_without_proposed_changes(self):
+        self.add_session("abcdef123456")
+        self.add_session("aabbcc001122")
+        modified = self.add_session("123456abcdef")
+        (modified / "work" / "proposed.txt").write_text("still to review")
+        with (mock.patch.object(service, "discard_empty_sessions") as discard,
+              mock.patch("builtins.input", return_value="1"),
+              contextlib.redirect_stdout(io.StringIO()) as captured):
+            ux.cleanup_sessions(service)
+        self.assertEqual(set(discard.call_args.args[0]),
+                         {"abcdef123456", "aabbcc001122"})
+        self.assertNotIn("123456abcdef", discard.call_args.args[0])
+        self.assertIn("1 proposed file change(s)", captured.getvalue())
+
+    @unittest.skipIf(os.name == "nt", "Linux Docker cleanup locking")
+    def test_cleanup_bulk_requires_approval_and_preserves_nonempty_sessions(self):
+        sid = "abcdef123456"
+        self.add_session(sid, "Old empty test")
+        modified = self.add_session("123456abcdef", "Has project proposal")
+        (modified / "work" / "project.py").write_text("changed")
+        with (mock.patch.object(service, "owner_lock",
+                                return_value=contextlib.nullcontext()),
+              mock.patch.object(service, "inspect_volume", return_value=True),
+              mock.patch.object(service, "docker", return_value="") as docker,
+              mock.patch.object(service.subprocess, "run", return_value=mock.Mock(
+                  returncode=1, stdout="", stderr=""))):
+            with mock.patch("builtins.input", return_value="wrong"):
+                with self.assertRaisesRegex(core.Refused, "Expected exactly"):
+                    service.discard_empty_sessions([sid])
+            self.assertTrue(service.session_dir(sid).exists())
+            docker.assert_not_called()
+            with mock.patch("builtins.input", return_value="DISCARD 1 EMPTY SESSIONS"):
+                service.discard_empty_sessions([sid])
+            self.assertFalse(service.session_dir(sid).exists())
+            self.assertTrue(modified.exists())
+            docker.assert_called_once_with("volume", "rm", "aiw-agent-home-" + sid)
+            with mock.patch("builtins.input", return_value="DISCARD 1 EMPTY SESSIONS"):
+                with self.assertRaisesRegex(core.Refused, "has proposed project changes"):
+                    service.discard_empty_sessions(["123456abcdef"])
+            self.assertTrue(modified.exists())
+
+    def test_project_registration_reuses_existing_bash_boundary(self):
+        with (mock.patch.object(ux, "workspace_entries", return_value=[]),
+              mock.patch.object(service, "list_sessions", return_value=[]),
+              mock.patch.object(ux.subprocess, "run") as run,
+              mock.patch("builtins.input", side_effect=[
+                  "1", "good-project", "/some/existing/project", "b"]),
+              contextlib.redirect_stdout(io.StringIO())):
+            ux.workspace_menu(service)
+        run.assert_called_once_with(
+            [str(service.ROOT / "bin/aiw"), "goose", "workspace", "add",
+             "good-project", "/some/existing/project"], check=True)
+
+    def test_session_and_environment_reports_are_separate(self):
+        self.add_session("abcdef123456", "One named session")
+        service.save_catalog({"environments": {
+            "standard": {"active": "1", "versions": {
+                "1": {"image_id": "sha256:" + "a" * 64}}}}})
+        with contextlib.redirect_stdout(io.StringIO()) as captured:
+            service.report("sessions")
+        self.assertIn("One named session", captured.getvalue())
+        self.assertNotIn("Approved sandbox environments", captured.getvalue())
+        with contextlib.redirect_stdout(io.StringIO()) as captured:
+            service.report("environments")
+        self.assertIn("standard", captured.getvalue())
+        self.assertNotIn("Retained sessions", captured.getvalue())
+
+
 class ProjectBoundary(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
