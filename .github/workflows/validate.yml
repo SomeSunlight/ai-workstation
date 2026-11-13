@@ -45,6 +45,7 @@ jobs:
           bash tests/smoke/local-inference-service.sh
           bash tests/smoke/goose-runtime.sh
           python tests/smoke/agent-sandbox.py
+          python -B tests/smoke/openshell-preflight.py
           bash tests/smoke/open-webui-runtime.sh
           bash tests/smoke/interactive-menu.sh
           uv run --frozen python tests/smoke/services-registry.py
