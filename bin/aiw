@@ -75,7 +75,7 @@ Native services (Process Compose)
  1 Paths      2 Initialize    3 Install     4 Validate
  5 Status     6 TUI           7 Start       8 Stop       9 Logs
 10 Add client 11 Clients     12 Render S02  13 Rename client
-14 Concepts   ? Show menu again             b Back
+14 Concepts  15 Port owners   ? Show menu again    b Back
 The menu prints once; actions remain in scrollback.
 Guide: docs/native-services.md
 EOF_SERVICES
@@ -145,6 +145,7 @@ native_services_menu() {
                 printf 'Imported key = existing shared credential, retained for migration.\n'
                 printf 'Full details: docs/native-services.md\n'
                 ;;
+            15) run_menu_action native_services ports ;;
             *) printf 'Unknown option. Press ? to show the menu.\n' ;;
         esac
         printf '%s\n' "--- End of action $choice (press ? for menu) ---"
@@ -189,6 +190,7 @@ Native host processes (Process Compose, optional):
   aiw services check         Validate YAML; never starts services
   aiw services up            Explicitly start the configured native project
   aiw services status        Inspect native processes
+  aiw services ports         Read-only TCP listeners and process owners
   aiw services client add goose-laptop --policy passthrough
   aiw services client render # Render hashes for DISPATCHER_CLIENT_CONFIG
   aiw services where         Show editable config location

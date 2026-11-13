@@ -499,8 +499,9 @@ def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = 
                 # Fail closed if port ownership cannot be checked.
                 ps_command = (
                     "$ErrorActionPreference='Stop'; "
-                    "if (@(Get-NetTCPConnection -State Listen -LocalPort " +
-                    str(port) + " -ErrorAction SilentlyContinue).Count -gt 0) "
+                    "if (@(Get-NetTCPConnection -State Listen -ErrorAction Stop | " +
+                    "Where-Object { [int]$_.LocalPort -eq " + str(port) +
+                    " }).Count -gt 0) "
                     "{ exit 42 }; exit 0"
                 )
                 try:
@@ -526,8 +527,8 @@ def preflight(folder: Path, process: str | None = None, *, verify_paths: bool = 
                             name + ": port " + str(port) +
                             " is already listening. Refusing duplicate service startup."
                         )
-    print("[OK] Config paths and declared loopback ports validated; no service started.")
-    print("Note: final Windows port/PID ownership and endpoint readiness require real-host verification.")
+    print("[OK] Configured service TCP ports are free; required paths and integrity checked.")
+    print("No service was started. Endpoint readiness is checked after launch.")
 
 
 def main() -> None:

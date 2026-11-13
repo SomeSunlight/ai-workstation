@@ -22,6 +22,7 @@ bash ./tests/smoke/goose-compose-config.sh
 python3 -B tests/smoke/openshell-preflight.py
 if [[ -x "${ROOT}/.venv/bin/python" ]]; then
   "${ROOT}/.venv/bin/python" tests/smoke/services-registry.py
+  "${ROOT}/.venv/bin/python" tests/smoke/native-operation-diagnostics.py
 fi
 
 if [[ -x "${HOME}/.local/bin/uv" ]]; then
