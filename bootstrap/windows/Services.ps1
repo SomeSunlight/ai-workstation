@@ -128,7 +128,7 @@ function Show-SetupMenu {
     Write-Host '  4  Check the edited settings (without starting services)'
     Write-Host '  5  Apply edited settings for the next startup'
     Write-Host '     Generate the managed process definition, then validate it.'
-    Write-Host '  6  Check whether old services still occupy the ports'
+    Write-Host '  6  Show service TCP ports and process owners'
     Write-Host '  7  Show the private file locations'
     Write-Host '  8  Install official Process Compose (smoke tests only; not approved for live host)'
     Write-Host '  9  Open the step-by-step setup guide'
@@ -149,7 +149,7 @@ function Show-KeysMenu {
     Write-Host '  3  Copy an application API key to the clipboard'
     Write-Host '  4  Prepare the Dispatcher key-verification file'
     Write-Host '     Write hashes only; this does not restart the Dispatcher.'
-    Write-Host '  5  Import an OLD shared gateway key (migration only)'
+    Write-Host '  5  Import a legacy shared gateway key (migration only)'
     Write-Host '  6  Rename an application identity (keep its key)'
     Write-Host '  7  Remove an application from the registry'
     Write-Host '  8  Change model parameter policy for an existing application'
@@ -199,12 +199,14 @@ function Start-FirstTimeSetup {
 
 function Start-EnabledServices {
     Write-Host 'Starts the configured native AI services under one Process Compose supervisor.'
-    Write-Host 'If the previous startup script still owns any ports, STOP here and plan a controlled handover.'
-    Write-Host 'Only the separately opted-in, exact-checksum Windows pilot may start a real native-host project.'
-    if (-not (Confirm-Aiw 'Start all enabled services?')) { return }
+    Write-Host 'Existing supervisors are reused; unsafe port conflicts block startup.'
+    if (-not (Confirm-Aiw 'Start all enabled services?')) {
+        Write-Host '[INFO] Start cancelled. No services were changed.'
+        return
+    }
     $openMonitor = Confirm-Aiw 'Open the live TUI monitor (status and embedded logs) after starting?' $true
     Invoke-Aiw @('up')
-    Write-Host '[OK] AI Workstation supervisor launched. Inspect individual readiness in the monitor.'
+    Write-Host '[OK] Start request completed. Check Status for individual service readiness.'
     if ($openMonitor) {
         Write-Host 'Opening live monitor. Exit the monitor to return here; exiting it does not stop services.'
         Invoke-Aiw @('tui')
@@ -271,7 +273,11 @@ function Run-Menu {
                     Write-Warning 'Stops the AIW-owned services in reverse dependency order, then their supervisor.'
                     Write-Host 'The command waits for the supervisor to exit and for service ports to be free.'
                     Write-Host 'A slow Strata shutdown can take time. No second instance will be started.'
-                    if (Confirm-Aiw 'Stop all AIW-managed services?') { Invoke-Aiw @('down') }
+                    if (Confirm-Aiw 'Stop all AIW-managed services?') {
+                        Invoke-Aiw @('down')
+                    } else {
+                        Write-Host '[INFO] Stop cancelled. No services were changed.'
+                    }
                 }
                 '6' { Restart-ManagedService }
                 default { Write-Warning 'Unknown operation. Enter ? for the list.' }
@@ -286,6 +292,7 @@ function Setup-Menu {
     Show-SetupMenu
     while ($true) {
         $choice = (Read-Host 'Setup operation (0=back, ?=options)').Trim()
+        if ($choice -eq '') { Write-Host '[INFO] Enter an option or 0 to go back.'; continue }
         if ($choice -eq '0') { return }
         if ($choice -eq '?') { Show-SetupMenu; continue }
         Write-Host ''
@@ -309,9 +316,8 @@ function Setup-Menu {
                     }
                 }
                 '6' {
-                    Write-Host 'Listening ports owned by the OLD script will be reported as conflicts.'
-                    Write-Host 'This check neither stops processes nor changes settings.'
-                    Invoke-Aiw @('host','preflight')
+                    Write-Host 'Configured TCP listeners and their process owners (read-only).'
+                    Invoke-Aiw @('ports')
                 }
                 '7' { Invoke-Aiw @('where') }
                 '8' {
@@ -488,7 +494,7 @@ function Help-Menu {
                     Write-Host '  aiw host validate            # check JSON without starting'
                     Write-Host '  aiw host render              # apply edited file while stopped'
                     Write-Host '  aiw check                    # supervisor config dry-run'
-                    Write-Host '  aiw up / status / logs-file / tui / down'
+                    Write-Host '  aiw up / status / ports / logs-file / tui / down'
                     Write-Host '  aiw client list / add / copy / render'
                     Write-Host '  aiw command-status / unregister  # Windows command registration'
                 }

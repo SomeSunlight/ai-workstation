@@ -21,6 +21,7 @@ bash ./tests/smoke/goose-maintenance.sh
 bash ./tests/smoke/goose-compose-config.sh
 if [[ -x "${ROOT}/.venv/bin/python" ]]; then
   "${ROOT}/.venv/bin/python" tests/smoke/services-registry.py
+  "${ROOT}/.venv/bin/python" tests/smoke/native-operation-diagnostics.py
 fi
 
 if [[ -x "${HOME}/.local/bin/uv" ]]; then
