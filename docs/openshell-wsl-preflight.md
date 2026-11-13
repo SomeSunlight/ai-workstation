@@ -200,6 +200,13 @@ previous minor releases at their newest patch [S1]. Check upstream
 [security advisories](https://github.com/NVIDIA/OpenShell/security/advisories)
 and fixes before *any* deployment. CNCF participation and stable release
 qualification are **not** certification of this WSL threat model.
+NVIDIA's [August 2026 OpenShell security bulletin](https://github.com/NVIDIA/product-security/blob/main/2026/5872/5872.md)
+lists critical vulnerabilities including CVE-2026-65093 (sandbox escape)
+and CVE-2026-65083 (sandbox provisioning input validation) affecting OpenShell
+up through v0.0.33 and identifies **v0.0.34** as the fixed release.
+The reviewed v0.1.8 is later than that fix, but this does **not** establish
+the absence of newer vulnerabilities. Check current upstream advisories and
+security notices at deployment and on every update.
 
 **Fallback:** retain merged PR #65 behavior unchanged until a replacement
 has passed both gates. Existing Docker workspace review is useful for
