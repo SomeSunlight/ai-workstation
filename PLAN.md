@@ -1,3 +1,14 @@
+## Issue #68 — OpenShell existing-WSL research gate 1 (review branch)
+
+Scope: upstream v0.1.8 theory, **passive-only** reusable preflight, mocked tests and a public sanitized decision memo. No host rollout, service/config changes, Issue #69 work, or PR #65 modification. Owner review is required before merge or any host execution.
+
+- [x] Read Issue #68, current main context, and current upstream support/security/runtime documentation.
+- [ ] Implement standard-library-only passive WSL/Linux preflight with offline example, conservative statuses and redacted text/JSON.
+- [ ] Add mocked offline tests proving no subprocess/network/write operations and correct uncertainty/redaction behavior.
+- [ ] Publish version-linked evidence, non-goals, explicit open questions and CONDITIONAL decision in Issue #68 and branch documentation.
+- [ ] Execute focused tests in an isolated disposable development environment and inspect branch diff / CI.
+- [ ] Open an independent review PR; keep #69 blocked and #65 unchanged; await operator approval before any laptop execution.
+
 # AI Workstation Plan
 
 ## Issue #64 — operator-facing agent sandbox UX (2026-11-12, draft first slice)
