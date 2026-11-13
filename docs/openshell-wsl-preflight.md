@@ -14,17 +14,21 @@ Labels below are deliberately different:
 - **Documented:** an upstream statement for v0.1.8.
 - **Implementation:** an inspected upstream source path at the v0.1.8 tag;
   this is not proof of behavior on this host.
-- **Observed on this WSL:** **nothing**. The operator has **not** approved
-  execution of the preflight; no host data has been collected.
+- **Observed on this WSL (owner-supplied passive output, 2026-11-13):**
+  9 PASS, 7 UNKNOWN, 3 POLICY-APPROVAL-NEEDED, **0 FAIL** across 19
+  checks; 10/10 offline unit tests passed. These are local capability
+  observations, **not** OpenShell sandbox admission. Full terminal output
+  is intentionally not in the public repository: the surrounding shell
+  prompt contains identifying host/user information.
 - **Unverified:** active runtime behavior, environment specifics, policy
   permissions, or interactions with Windows.
 
 | Question | Documented upstream | Implementation evidence | Observed on owner WSL | Unknown / next discriminator |
 | --- | --- | --- | --- | --- |
-| Host support | Debian/Ubuntu x86_64/arm64 supported; **Windows WSL2 + Docker Desktop x86_64 experimental**, not qualified supported Linux-on-WSL by inference [S1] | Published release tag [S0] | Not inspected | In-WSL Docker/Podman arrangement and enterprise support clearance |
-| Driver | Docker supported (Docker Engine/Desktop **>=28.0**); Podman 5.x rootless with cgroups v2 and active user socket; MicroVM uses Linux KVM [S1, S3] | Docker gateway uses a Unix socket and default workload network=none [S3] | Not inspected | Existing approved backend, socket usability, systemd and install/daemon permissions |
-| Sandbox bootstrap | Landlock **ABI >=3**, enabled LSM; seccomp nested user notification with atomic ADDFD/SEND; parent/child task-memory read; SO_BINDTODEVICE without added caps [S1] | Kernel ABI query [S7]; active notification/ADDFD probes [S8] | Not inspected | Container profile and real workload admission; passive checks alone insufficient |
-| Other Linux controls | Unprivileged non-root process, **no Linux capabilities**, no_new_privs, Landlock, seccomp, namespaces, kernel-enforced filesystem [S2] | OpenShell's version-specific runtime source [S7, S8] | Not inspected | Namespace/mount and cgroup delegation, Windows host mounts, Docker privilege reachability |
+| Host support | Debian/Ubuntu x86_64/arm64 supported; **Windows WSL2 + Docker Desktop x86_64 experimental**, not qualified supported Linux-on-WSL by inference [S1] | Published release tag [S0] | Passive OS/architecture checks PASS; support tier still unqualified | In-WSL Docker/Podman arrangement and enterprise support clearance |
+| Driver | Docker supported (Docker Engine/Desktop **>=28.0**); Podman 5.x rootless with cgroups v2 and active user socket; MicroVM uses Linux KVM [S1, S3] | Docker gateway uses a Unix socket and default workload network=none [S3] | Docker client/socket presence only; no daemon call | Existing approved backend, socket usability, systemd and install/daemon permissions |
+| Sandbox bootstrap | Landlock **ABI >=3**, enabled LSM; seccomp nested user notification with atomic ADDFD/SEND; parent/child task-memory read; SO_BINDTODEVICE without added caps [S1] | Kernel ABI query [S7]; active notification/ADDFD probes [S8] | Passive Landlock minimum and USER_NOTIF-action availability PASS; no sandbox admitted | Container profile and real workload admission; passive checks alone insufficient |
+| Other Linux controls | Unprivileged non-root process, **no Linux capabilities**, no_new_privs, Landlock, seccomp, namespaces, kernel-enforced filesystem [S2] | OpenShell's version-specific runtime source [S7, S8] | Passive cgroups/namespace-handle presence PASS; runtime state UNKNOWN | Namespace/mount and cgroup delegation, Windows host mounts, Docker privilege reachability |
 | Network | Default deny at supervisor proxy/OPA plus driver outer fence [S2]; Docker workload network=none [S3] | Implementation not independently exercised here | Not inspected | Direct egress bypass, IPv4/IPv6/UDP/DNS/raw, host services, localhost/LAN |
 | L7 policy | Inspected API traffic defaults to `enforcement: audit` (logs but **does not block**); set `enforce` [S2] | Not exercised | Not inspected | Effective policy via inspection and adversarial requests |
 | Filesystem policy | Landlock private/bootstrap baseline is mandatory; additional filesystem policy defaults to `best_effort`, use `hard_requirement` for fail-closed [S2] | ABI detection in source [S7] | Not inspected | Enforced actual runtime policy, mounted filesystem and WSL drive visibility |
@@ -161,8 +165,8 @@ as real host evidence. The focused unit tests mock kernel queries, exercise
 redaction, known FAIL/UNKNOWN handling and show that example mode never
 reads host files.
 
-**Commands reserved for separate explicit permission on the laptop,
-NOT executed for #68:**
+**Passive-only commands the operator chose to run on their own laptop
+on 2026-11-13; **no installation or active runtime test**:**
 
 ```sh
 python3 -B tools/openshell_preflight.py
@@ -199,8 +203,9 @@ on the owner WSL. A compatible pre-existing daemon might allow an
 operator-approved Docker-driver experiment, but no engine switch or
 installation is assumed.
 
-**Exact conditions to reconsider:** (1) operator approves collecting the
-passive local report; (2) privacy-reviewed results reveal no hard blocker;
+**Exact conditions to reconsider:** (1) owner-supplied passive results are
+reviewed privately and reveal no hard blocker (**observed in this gate**);
+(2) any fuller report receives a separate privacy review before public sharing;
 (3) authorized container driver and enterprise policy approval are stated;
 (4) an *independent* practical gate is explicitly unlocked by the owner;
 (5) disposable adversarial trials pass upstream's full active runtime
