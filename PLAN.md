@@ -1,3 +1,23 @@
+## Issue #68 — OpenShell existing-WSL research gate 1 (review branch)
+
+Scope: upstream v0.1.8 theory, **passive-only** reusable preflight, mocked tests and a public sanitized decision memo. No host rollout, service/config changes, Issue #69 work, or PR #65 modification. Owner review is required before merge or any host execution.
+
+- [x] Read Issue #68, current main context, and current upstream support/security/runtime documentation.
+- [x] Implement standard-library-only passive WSL/Linux preflight with offline example, conservative statuses and redacted text/JSON.
+- [x] Add mocked offline tests proving no subprocess/network/write operations and correct uncertainty/redaction behavior.
+- [x] Publish version-linked evidence, non-goals, explicit open questions and CONDITIONAL decision in Issue #68 and branch documentation.
+- [x] Execute focused tests in an isolated disposable development environment and inspect branch diff / CI.
+- [x] Open an independent review PR; keep #69 blocked and #65 unchanged; await operator approval before any laptop execution.
+Checkpoint (2026-11-13): CONDITIONAL decision in Issue #68; independent Draft PR #70.
+Upstream baseline pinned to NVIDIA OpenShell v0.1.8. The new 10-test
+standard-library suite ran in GitHub-hosted Ubuntu validation, whose
+"Verify repository files" step passed (run #43420360480). No owner WSL
+script execution or host data collection. Branch diff reviewed: only
+PLAN, documentation, test/CI wiring and stand-alone preflight. This is
+review-ready, **not** owner-approved or merge-ready. Gate #69 stays blocked
+and merged PR #65 stays as-is.
+
+
 # AI Workstation Plan
 
 ## Issue #64 — operator-facing agent sandbox UX (2026-11-12, draft first slice)
