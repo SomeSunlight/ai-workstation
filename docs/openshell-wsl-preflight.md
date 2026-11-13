@@ -41,6 +41,22 @@ its own user-service/cgroup/network requirements; do not silently install,
 enable or switch it. A `vm` driver requires **KVM** and is outside this
 gate: **never require /dev/kvm for the Docker/Podman driver**.
 
+## Installation and local-service footprint (not authorized)
+
+The v0.1.8 Linux CLI is a static musl build; the standalone Linux gateway
+binary requires **glibc >= 2.28** [S1]. The upstream Linux installer selects
+a Debian/Ubuntu package or RPM and **starts a systemd user gateway service**
+(listening on the loopback gateway endpoint) [S6]. It is emphatically
+**not** a read-only compatibility check. Package-manager rights, user-service
+availability, a gateway-managed local configuration/state location,
+downloaded trusted supervisor/runtime images, and access to the chosen
+container engine must all be reviewed. Some steps may require corporate
+administrator authorization even if the final workload runs non-root.
+A standalone binary/manual package path changes bootstrap mechanics but
+does not waive runtime qualification or corporate permissions. No such
+install, user service start/stop, image pull, daemon access or configuration
+change is part of this gate.
+
 ## Security boundary to prove, not assume
 
 1. **WSL/Windows adjacency:** WSL's host integration is a meaningful threat
