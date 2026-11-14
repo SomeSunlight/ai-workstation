@@ -1,3 +1,16 @@
+## Issue #71 — OpenShell workstations: first thin integration (Draft PR)
+
+**Baseline:** current `main` after merged docs PR #72. This independent review branch changes no host, Docker runtime, existing Goose sessions, or data. OpenShell v0.1.8 is operator-tested on one WSL2 + in-WSL Docker host, not generally security-qualified. Owner explicitly approves any host test and any merge.
+
+- [x] Read #71, closed research gates #68/#69, merged PR #72 runbook, source context and Development Workflow; decide responsibility split first.
+- [ ] Write short ADR describing upstream ownership, typed user actions, trust boundary, state/export policy and unchanged #65 fallback.
+- [ ] Add one opt-in Goose-first `aiw workstations` entry and standalone stdlib adapter: title-first list/selection, create with reviewed policy + pinned OCI reference, status/start/stop, interactive Goose/shell, full registered-project copy and targeted export.
+- [ ] Add offline mocks for strict no-overwrite/no-delete and command/approval contracts; integrate into CI without accessing OpenShell, Docker or a user host.
+- [ ] Review focused tests and diff; open independent Draft PR. No ContextCanon source changes in this first slice: update authorized source and regenerate only after owner reviews the ADR.
+- [ ] Owner reviews and authorizes any real WSL test / exact-head merge. Unresolved: interactive extension hang, pinned offline tools, provider convenience, full backup/restore and broader negative security tests.
+
+---
+
 ## Issue #71 — OpenShell first-flight reproduction and #69 research handoff (2026-11-14)
 
 **Scope of this documentation-only PR:** capture the operator-proven OpenShell v0.1.8 / Goose 1.59.0 WSL journey in a sanitized, repeatable runbook; update no runtime, source context, provider credentials, Docker/WSL configuration, or host. Integration architecture, security qualification, legacy migration and new features belong in #71's later scoped PRs. Owner squash-merges only after review.
