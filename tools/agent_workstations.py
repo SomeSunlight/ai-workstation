@@ -204,6 +204,7 @@ def create(title: str, policy_file: str | None = None, *,
     print(f"Network choice: {PROFILE_TITLES[selected_profile]}")
     if host:
         print(f"Allowed website: {host}:443 (GET/HEAD/OPTIONS, entire host; not other redirect hosts)")
+        print("Read-only HTTP still permits data egress via GET URLs (not DLP).")
         print("A DNS name may resolve to a private address. Review the actual effective policy")
         print("and test safely before allowing sensitive data or untrusted downloads.")
     if profile == "flexible":
