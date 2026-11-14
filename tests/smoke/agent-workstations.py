@@ -102,7 +102,7 @@ class WorkstationTests(unittest.TestCase):
     def test_goose_https_and_no_key_in_arguments(self):
         entry = {"name": "internal", "title": "Display", "phase": "Ready"}
         with patch.object(module, "openshell",
-                          side_effect=lambda *args, capture=False: "/home/goose\\n" if capture else "") as cli:
+                          side_effect=lambda *args, capture=False: "/home/goose" if capture else "") as cli:
             for invalid in ("http://example.invalid", "https://user:pw@example.invalid"):
                 with self.assertRaises(module.Refused):
                     module.goose(entry, invalid, "work")
