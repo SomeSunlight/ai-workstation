@@ -191,10 +191,10 @@ show_help() {
     cat <<'EOF'
 
 Agent workstations (OpenShell on Linux / WSL, opt-in):
-  aiw workstations              Human-title workstation selection and transfer menu
-  aiw workstations list         View OpenShell-managed AIW Goose workstations
+  aiw workstations              Choose a persistent Goose work area and transfer files
+  aiw workstations list         Show your Goose work areas and their current state
   aiw workstations --help       Show advanced commands
-  See docs/openshell-architecture.md and docs/openshell-hands-on.md
+  See docs/openshell-network-profiles.md and docs/openshell-architecture.md
 
 Native host processes (Process Compose, optional):
   aiw services init          Create the PRIVATE per-host YAML (once)
@@ -314,7 +314,7 @@ AI Workstation
 5) Command help
 6) Configure AI Workstation (edit YAML settings)
 7) Native services (Process Compose)
-8) Agent workstations (OpenShell / WSL)
+8) Goose work areas (OpenShell)
 q) Exit
 EOF
         read -r -p 'Select: ' choice || return 0
