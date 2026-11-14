@@ -450,8 +450,7 @@ test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw"
     }
 
     if ($Profile -eq 'NemoClaw') {
-        Invoke-Bash -User 'root' -Script "printf '%s
-' nemoclaw > /etc/aiw-install-profile && chmod 0644 /etc/aiw-install-profile"
+        Invoke-Bash -User 'root' -Script "printf '%s' nemoclaw > /etc/aiw-install-profile && chmod 0644 /etc/aiw-install-profile"
     }
     Write-Step "Distribution '$DistroName' is installed." Ok
 }
