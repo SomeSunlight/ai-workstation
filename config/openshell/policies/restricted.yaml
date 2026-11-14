@@ -1,0 +1,20 @@
+# OpenShell v0.1.8: restrictive policy reproduced from operator research gate #69.
+# No general network access; an explicitly attached provider can add its own
+# restricted inference endpoint. Inspect effective policy after attachment.
+version: 1
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /bin
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /var/log
+  read_write:
+    - /tmp
+    - /dev/null
+landlock:
+  compatibility: hard_requirement
+network_policies: {}
