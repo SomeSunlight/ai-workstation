@@ -129,7 +129,7 @@ class WorkstationTests(unittest.TestCase):
         self.assertIn('host: "docs.python.org"', text)
         self.assertIn("enforcement: enforce", text)
         self.assertIn("access: read-only", text)
-        self.assertIn("landlock:\\n  compatibility: hard_requirement", text)
+        self.assertIn("landlock:" + chr(10) + "  compatibility: hard_requirement", text)
         self.assertNotIn("approval_mode: auto", text)
         self.assertNotIn("0.0.0.0/0", text)
 
