@@ -168,16 +168,21 @@ def shell(entry: dict[str, str]) -> None:
     openshell("sandbox", "exec", "-n", entry["name"], "--tty", "--", "bash")
 
 
-def goose(entry: dict[str, str], endpoint: str, session: str, model: str = "agent") -> None:
+def goose(entry: dict[str, str], endpoint: str, session: str, model: str = "agent", directory: str = ".") -> None:
     check_ready(entry)
     parsed = urlsplit(endpoint)
     if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password or parsed.path not in ("", "/") or parsed.query or parsed.fragment:
         raise Refused("The approved inference endpoint must be a bare HTTPS origin (no credentials/path).")
     if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", session) or not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", model):
         raise Refused("Session and model names must be 1–64 simple characters.")
+    remote = PurePosixPath(directory)
+    if (not directory or remote.is_absolute() or any(p in ("..", "") for p in directory.split("/"))
+            or any(ord(c) < 32 for c in directory)):
+        raise Refused("Choose a relative directory inside the private sandbox workspace.")
+    workdir = [] if directory == "." else ["--workdir", "/sandbox/" + directory]
     print("Interactive Goose is experimental: developer extension readiness is not yet qualified.")
     print("Use the separately attached OpenShell provider; no API key is passed by AIW.")
-    openshell("sandbox", "exec", "-n", entry["name"], "--tty",
+    openshell("sandbox", "exec", "-n", entry["name"], "--tty", *workdir,
               "--env", f"OPENAI_HOST={endpoint}",
               "--env", "OPENAI_BASE_PATH=v1/chat/completions",
               "--env", "GOOSE_PROVIDER=openai", "--env", f"GOOSE_MODEL={model}",
@@ -289,7 +294,8 @@ def workstation_menu(entry: dict[str, str]) -> None:
                     entry = select_workstation(entry["title"])
                 endpoint = input("Approved HTTPS inference origin: ").strip()
                 session = input("Goose session title (simple name) [work]: ").strip() or "work"
-                goose(entry, endpoint, session)
+                directory = input("Sandbox work folder [.] (e.g. imported project name): ").strip() or "."
+                goose(entry, endpoint, session, directory=directory)
             elif choice == "3":
                 shell(entry)
             elif choice == "4":
@@ -349,6 +355,7 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--endpoint", required=True, help="Approved HTTPS inference origin; never an API key")
     g.add_argument("--session", default="work")
     g.add_argument("--model", default="agent")
+    g.add_argument("--directory", default=".", help="Relative directory inside the sandbox workspace")
     imp = sub.add_parser("import-project")
     imp.add_argument("title")
     imp.add_argument("registered_project")
@@ -376,7 +383,7 @@ def main(argv: list[str] | None = None) -> int:
             elif args.action == "shell":
                 shell(entry)
             elif args.action == "goose":
-                goose(entry, args.endpoint, args.session, args.model)
+                goose(entry, args.endpoint, args.session, args.model, args.directory)
             elif args.action == "import-project":
                 import_project(entry, args.registered_project)
             elif args.action == "export":
