@@ -17,11 +17,12 @@ BECOME_PASSWORD_FILE=""
 
 ACTION="install"
 ASSUME_YES="false"
+INSTALL_PROFILE="legacy"
 
 usage() {
     cat <<'EOF'
 Usage:
-  ./install.sh [install|status|verify] [--yes]
+  ./install.sh [install|status|verify] [--yes] [--profile legacy|nemoclaw]
 
 Commands:
   install  Bootstrap dependencies and configure the host.
@@ -35,6 +36,10 @@ parse_arguments() {
         case "$1" in
             install|status|verify) ACTION="$1" ;;
             --yes|-y) ASSUME_YES="true" ;;
+            --profile)
+                [[ $# -gt 1 ]] || fail "--profile needs legacy or nemoclaw."
+                case "$2" in legacy|nemoclaw) INSTALL_PROFILE="$2" ;; *) fail "Invalid installation profile." ;; esac
+                shift ;;
             --help|-h) usage; exit 0 ;;
             *) printf 'Unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
         esac
@@ -125,7 +130,11 @@ preflight() {
 
 show_status() {
     preflight
-    "${ROOT}/bin/aiw" status
+    if [[ "$INSTALL_PROFILE" == "nemoclaw" ]]; then
+        "${ROOT}/bin/aiw-nemo" status
+    else
+        "${ROOT}/bin/aiw" status
+    fi
 }
 
 confirm_install() {
@@ -271,6 +280,7 @@ main() {
 
     section 'AI Workstation installer'
     info "Action : $ACTION"
+    info "Profile: $INSTALL_PROFILE"
     info "Log    : $LOG_FILE"
 
     case "$ACTION" in
@@ -286,13 +296,23 @@ main() {
             sync_automation_runtime
             install_collections
             bootstrap_verify
-            "${ROOT}/bin/aiw" install
+            if [[ "$INSTALL_PROFILE" == "nemoclaw" ]]; then
+                "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw.yml
+                "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw-verify.yml
+                ok "NemoClaw host configured; Hermes sandbox/provider onboarding remains upstream."
+            else
+                "${ROOT}/bin/aiw" install
+            fi
             ;;
         verify)
             preflight
             bootstrap_verify
             prepare_become_password
-            "${ROOT}/bin/aiw" verify
+            if [[ "$INSTALL_PROFILE" == "nemoclaw" ]]; then
+                "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw-verify.yml
+            else
+                "${ROOT}/bin/aiw" verify
+            fi
             ;;
     esac
 }
