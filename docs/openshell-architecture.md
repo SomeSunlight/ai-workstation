@@ -48,7 +48,7 @@ The workstations menu shows numbered **titles**. The advanced CLI also accepts e
 aiw workstations list
 aiw workstations create "Explore Project" --policy /path/to/reviewed-strict-policy.yaml
 aiw workstations import-project "Explore Project" registered-project
-aiw workstations goose "Explore Project" --endpoint https://dispatcher.example.invalid --session work
+aiw workstations goose "Explore Project" --endpoint https://dispatcher.example.invalid --session work --directory registered-project
 aiw workstations export "Explore Project" project/result.html "$HOME/aiw-export/new-result.html"
 aiw workstations stop "Explore Project"
 ```
