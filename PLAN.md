@@ -5,7 +5,7 @@
 - [x] Inspect latest #68/#69, owner-observed results, current main and the new #71 architecture/implementation hub.
 - [x] Write a version-pinned hands-on runbook separating **actually tested** commands and expected output from **not yet qualified** security/backup/host cases; show safe key-injection and tested interactive Goose/export.
 - [x] Verify document contains no user/host-specific identifiers, private Dispatcher hostname, original key, generated sandbox IDs or unrestricted security advice.
-- [ ] Open independent draft docs-only PR; record successful research-gate handoff and links; do not merge or change running sandboxes.
+- [x] Open independent [draft docs-only PR #72](https://github.com/SomeSunlight/ai-workstation/pull/72); record successful research-gate handoff and links; do not merge or change running sandboxes.
 - [x] Close #69 explicitly as **successful bounded functional research, not completed P0–P6 security certification**; carry gaps into #71 and annotate superseded older issues.
 - [ ] Run read-only review/CI on the exact PR head, leave owner approval and squash-merge to operator.
 
