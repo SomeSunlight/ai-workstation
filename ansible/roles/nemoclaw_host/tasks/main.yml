@@ -6,7 +6,7 @@
       - ansible_facts.distribution_version == versions.ubuntu.release
       - ansible_facts.service_mgr == "systemd"
       - ai_workstation_user | length > 0
-      - nemoclaw_source_commit is match('^[a-f0-9]{40}$')
+      - nemoclaw_host_source_commit is match('^[a-f0-9]{40}$')
     quiet: true
 
 - name: Install vendor installer prerequisites
@@ -24,27 +24,27 @@
 
 - name: Check NemoClaw CLI installation
   ansible.builtin.stat:
-    path: "{{ nemoclaw_binary }}"
-  register: nemo_cli_stat
+    path: "{{ nemoclaw_host_binary }}"
+  register: nemoclaw_host_cli_stat
 
 - name: Check provenance receipt
   ansible.builtin.stat:
-    path: "{{ nemoclaw_ref_receipt }}"
-  register: nemo_receipt_stat
+    path: "{{ nemoclaw_host_ref_receipt }}"
+  register: nemoclaw_host_receipt_stat
 
 - name: Read provenance receipt when present
   ansible.builtin.slurp:
-    src: "{{ nemoclaw_ref_receipt }}"
-  register: nemo_receipt_content
-  when: nemo_receipt_stat.stat.exists
+    src: "{{ nemoclaw_host_ref_receipt }}"
+  register: nemoclaw_host_receipt_content
+  when: nemoclaw_host_receipt_stat.stat.exists
 
 - name: Refuse untracked installation, changed version, or lost binary
   ansible.builtin.assert:
     that:
-      - nemo_cli_stat.stat.exists == nemo_receipt_stat.stat.exists
+      - nemoclaw_host_cli_stat.stat.exists == nemoclaw_host_receipt_stat.stat.exists
       - >-
-        not nemo_receipt_stat.stat.exists or
-        (nemo_receipt_content.content | b64decode | trim) == nemoclaw_source_commit
+        not nemoclaw_host_receipt_stat.stat.exists or
+        (nemoclaw_host_receipt_content.content | b64decode | trim) == nemoclaw_host_source_commit
     fail_msg: >-
       NemoClaw version/receipt mismatch or an untracked CLI exists. Refusing
       to modify a possibly live NemoClaw/OpenShell installation. Inspect
@@ -53,7 +53,7 @@
 
 - name: Prepare pinned external-source directory
   ansible.builtin.file:
-    path: "{{ nemoclaw_source_dir | dirname }}"
+    path: "{{ nemoclaw_host_source_dir | dirname }}"
     state: directory
     owner: "{{ ai_workstation_user }}"
     group: "{{ ai_workstation_group }}"
@@ -61,11 +61,12 @@
 
 - name: Check out reviewed NemoClaw upstream source at exact Git commit
   ansible.builtin.git:
-    repo: "{{ nemoclaw_source_url }}"
-    dest: "{{ nemoclaw_source_dir }}"
-    version: "{{ nemoclaw_source_commit }}"
+    repo: "{{ nemoclaw_host_source_url }}"
+    dest: "{{ nemoclaw_host_source_dir }}"
+    version: "{{ nemoclaw_host_source_commit }}"
     update: false
     force: false
+  become: true
   become_user: "{{ ai_workstation_user }}"
 
 - name: Verify pinned source is not moved
@@ -73,16 +74,16 @@
     argv:
       - git
       - -C
-      - "{{ nemoclaw_source_dir }}"
+      - "{{ nemoclaw_host_source_dir }}"
       - rev-parse
       - HEAD
-  register: nemo_checked_out_commit
+  register: nemoclaw_host_checked_out_commit
   changed_when: false
 
 - name: Confirm exact upstream source revision
   ansible.builtin.assert:
     that:
-      - nemo_checked_out_commit.stdout == nemoclaw_source_commit
+      - nemoclaw_host_checked_out_commit.stdout == nemoclaw_host_source_commit
     quiet: true
 
 - name: Install Hermes-selected NemoClaw CLI using pinned vendor installer
@@ -93,26 +94,29 @@
       - --non-interactive
       - --yes-i-accept-third-party-software
       - --defer-onboarding
-    chdir: "{{ nemoclaw_source_dir }}"
+    chdir: "{{ nemoclaw_host_source_dir }}"
+  become: true
   become_user: "{{ ai_workstation_user }}"
   environment:
     HOME: "{{ ai_workstation_home }}"
     NEMOCLAW_AGENT: hermes
-    NEMOCLAW_INSTALL_REF: "{{ nemoclaw_source_commit }}"
+    NEMOCLAW_INSTALL_REF: "{{ nemoclaw_host_source_commit }}"
     NEMOCLAW_NON_INTERACTIVE: "1"
     NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE: "1"
     NEMOCLAW_DISABLE_TELEMETRY: "1"
     NEMOCLAW_NO_EXPRESS: "1"
     NEMOCLAW_PROVIDER: build
-  when: not nemo_cli_stat.stat.exists
+  when: not nemoclaw_host_cli_stat.stat.exists
+  changed_when: true
   no_log: true
 
 - name: Validate Hermes CLI is installed
   ansible.builtin.command:
     argv:
-      - "{{ nemoclaw_binary }}"
+      - "{{ nemoclaw_host_binary }}"
       - --version
-  register: nemo_cli_version
+  register: nemoclaw_host_cli_version
+  become: true
   become_user: "{{ ai_workstation_user }}"
   environment:
     HOME: "{{ ai_workstation_home }}"
@@ -121,7 +125,7 @@
 
 - name: Ensure provenance directory exists
   ansible.builtin.file:
-    path: "{{ nemoclaw_ref_receipt | dirname }}"
+    path: "{{ nemoclaw_host_ref_receipt | dirname }}"
     state: directory
     owner: "{{ ai_workstation_user }}"
     group: "{{ ai_workstation_group }}"
@@ -129,8 +133,8 @@
 
 - name: Record pinned upstream revision after successful CLI validation
   ansible.builtin.copy:
-    dest: "{{ nemoclaw_ref_receipt }}"
-    content: "{{ nemoclaw_source_commit }}\n"
+    dest: "{{ nemoclaw_host_ref_receipt }}"
+    content: "{{ nemoclaw_host_source_commit }}\n"
     owner: "{{ ai_workstation_user }}"
     group: "{{ ai_workstation_group }}"
     mode: "0600"
@@ -138,6 +142,6 @@
 - name: Report CLI and explicitly deferred agent onboarding
   ansible.builtin.debug:
     msg:
-      - "Hermes CLI: {{ nemo_cli_version.stdout }}"
+      - "Hermes CLI: {{ nemoclaw_host_cli_version.stdout }}"
       - "NemoClaw owns later OpenShell/Hermes onboarding and provider credentials."
       - "OpenRouter onboarding: AIW Nemo menu -> Set up Hermes (NemoClaw)."
