@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import platform
 import re
 import subprocess
 import sys
+import tempfile
 import unicodedata
 from urllib.parse import urlsplit
 
@@ -17,6 +19,14 @@ OPENSHELL_VERSION = "0.1.8"  # First-flight tested version, not an auto-upgrade 
 GOOSE_IMAGE = "ghcr.io/aaif-goose/goose@sha256:18e801642a134d3d3975b563ab6185593b53fac270167b1acbfb4368baca1c96"
 AGENT_LABEL = "aiw.agent=goose"
 WORKSPACE_REGISTRY = Path.home() / ".config/ai-workstation/goose-workspaces"
+RESTRICTED_POLICY = Path(__file__).resolve().parents[1] / "config/openshell/policies/restricted.yaml"
+PROFILE_TITLES = {
+    "restricted": "Protected — no general Internet",
+    "website": "One website — HTTPS read-only",
+    "flexible": "Flexible web — automatic low-risk public-site approvals (experimental)",
+    "custom": "Custom policy (advanced)",
+}
+RISK_DOC = "docs/openshell-network-profiles.md"
 
 
 class Refused(Exception):
@@ -85,7 +95,9 @@ def list_workstations() -> list[dict[str, str]]:
             if not isinstance(name, str) or not name or not isinstance(annotations, dict):
                 raise Refused("Incomplete OpenShell sandbox metadata; refusing to guess.")
             title = annotations.get("aiw.title") or name
-            result.append({"name": name, "title": str(title), "phase": str(phase or "Unknown")})
+            result.append({"name": name, "title": str(title), "phase": str(phase or "Unknown"),
+                           "profile": str(annotations.get("aiw.profile") or "unknown"),
+                           "site": str(annotations.get("aiw.site") or "")})
         next_page = payload.get("next_page_token") or ""
         if not next_page:
             break
@@ -107,35 +119,127 @@ def select_workstation(title: str, entries: list[dict[str, str]] | None = None) 
 def show_list() -> None:
     entries = list_workstations()
     if not entries:
-        print("No AIW OpenShell workstations. Existing unlabelled test sandboxes are not modified.")
+        print("No Goose workspaces yet. Existing research sandboxes are left alone.")
     for i, entry in enumerate(entries, 1):
-        print(f" {i}) {entry['title']} — {entry['phase']} (Goose / OpenShell)")
+        print(f" {i}) {entry['title']} — {entry['phase']} (OpenShell, {entry.get('profile', 'unknown')})")
 
 
-def create(title: str, policy_file: str) -> None:
-    policy = Path(policy_file).expanduser().resolve(strict=True)
+def website_hostname(url: str) -> str:
+    """Restrict a human URL to a single DNS name over HTTPS:443, never a subnet."""
+    if not isinstance(url, str) or len(url) > 2048:
+        raise Refused("Enter one https:// website address.")
+    try:
+        parsed = urlsplit(url.strip())
+        port = parsed.port
+        host = (parsed.hostname or "").encode("idna").decode("ascii").lower()
+    except (ValueError, UnicodeError) as exc:
+        raise Refused("Invalid HTTPS website address.") from exc
+    if (parsed.scheme != "https" or port not in (None, 443)
+            or parsed.username or parsed.password or parsed.fragment
+            or not host or len(host) > 253 or host.endswith(".")
+            or not re.fullmatch(r"[a-z0-9.-]+", host)):
+        raise Refused("Enter an HTTPS address without login information or a custom port.")
+    labels = host.split(".")
+    if (len(labels) < 2 or any(not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", item)
+                                for item in labels)
+            or host.endswith((".local", ".internal", ".localhost", ".invalid", ".test"))):
+        raise Refused("Choose a public DNS hostname, not a local or private network name.")
+    return host
+
+
+def website_policy(host: str) -> str:
+    """Small OpenShell network rule; no home-grown network enforcement."""
+    baseline = RESTRICTED_POLICY.read_text(encoding="utf-8")
+    if "network_policies: {}" not in baseline:
+        raise Refused("The bundled strict policy changed unexpectedly; refusing to broaden it.")
+    # The policy is YAML and JSON strings are valid YAML scalars. host is validated.
+    entry = f"""network_policies:
+  approved_website:
+    name: "Read-only website for Goose and developer tools"
+    endpoints:
+      - host: {json.dumps(host)}
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: /usr/local/bin/goose
+      - path: /usr/bin/curl
+      - path: /usr/local/bin/curl
+      - path: /usr/bin/git
+"""
+    return baseline.replace("network_policies: {}", entry)
+
+
+def create(title: str, policy_file: str | None = None, *,
+           profile: str = "restricted", website: str | None = None) -> None:
+    # CLI --policy remains an expert escape hatch; the interactive menu never asks for files.
+    if profile not in ("restricted", "website", "flexible"):
+        raise Refused("Unknown network choice.")
+    if policy_file and (profile != "restricted" or website):
+        raise Refused("Choose either a custom policy file or a built-in profile.")
+    if website and profile != "website":
+        raise Refused("A website address is accepted only with the website profile.")
+    host = website_hostname(website or "") if profile == "website" else ""
+    selected_profile = "custom" if policy_file else profile
+    policy = (Path(policy_file).expanduser().resolve(strict=True)
+              if policy_file else RESTRICTED_POLICY)
     if not policy.is_file():
-        raise Refused("Policy must be an existing reviewed file on the trusted Linux host.")
+        raise Refused("The selected OpenShell policy file is missing.")
+    if not title.strip():
+        raise Refused("Enter a name for your Goose work area.")
     entries = list_workstations()
     if any(e["title"].casefold() == title.casefold() for e in entries):
-        raise Refused("A workstation with this title already exists.")
+        raise Refused("A Goose work area with this name already exists.")
     name = sandbox_name(title)
     if any(e["name"] == name for e in entries):
-        raise Refused("An OpenShell workstation already uses this name.")
-    print("Creates a persistent Goose sandbox using the pinned tested OCI image.")
-    print("OpenShell enforces the supplied policy; AIW does not verify its security.")
-    if not confirm(f"Create '{title}' under OpenShell (no host mounts)?", "CREATE"):
+        raise Refused("An OpenShell work area already uses this name.")
+    print(f"\nName: {title}")
+    print(f"Network choice: {PROFILE_TITLES[selected_profile]}")
+    if host:
+        print(f"Allowed website: {host}:443 (GET/HEAD/OPTIONS, entire host; not other redirect hosts)")
+        print("This does not grant arbitrary network access to subprocesses or other domains.")
+    if profile == "flexible":
+        print("WARNING: OpenShell may automatically approve low-risk PUBLIC website requests.")
+        print("Not unrestricted Internet: flagged requests still require approval or fail.")
+        print("This has not been qualified with interactive Goose or other tools.")
+        print(f"Security limitations: {RISK_DOC}")
+    print("OpenShell owns the sandbox. Nothing is mounted from your original projects.")
+    approval = "ALLOW" if profile == "flexible" else "CREATE"
+    if not confirm(f"Create this persistent Goose work area?", approval):
         return
-    openshell("sandbox", "create", "--name", name, "--from", GOOSE_IMAGE,
-              "--policy", str(policy), "--label", AGENT_LABEL,
-              "--annotation", f"aiw.title={title}", "--detach", "--cpu", "2", "--memory", "4Gi")
-    print(f"Created '{title}'. Provider/credential attachment is a separate trusted OpenShell operation.")
-
+    args = ["sandbox", "create", "--name", name, "--from", GOOSE_IMAGE,
+            "--label", AGENT_LABEL, "--annotation", f"aiw.title={title}",
+            "--annotation", f"aiw.profile={selected_profile}", "--detach",
+            "--cpu", "2", "--memory", "4Gi"]
+    if host:
+        args += ["--annotation", f"aiw.site={host}"]
+    if profile == "flexible":
+        # Upstream OpenShell's policy-advisor path, not a custom permissive firewall.
+        args += ["--approval-mode", "auto"]
+    if host:
+        # This temporary file is NOT an AIW-managed policy catalogue or durable state.
+        # The trusted OpenShell CLI reads it at creation; its gateway retains the policy.
+        with tempfile.TemporaryDirectory(prefix="aiw-openshell-policy-") as tmp:
+            generated = Path(tmp) / "website.yaml"
+            generated.write_text(website_policy(host), encoding="utf-8")
+            generated.chmod(0o600)
+            openshell(*args, "--policy", str(generated))
+    else:
+        openshell(*args, "--policy", str(policy))
+    print(f"Created '{title}'. Private data survives stop/start, not deletion.")
+    print("Inference requires separately approved OpenShell provider configuration.")
 
 def status(entry: dict[str, str]) -> None:
     print(f"\n{entry['title']} — {entry['phase']} / Goose / OpenShell {OPENSHELL_VERSION}")
     print("Persistence: OpenShell-owned; stop/start retains observed workspace data.")
-    print("Network: as restricted by the effective OpenShell policy and attached providers.")
+    profile = entry.get("profile", "unknown")
+    print(f"Initial network choice: {PROFILE_TITLES.get(profile, 'Unknown / existing configuration')}")
+    if entry.get("site"):
+        print(f"Initial website: {entry['site']}:443")
+    print("The actual effective OpenShell policy/providers can differ from this creation label.")
+    print("Approved model endpoints allow data egress; credentials mediation is not DLP.")
+    print(f"Details: {RISK_DOC}")
     print("Approved inference endpoints are deliberate data-egress paths, not DLP.")
     print("For local policy/provider details, use the advanced OpenShell commands:")
     print("  openshell sandbox get <sandbox-name>")
@@ -321,32 +425,44 @@ def menu() -> None:
     require_runtime()
     while True:
         entries = list_workstations()
-        print("\nAgent workstations (OpenShell) — Goose first; Hermes planned")
-        print("Persistent data is managed by OpenShell; this menu never deletes a sandbox.")
+        print("\nGoose work areas")
+        print("Each is a private, persistent OpenShell sandbox. It may hold many projects")
+        print("and several Goose conversations. Stopping it does not delete its files.")
         choices = [(f"{item['title']} — {item['phase']}", item) for item in entries]
-        choices.append(("Create a Goose workstation", "create"))
-        selected = choose(choices, "Choose workstation or action")
+        choices.append(("Create a new Goose work area", "create"))
+        selected = choose(choices, "Choose a work area")
         if selected is None:
             return
         if selected == "create":
-            title = input("Workstation title: ").strip()
-            policy = input("Existing reviewed strict policy file (Linux path): ").strip()
+            title = input("Name of the work area (e.g. My Goose project): ").strip()
+            print("\nWhat websites may Goose and its tools access?")
+            profile = choose([
+                ("Protected — no general Internet (recommended, like our first test)", "restricted"),
+                ("One HTTPS website — read-only downloads from that host", "website"),
+                ("Flexible web — auto-approve some public websites (experimental, riskier)", "flexible"),
+            ], "Network access")
+            if profile is None:
+                continue
+            website = ""
+            if profile == "website":
+                website = input("Website URL (https://...): ").strip()
             try:
-                create(title, policy)
+                create(title, profile=profile, website=website or None)
             except (Refused, OSError) as exc:
                 print(f"[!] {exc}", file=sys.stderr)
         else:
             workstation_menu(selected)
 
-
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="OpenShell agent workstations (Goose first; Linux/WSL)")
+    parser = argparse.ArgumentParser(description="Persistent Goose work areas powered by OpenShell")
     sub = parser.add_subparsers(dest="action")
     sub.add_parser("menu")
     sub.add_parser("list")
     c = sub.add_parser("create")
     c.add_argument("title")
-    c.add_argument("--policy", required=True, help="Trusted, reviewed OpenShell policy YAML on Linux")
+    c.add_argument("--policy", help="Advanced: custom policy file; otherwise bundled restricted policy")
+    c.add_argument("--profile", choices=("restricted", "website", "flexible"), default="restricted")
+    c.add_argument("--website", help="HTTPS URL for website profile; allows read-only requests to its host")
     for name in ("status", "start", "stop", "shell"):
         cmd = sub.add_parser(name)
         cmd.add_argument("title")
@@ -371,7 +487,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.action == "list":
             show_list()
         elif args.action == "create":
-            create(args.title, args.policy)
+            create(args.title, args.policy, profile=args.profile, website=args.website)
         else:
             entry = select_workstation(args.title)
             if args.action == "status":
