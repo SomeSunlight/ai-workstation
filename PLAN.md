@@ -3,10 +3,10 @@
 **Scope of this documentation-only PR:** capture the operator-proven OpenShell v0.1.8 / Goose 1.59.0 WSL journey in a sanitized, repeatable runbook; update no runtime, source context, provider credentials, Docker/WSL configuration, or host. Integration architecture, security qualification, legacy migration and new features belong in #71's later scoped PRs. Owner squash-merges only after review.
 
 - [x] Inspect latest #68/#69, owner-observed results, current main and the new #71 architecture/implementation hub.
-- [ ] Write a version-pinned hands-on runbook separating **actually tested** commands and expected output from **not yet qualified** security/backup/host cases; show safe key-injection and tested interactive Goose/export.
-- [ ] Verify document contains no user/host-specific identifiers, private Dispatcher hostname, original key, generated sandbox IDs or unrestricted security advice.
+- [x] Write a version-pinned hands-on runbook separating **actually tested** commands and expected output from **not yet qualified** security/backup/host cases; show safe key-injection and tested interactive Goose/export.
+- [x] Verify document contains no user/host-specific identifiers, private Dispatcher hostname, original key, generated sandbox IDs or unrestricted security advice.
 - [ ] Open independent draft docs-only PR; record successful research-gate handoff and links; do not merge or change running sandboxes.
-- [ ] Close #69 explicitly as **successful bounded functional research, not completed P0–P6 security certification**; carry gaps into #71 and annotate superseded older issues.
+- [x] Close #69 explicitly as **successful bounded functional research, not completed P0–P6 security certification**; carry gaps into #71 and annotate superseded older issues.
 - [ ] Run read-only review/CI on the exact PR head, leave owner approval and squash-merge to operator.
 
 Checkpoint: research gate #69 operator reports working default/hardened OpenShell sandboxes,
