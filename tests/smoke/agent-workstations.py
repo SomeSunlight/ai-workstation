@@ -101,7 +101,8 @@ class WorkstationTests(unittest.TestCase):
 
     def test_goose_https_and_no_key_in_arguments(self):
         entry = {"name": "internal", "title": "Display", "phase": "Ready"}
-        with patch.object(module, "openshell") as cli:
+        with patch.object(module, "openshell",
+                          side_effect=lambda *args, capture=False: "/home/goose\\n" if capture else "") as cli:
             for invalid in ("http://example.invalid", "https://user:pw@example.invalid"):
                 with self.assertRaises(module.Refused):
                     module.goose(entry, invalid, "work")
@@ -113,9 +114,17 @@ class WorkstationTests(unittest.TestCase):
             self.assertNotIn("OPENAI_API_KEY", str(args))
             module.goose(entry, "https://example.invalid", "work", directory="project")
             self.assertIn("--workdir", cli.call_args.args)
-            self.assertIn("/sandbox/project", cli.call_args.args)
+            self.assertIn("/home/goose/project", cli.call_args.args)
+            self.assertTrue(any(call.kwargs.get("capture") for call in cli.call_args_list))
             with self.assertRaises(module.Refused):
                 module.goose(entry, "https://example.invalid", "work", directory="../etc")
+
+    def test_goose_refuses_unknown_workdir_without_launch(self):
+        entry = {"name": "internal", "title": "Display", "phase": "Ready"}
+        with patch.object(module, "openshell", return_value="/") as cli:
+            with self.assertRaises(module.Refused):
+                module.goose(entry, "https://example.invalid", "work", directory="project")
+            self.assertEqual(cli.call_count, 1)
 
     def test_public_site_validation_and_restrictive_https_rule(self):
         self.assertEqual(module.website_hostname("https://docs.python.org/3/library"),
