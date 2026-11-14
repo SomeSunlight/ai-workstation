@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# NemoClaw's CLI owns Hermes/OpenShell lifecycle; AIW only provides an entry point.
+set -Eeuo pipefail
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+export PATH="$HOME/.local/bin:$PATH"
+export NEMOCLAW_DISABLE_TELEMETRY=1
+export NEMOCLAW_NO_EXPRESS=1
+
+status() {
+    printf '\nNemoClaw / Hermes (separate Ubuntu environment)\n'
+    printf 'User: %s | WSL: %s\n' "$(id -un)" "${WSL_DISTRO_NAME:-native Linux}"
+    if command -v docker >/dev/null 2>&1; then
+        docker info --format 'Docker Engine: {{.ServerVersion}}' || true
+    else
+        printf 'Docker Engine is not installed.\n'
+    fi
+    if command -v nemohermes >/dev/null 2>&1; then
+        nemohermes --version || true
+        printf 'NemoClaw manages sandbox status: use option 3 for its native CLI.\n'
+    else
+        printf 'NemoClaw Hermes CLI not yet installed. Choose option 2 after installation.\n'
+    fi
+    printf 'Guide: %s/docs/nemoclaw-reference.md\n' "$ROOT"
+}
+onboard() {
+    command -v nemohermes >/dev/null 2>&1 || {
+        printf 'First install the host with the NemoClaw installer.\n' >&2
+        return 1
+    }
+    printf 'Official NemoClaw Hermes onboarding. Select OpenRouter as first provider.\n'
+    printf 'Enter credentials ONLY in the official wizard, never in AIW or Git.\n'
+    printf 'NVIDIA Express (managed Windows Ollama) is disabled for this native Docker setup.\n'
+    nemohermes onboard "$@"
+}
+connect() {
+    command -v nemohermes >/dev/null 2>&1 || { printf 'NemoClaw not installed.\n' >&2; return 1; }
+    local title="$1"
+    [[ "$title" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$ ]] || {
+        printf 'Choose a simple registered sandbox name (letters, digits, - or _).\n' >&2
+        return 1
+    }
+    nemohermes "$title" connect
+}
+menu() {
+    local choice title
+    while true; do
+        printf '\n🐧  NemoClaw + Hermes  🦞\n'
+        printf ' 1) Show local installation status\n'
+        printf ' 2) Set up Hermes / choose model provider (NemoClaw wizard)\n'
+        printf ' 3) Open official NemoClaw management CLI\n'
+        printf ' 4) Connect to my Hermes sandbox\n'
+        printf ' 5) Verify AIW-managed Linux host and Docker Engine\n'
+        printf ' 6) Resume interrupted NemoClaw onboarding\n'
+        printf ' q) Exit to terminal\n'
+        read -r -p 'Selection: ' choice || return
+        case "$choice" in
+            1) status ;;
+            2) onboard ;;
+            3) command -v nemohermes >/dev/null && nemohermes --help || printf 'Install NemoClaw first.\n' ;;
+            4) read -r -p 'Hermes sandbox name: ' title; connect "$title" ;;
+            5) "$ROOT/install.sh" verify --profile nemoclaw ;;
+            6) onboard --resume ;;
+            q|Q) return ;;
+            *) printf 'Select a displayed option.\n' ;;
+        esac
+        printf '\n'
+    done
+}
+case "${1:-menu}" in
+    menu) menu ;;
+    status) status ;;
+    onboard) shift; onboard "$@" ;;
+    connect) shift; [[ $# -eq 1 ]] || exit 2; connect "$1" ;;
+    verify) "$ROOT/install.sh" verify --profile nemoclaw ;;
+    *) printf 'Usage: aiw-nemo [menu|status|onboard|connect NAME|verify]\n' >&2; exit 2 ;;
+esac

@@ -1,3 +1,19 @@
+## Issue #75 — NemoClaw/Hermes reference WSL (independent Draft PR)
+
+**Decision:** Keep the existing Goose/OpenShell and legacy Docker/Compose installations unchanged. The unmerged Draft PR #73 is paused, **not superseded by an automatic merge**. Prefer one isolated third WSL Ubuntu 24.04 distribution `AIW-Nemo`, native Docker Engine, official upstream NemoClaw and Hermes, OpenRouter first, identical Linux Ansible on the private host. AIW only bootstraps; NemoClaw owns OpenShell, policy, Hermes, provider and agent state. No Docker Desktop. Native Docker under WSL is not NVIDIA's qualified WSL path.
+
+- [x] Reuse the existing sha256-pinned WSL image and Ansible Docker Engine role; opt-in NemoClaw profile does not invoke legacy host playbooks or change global WSL configuration.
+- [x] Create fresh separate Windows install entry point, independently owned WSL name/marker, one mascot shortcut; existing distros and links are retained.
+- [x] Add version-pinned official NemoClaw installer, no secret collection, deferred official Hermes onboarding and operator-selected OpenRouter via NemoClaw wizard.
+- [x] Provide a persistent Markdown checklist for WSL/Docker/Hermes, provider, persistence, data isolation and repeat-run acceptance.
+- [ ] Complete exact-head GitHub Actions Windows/Linux + Ansible syntax/lint checks, fix all findings.
+- [ ] Real WSL acceptance by owner including native-Docker support and NemoClaw/OpenShell/Hermes onboarding. No known successful native WSL test yet.
+- [ ] Confirm multi-host private replication using the same Linux playbook without sharing business/private data.
+- [ ] Review legacy context/source rules and optional cleanup **only after** successful migration; no existing resources are deleted.
+- [ ] Owner explicitly authorizes a merge; neither PR #73 nor this branch may be merged automatically.
+
+See [Issue #75](https://github.com/SomeSunlight/ai-workstation/issues/75) and [tick-box test document](docs/nemoclaw-acceptance.md).
+
 ## Issue #71 — OpenShell first-flight reproduction and #69 research handoff (2026-11-14)
 
 **Scope of this documentation-only PR:** capture the operator-proven OpenShell v0.1.8 / Goose 1.59.0 WSL journey in a sanitized, repeatable runbook; update no runtime, source context, provider credentials, Docker/WSL configuration, or host. Integration architecture, security qualification, legacy migration and new features belong in #71's later scoped PRs. Owner squash-merges only after review.

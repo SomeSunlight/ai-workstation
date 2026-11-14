@@ -1,0 +1,6 @@
+---
+nemoclaw_host_source_url: https://github.com/NVIDIA/NemoClaw.git
+nemoclaw_host_source_commit: "82e1ad7474ec7175c5b860b2bfa9d7940bc6e75f"
+nemoclaw_host_source_dir: "{{ ai_workstation_home }}/.local/share/aiw-nemoclaw/source"
+nemoclaw_host_binary: "{{ ai_workstation_home }}/.local/bin/nemohermes"
+nemoclaw_host_ref_receipt: "{{ ai_workstation_home }}/.config/ai-workstation/nemoclaw-installer-ref"

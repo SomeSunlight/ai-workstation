@@ -36,7 +36,7 @@ jobs:
       - name: Verify repository files
         run: |
           test -f uv.lock
-          bash -n install.sh bootstrap/linux/install.sh bin/aiw bin/aiw-core runtimes/local-inference/manage.sh runtimes/local-inference/service.sh tools/*.sh tests/smoke/*.sh
+          bash -n install.sh bootstrap/linux/install.sh bin/aiw bin/aiw-core bin/aiw-nemo runtimes/local-inference/manage.sh runtimes/local-inference/service.sh tools/*.sh tests/smoke/*.sh
           python -m json.tool config/versions.json >/dev/null
           python tools/check-version-consistency.py
           bash tools/release-check.sh
@@ -46,6 +46,7 @@ jobs:
           bash tests/smoke/goose-runtime.sh
           python tests/smoke/agent-sandbox.py
           python -B tests/smoke/openshell-preflight.py
+          python -B tests/smoke/nemoclaw-profile.py
           bash tests/smoke/open-webui-runtime.sh
           bash tests/smoke/interactive-menu.sh
           uv run --frozen python tests/smoke/services-registry.py
@@ -91,6 +92,8 @@ jobs:
         run: |
           uv run --frozen ansible-playbook ansible/playbooks/workstation.yml --syntax-check
           uv run --frozen ansible-playbook ansible/playbooks/verify.yml --syntax-check
+          uv run --frozen ansible-playbook ansible/playbooks/nemoclaw.yml --syntax-check
+          uv run --frozen ansible-playbook ansible/playbooks/nemoclaw-verify.yml --syntax-check
 
   sandbox-docker:
     runs-on: ubuntu-24.04
@@ -112,6 +115,7 @@ jobs:
         with:
           sparse-checkout: |
             bootstrap/windows
+            install-nemoclaw.ps1
             aiw.cmd
             tests/windows
             tools/aiw-secret-windows.ps1
@@ -135,10 +139,13 @@ jobs:
       - name: Verify Windows installer staging cleanup under transient locks
         shell: pwsh
         run: ./tests/windows/staging-cleanup.ps1
+      - name: Verify separate NemoClaw penguin and installer profile (offline)
+        shell: pwsh
+        run: ./tests/windows/nemoclaw-profile.ps1
       - name: Parse native Windows Process Compose and DPAPI helper
         shell: pwsh
         run: |
-          foreach ($path in @('bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1', 'tools/aiw-native-child.ps1', 'tools/aiw-native-health.ps1', 'tools/aiw-native-integrity.ps1', 'tests/windows/native-integrity.ps1', 'bootstrap/windows/Register-AiwCommand.ps1', 'tests/windows/native-host.ps1', 'tests/windows/native-aiw-command.ps1', 'tests/windows/s02-three-clients.ps1')) {
+          foreach ($path in @('bootstrap/windows/Launch-NemoClaw.ps1', 'bootstrap/windows/Create-NemoClawShortcut.ps1', 'bootstrap/windows/Install-AiWorkstation.ps1', 'install-nemoclaw.ps1', 'tests/windows/nemoclaw-profile.ps1', 'bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1', 'tools/aiw-native-child.ps1', 'tools/aiw-native-health.ps1', 'tools/aiw-native-integrity.ps1', 'tests/windows/native-integrity.ps1', 'bootstrap/windows/Register-AiwCommand.ps1', 'tests/windows/native-host.ps1', 'tests/windows/native-aiw-command.ps1', 'tests/windows/s02-three-clients.ps1')) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(

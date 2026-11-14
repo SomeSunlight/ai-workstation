@@ -1,0 +1,188 @@
+---
+- name: Require a fresh Ubuntu NemoClaw installation profile
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == "Ubuntu"
+      - ansible_facts.distribution_version == versions.ubuntu.release
+      - ansible_facts.service_mgr == "systemd"
+      - ai_workstation_user | length > 0
+      - nemoclaw_host_source_commit is match('^[a-f0-9]{40}$')
+    quiet: true
+
+- name: Install vendor installer prerequisites
+  ansible.builtin.apt:
+    name:
+      - binutils
+      - zstd
+      - lsof
+      - git
+      - curl
+      - ca-certificates
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Check NemoClaw CLI installation
+  ansible.builtin.stat:
+    path: "{{ nemoclaw_host_binary }}"
+  register: nemoclaw_host_cli_stat
+
+- name: Check provenance receipt
+  ansible.builtin.stat:
+    path: "{{ nemoclaw_host_ref_receipt }}"
+  register: nemoclaw_host_receipt_stat
+
+- name: Read provenance receipt when present
+  ansible.builtin.slurp:
+    src: "{{ nemoclaw_host_ref_receipt }}"
+  register: nemoclaw_host_receipt_content
+  when: nemoclaw_host_receipt_stat.stat.exists
+
+- name: Refuse a missing CLI with a recorded install or an unexpected version
+  ansible.builtin.assert:
+    that:
+      - not nemoclaw_host_receipt_stat.stat.exists or nemoclaw_host_cli_stat.stat.exists
+      - >-
+        not nemoclaw_host_receipt_stat.stat.exists or
+        (nemoclaw_host_receipt_content.content | b64decode | trim) == nemoclaw_host_source_commit
+    fail_msg: >-
+      NemoClaw CLI/receipt is inconsistent or an installed version was changed.
+      Refusing to reinstall, mutate or destroy an existing NemoClaw/OpenShell.
+    quiet: true
+
+- name: Inspect upstream build identity after interrupted first install
+  ansible.builtin.stat:
+    path: "{{ ai_workstation_home }}/.nemoclaw/source/dist/build-identity.json"
+  register: nemoclaw_host_build_identity_stat
+  when:
+    - nemoclaw_host_cli_stat.stat.exists
+    - not nemoclaw_host_receipt_stat.stat.exists
+
+- name: Require an upstream build identity for safe interrupted-install recovery
+  ansible.builtin.assert:
+    that:
+      - nemoclaw_host_build_identity_stat.stat.exists
+    fail_msg: >-
+      A NemoClaw CLI exists but no AIW install receipt was recorded. No
+      authentic upstream build identity is present; refusing to adopt it.
+    quiet: true
+  when:
+    - nemoclaw_host_cli_stat.stat.exists
+    - not nemoclaw_host_receipt_stat.stat.exists
+
+- name: Read upstream build identity only for recovery
+  ansible.builtin.slurp:
+    src: "{{ ai_workstation_home }}/.nemoclaw/source/dist/build-identity.json"
+  register: nemoclaw_host_build_identity
+  when:
+    - nemoclaw_host_cli_stat.stat.exists
+    - not nemoclaw_host_receipt_stat.stat.exists
+
+- name: Verify unfinished first install matches the pinned source
+  ansible.builtin.assert:
+    that:
+      - >-
+        (nemoclaw_host_build_identity.content | b64decode | from_json).sourceRevision
+        == nemoclaw_host_source_commit
+    fail_msg: >-
+      Existing NemoClaw build identity does not match this pinned installer.
+      Refusing to silently adopt or upgrade a different live installation.
+    quiet: true
+  when:
+    - nemoclaw_host_cli_stat.stat.exists
+    - not nemoclaw_host_receipt_stat.stat.exists
+
+- name: Prepare pinned external-source directory
+  ansible.builtin.file:
+    path: "{{ nemoclaw_host_source_dir | dirname }}"
+    state: directory
+    owner: "{{ ai_workstation_user }}"
+    group: "{{ ai_workstation_group }}"
+    mode: "0700"
+
+- name: Check out reviewed NemoClaw upstream source at exact Git commit
+  ansible.builtin.git:
+    repo: "{{ nemoclaw_host_source_url }}"
+    dest: "{{ nemoclaw_host_source_dir }}"
+    version: "{{ nemoclaw_host_source_commit }}"
+    update: false
+    force: false
+  become: true
+  become_user: "{{ ai_workstation_user }}"
+
+- name: Verify pinned source is not moved
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ nemoclaw_host_source_dir }}"
+      - rev-parse
+      - HEAD
+  register: nemoclaw_host_checked_out_commit
+  changed_when: false
+
+- name: Confirm exact upstream source revision
+  ansible.builtin.assert:
+    that:
+      - nemoclaw_host_checked_out_commit.stdout == nemoclaw_host_source_commit
+    quiet: true
+
+- name: Install Hermes-selected NemoClaw CLI using pinned vendor installer
+  ansible.builtin.command:
+    argv:
+      - bash
+      - scripts/install.sh
+      - --non-interactive
+      - --yes-i-accept-third-party-software
+      - --defer-onboarding
+    chdir: "{{ nemoclaw_host_source_dir }}"
+  become: true
+  become_user: "{{ ai_workstation_user }}"
+  environment:
+    HOME: "{{ ai_workstation_home }}"
+    NEMOCLAW_AGENT: hermes
+    NEMOCLAW_INSTALL_REF: "{{ nemoclaw_host_source_commit }}"
+    NEMOCLAW_NON_INTERACTIVE: "1"
+    NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE: "1"
+    NEMOCLAW_DISABLE_TELEMETRY: "1"
+    NEMOCLAW_NO_EXPRESS: "1"
+    NEMOCLAW_PROVIDER: build
+  when: not nemoclaw_host_cli_stat.stat.exists
+  changed_when: true
+  no_log: true
+
+- name: Validate Hermes CLI is installed
+  ansible.builtin.command:
+    argv:
+      - "{{ nemoclaw_host_binary }}"
+      - --version
+  register: nemoclaw_host_cli_version
+  become: true
+  become_user: "{{ ai_workstation_user }}"
+  environment:
+    HOME: "{{ ai_workstation_home }}"
+    NEMOCLAW_DISABLE_TELEMETRY: "1"
+  changed_when: false
+
+- name: Ensure provenance directory exists
+  ansible.builtin.file:
+    path: "{{ nemoclaw_host_ref_receipt | dirname }}"
+    state: directory
+    owner: "{{ ai_workstation_user }}"
+    group: "{{ ai_workstation_group }}"
+    mode: "0700"
+
+- name: Record pinned upstream revision after successful CLI validation
+  ansible.builtin.copy:
+    dest: "{{ nemoclaw_host_ref_receipt }}"
+    content: "{{ nemoclaw_host_source_commit }}\n"
+    owner: "{{ ai_workstation_user }}"
+    group: "{{ ai_workstation_group }}"
+    mode: "0600"
+
+- name: Report CLI and explicitly deferred agent onboarding
+  ansible.builtin.debug:
+    msg:
+      - "Hermes CLI: {{ nemoclaw_host_cli_version.stdout }}"
+      - "NemoClaw owns later OpenShell/Hermes onboarding and provider credentials."
+      - "OpenRouter onboarding: AIW Nemo menu -> Set up Hermes (NemoClaw)."
