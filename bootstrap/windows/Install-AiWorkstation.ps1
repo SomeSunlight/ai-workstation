@@ -795,6 +795,24 @@ function Show-Status {
         }
     }
 
+    if ($Profile -eq 'NemoClaw') {
+        $displayName = Get-ShortcutDisplayName
+        $desktopLink = Join-Path ([Environment]::GetFolderPath('Desktop')) "$displayName.lnk"
+        $startLink = Join-Path (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs') "$displayName.lnk"
+        Write-Step "NemoClaw Desktop shortcut: $(if (Test-Path -LiteralPath $desktopLink) { 'present' } else { 'missing' })"
+        Write-Step "NemoClaw Start Menu shortcut: $(if (Test-Path -LiteralPath $startLink) { 'present' } else { 'missing' })"
+        if ($DistroName -in $distros) {
+            $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script 'test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw"'
+            if ($profileCode -ne 0) {
+                Write-Step "The selected WSL distro is NOT an AIW NemoClaw profile; no runtime was accessed." Warning
+                return
+            }
+            $code = Invoke-Wsl -AllowFailure -Arguments @('--distribution', $DistroName, '--user', $LinuxUser, '--', 'bash', '-lc', 'cd ~/ai-workstation && bash ./bin/aiw-nemo status')
+            if ($code -ne 0) { Write-Step "NemoClaw status probe returned $code." Warning }
+        }
+        return
+    }
+
     $displayName = Get-ShortcutDisplayName
     $terminalDisplayName = Get-TerminalShortcutDisplayName
     $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) "$displayName.lnk"
@@ -832,6 +850,11 @@ function Verify-All {
     $distros = @(Get-Distros)
     if ($DistroName -notin $distros) {
         throw "Distribution '$DistroName' is missing."
+    }
+
+    if ($Profile -eq 'NemoClaw') {
+        $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script 'test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw"'
+        if ($profileCode -ne 0) { throw "Refusing to verify non-NemoClaw WSL distribution '$DistroName'." }
     }
 
     # Ubuntu release, systemd, Python, uv, Ansible and Docker are verified by
