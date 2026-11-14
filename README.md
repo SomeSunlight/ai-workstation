@@ -122,6 +122,12 @@ tracks isolated agent containers. The existing running gateway remains
 untouched until that explicit operational acceptance gate. Read the
 [operator guide](docs/native-services.md) for the portable workflow.
 
+## NemoClaw + Hermes: separate open-source Linux reference environment (experimental)
+
+The **opt-in** `install-nemoclaw.ps1` is a separate Windows entry point. It creates the independent `AIW-Nemo` Ubuntu WSL2 distribution, uses the existing Ansible-pinned **Docker Engine** (not Docker Desktop), and installs NVIDIA's pinned NemoClaw CLI. NemoClaw's own guided Hermes/OpenRouter onboarding then manages OpenShell, agent sessions, model providers and policies. Existing Goose/OpenShell and Windows inference resources are retained untouched.
+
+Read the [reference installation and safety notes](docs/nemoclaw-reference.md) and [editable owner acceptance checklist](docs/nemoclaw-acceptance.md) before running the new installer. Native Docker Engine **inside WSL2 is not NVIDIA's formally qualified WSL configuration**; this is a research/acceptance branch, not a production-ready cutover.
+
 ## Quick start
 
 Clone the repository on Windows, then run the installer from PowerShell 7:
