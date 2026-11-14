@@ -291,7 +291,16 @@ def goose(entry: dict[str, str], endpoint: str, session: str, model: str = "agen
     if (not directory or remote.is_absolute() or any(p in ("..", "") for p in directory.split("/"))
             or any(ord(c) < 32 for c in directory)):
         raise Refused("Choose a relative directory inside the private sandbox workspace.")
-    workdir = [] if directory == "." else ["--workdir", "/sandbox/" + directory]
+    # The official Goose v1.59.0 image uses /home/goose, NOT /sandbox.
+    # Ask upstream for the canonical work directory instead of assuming its path.
+    workdir = []
+    if directory != ".":
+        base = openshell("sandbox", "exec", "-n", entry["name"],
+                         "--no-login-shell", "--", "pwd", capture=True).strip()
+        if (not base.startswith("/") or base == "/"
+                or any(part in (".", "..") for part in base.split("/"))):
+            raise Refused("Cannot establish the sandbox working directory; refusing to guess.")
+        workdir = ["--workdir", base.rstrip("/") + "/" + directory]
     print("Interactive Goose is experimental: developer extension readiness is not yet qualified.")
     print("Use the separately attached OpenShell provider; no API key is passed by AIW.")
     openshell("sandbox", "exec", "-n", entry["name"], "--tty", *workdir,
