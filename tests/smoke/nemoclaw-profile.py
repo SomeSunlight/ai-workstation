@@ -32,7 +32,7 @@ class NemoClawProfileContracts(unittest.TestCase):
         self.assertIn("NEMOCLAW_INSTALL_REF:", role)
         self.assertIn("NEMOCLAW_DISABLE_TELEMETRY:", role)
         self.assertIn("--defer-onboarding", role)
-        self.assertIn("not nemo_cli_stat.stat.exists", role)
+        self.assertIn("not nemoclaw_host_cli_stat.stat.exists", role)
         self.assertNotIn("openshell sandbox create", role)
         self.assertNotIn("curl -fsSL", role)
         self.assertNotIn("docker-desktop", role)
