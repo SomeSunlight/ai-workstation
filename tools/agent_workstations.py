@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
+from ipaddress import ip_address
 from pathlib import Path, PurePosixPath
 import platform
 import re
@@ -139,6 +139,12 @@ def website_hostname(url: str) -> str:
             or not host or len(host) > 253 or host.endswith(".")
             or not re.fullmatch(r"[a-z0-9.-]+", host)):
         raise Refused("Enter an HTTPS address without login information or a custom port.")
+    try:
+        ip_address(host)
+    except ValueError:
+        pass
+    else:
+        raise Refused("Use a public DNS hostname, not a literal IP address.")
     labels = host.split(".")
     if (len(labels) < 2 or any(not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", item)
                                 for item in labels)
