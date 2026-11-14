@@ -1,3 +1,21 @@
+## Issue #71 — OpenShell workstations: first thin integration (Draft PR)
+
+**Baseline:** current `main` after merged docs PR #72. This independent review branch changes no host, Docker runtime, existing Goose sessions, or data. OpenShell v0.1.8 is operator-tested on one WSL2 + in-WSL Docker host, not generally security-qualified. Owner explicitly approves any host test and any merge.
+
+- [x] Read #71, closed research gates #68/#69, merged PR #72 runbook, source context and Development Workflow; decide responsibility split first.
+- [x] Write short ADR describing upstream ownership, typed user actions, trust boundary, state/export policy and unchanged #65 fallback.
+- [x] Add one opt-in Goose-first `aiw workstations` entry and standalone stdlib adapter: title-first list/selection, create with reviewed policy + pinned OCI reference, status/start/stop, interactive Goose/shell, full registered-project copy and targeted export.
+- [x] Add offline mocks for strict no-overwrite/no-delete and command/approval contracts; integrate into CI without accessing OpenShell, Docker or a user host. (8 tests; GitHub Ubuntu `Verify repository files` passed on head `e0a6884`.)
+- [x] Review focused tests and six-file diff; open independent [Draft PR #73](https://github.com/SomeSunlight/ai-workstation/pull/73). Ubuntu validation and disposable legacy Docker job passed on prior head `e0a6884`; remaining Windows/updated-head CI is checked separately. No ContextCanon source changes in this first slice: update authorized source and regenerate only after owner reviews the ADR.
+- [x] Operator feedback: rename top-level entry to plain English "Goose work areas" (not "Workstations / WSL"), explain persistent sandbox vs Goose conversation, offer bundled strict policy by default and site/flexible-web choices without local YAML management.
+- [x] Implement source-linked OpenShell v0.1.8 restrictive preset and minimal read-only HTTPS host rule, plus opt-in upstream policy-advisor mode (not fully unrestricted). Security boundary and support caveats documented in docs/openshell-network-profiles.md; **runtime policy effects still need operator flight**.
+- [x] Extend offline mocked contract suite to 14 tests: first-run title/profile (no YAML prompt), strict default, URL/IP validation, site-policy temporary 0600 file, no overwrite, explicit flexible-mode approval, unchanged legacy operations.
+- [ ] Exact current-head CI checkpoint (all jobs) after owner UX corrections; user must separately authorize any real OpenShell/WSL smoke test. Latest successful Linux validation and disposable Docker regression: [Validate #43573762887](https://github.com/SomeSunlight/ai-workstation/actions/runs/43573762887); Windows job may still be running when this checklist was last edited.
+- [x] Kaspersky / Windows-WSL/Linux support and scan-on-export integration: opened separate [Issue #74](https://github.com/SomeSunlight/ai-workstation/issues/74) with vendor-source feasibility questions and trusted scan-on-transfer criteria; no antivirus installed or implied protection.
+- [ ] Owner reviews and authorizes any real WSL test / exact-head merge. Unresolved: interactive extension hang, pinned offline tools, provider convenience, full backup/restore and broader negative security tests.
+
+---
+
 ## Issue #71 — OpenShell first-flight reproduction and #69 research handoff (2026-11-14)
 
 **Scope of this documentation-only PR:** capture the operator-proven OpenShell v0.1.8 / Goose 1.59.0 WSL journey in a sanitized, repeatable runbook; update no runtime, source context, provider credentials, Docker/WSL configuration, or host. Integration architecture, security qualification, legacy migration and new features belong in #71's later scoped PRs. Owner squash-merges only after review.
