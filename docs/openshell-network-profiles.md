@@ -49,6 +49,8 @@ OpenShell's explicit CLI stays available for advanced inspection; AIW does not r
 
 Windows antivirus must not be assumed to scan files inside WSL2 or a Linux container, and installing an antivirus **inside Goose's untrusted sandbox** would not establish reliable protection. Kaspersky offers Linux products, but WSL2 kernel/real-time protection, license applicability and sandbox isolation need independent vendor confirmation. A later optional **trusted-host scan-on-export** adapter (or a download staging/approval gate) can use a locally installed, approved scanner. That scan must fail clearly on scanner-not-installed, unknown status or detection; it must not imply that downloaded scripts, dependencies or binaries are safe to execute merely because a signature scan passes.
 
+See [optional antivirus scan-on-transfer research #74](https://github.com/SomeSunlight/ai-workstation/issues/74) before assuming Kaspersky covers WSL2 or OpenShell's private files.
+
 ### Related
 
 - [Architecture ADR](openshell-architecture.md) — upstream ownership, persistent data, migration boundaries.
