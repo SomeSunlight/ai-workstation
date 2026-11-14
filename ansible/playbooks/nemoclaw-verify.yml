@@ -1,0 +1,20 @@
+---
+- name: Verify isolated NemoClaw reference host
+  hosts: localhost
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../../config/versions.json
+  tasks:
+    - name: Verify base system
+      ansible.builtin.include_role:
+        name: base_system
+        tasks_from: verify
+    - name: Verify pinned Docker Engine
+      ansible.builtin.include_role:
+        name: docker_engine
+        tasks_from: verify
+    - name: Verify pinned NemoClaw installation without onboarding
+      ansible.builtin.include_role:
+        name: nemoclaw_host
+        tasks_from: verify
