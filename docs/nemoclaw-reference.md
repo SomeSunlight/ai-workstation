@@ -43,6 +43,8 @@ Native Ubuntu hosts can execute `./install.sh install --yes --profile nemoclaw` 
 
 ## Known limitations and security
 
+WSL2 distributions share a Linux VM/kernel and can contend for host-visible network ports. A third Ubuntu distro isolates files and its Docker daemon, but is **not** a full independent VM. A gateway already listening on a port in an earlier WSL distro can conflict. NemoClaw documents a managed automatic alternate gateway-port selection; allow its official onboarding to assess this rather than launching another OpenShell gateway or modifying the old distro manually. If ports clash, record the precise symptom and stop.
+
 **WSL2 with Docker Engine running directly inside Ubuntu is not the formally NVIDIA-qualified WSL path.** NVIDIA's WSL qualification focuses on Docker Desktop's WSL backend or supported rootless Podman. OpenShell already worked once with native Docker in the research environment, but that does **not** prove NemoClaw/Hermes onboarding. If upstream preflight refuses the configuration, stop and capture the log; no automatic switch to Docker Desktop or alteration of existing distros is permitted.
 
 Docker group membership confers **root-equivalent control of the new Linux Docker host**. All agent-executed code belongs in OpenShell's separate sandbox, never on the privileged WSL/Docker host. File access inside an approved work area and approved inference/network endpoints can still leak data. Do not send corporate/confidential documents to OpenRouter unless expressly approved under the relevant data-processing rules.
