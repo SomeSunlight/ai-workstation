@@ -38,18 +38,59 @@
   register: nemoclaw_host_receipt_content
   when: nemoclaw_host_receipt_stat.stat.exists
 
-- name: Refuse untracked installation, changed version, or lost binary
+- name: Refuse a missing CLI with a recorded install or an unexpected version
   ansible.builtin.assert:
     that:
-      - nemoclaw_host_cli_stat.stat.exists == nemoclaw_host_receipt_stat.stat.exists
+      - not nemoclaw_host_receipt_stat.stat.exists or nemoclaw_host_cli_stat.stat.exists
       - >-
         not nemoclaw_host_receipt_stat.stat.exists or
         (nemoclaw_host_receipt_content.content | b64decode | trim) == nemoclaw_host_source_commit
     fail_msg: >-
-      NemoClaw version/receipt mismatch or an untracked CLI exists. Refusing
-      to modify a possibly live NemoClaw/OpenShell installation. Inspect
-      it and make an explicit upgrade/recovery decision.
+      NemoClaw CLI/receipt is inconsistent or an installed version was changed.
+      Refusing to reinstall, mutate or destroy an existing NemoClaw/OpenShell.
     quiet: true
+
+- name: Inspect upstream build identity after interrupted first install
+  ansible.builtin.stat:
+    path: "{{ ai_workstation_home }}/.nemoclaw/source/dist/build-identity.json"
+  register: nemoclaw_host_build_identity_stat
+  when:
+    - nemoclaw_host_cli_stat.stat.exists
+    - not nemoclaw_host_receipt_stat.stat.exists
+
+- name: Require an upstream build identity for safe interrupted-install recovery
+  ansible.builtin.assert:
+    that:
+      - nemoclaw_host_build_identity_stat.stat.exists
+    fail_msg: >-
+      A NemoClaw CLI exists but no AIW install receipt was recorded. No
+      authentic upstream build identity is present; refusing to adopt it.
+    quiet: true
+  when:
+    - nemoclaw_host_cli_stat.stat.exists
+    - not nemoclaw_host_receipt_stat.stat.exists
+
+- name: Read upstream build identity only for recovery
+  ansible.builtin.slurp:
+    src: "{{ ai_workstation_home }}/.nemoclaw/source/dist/build-identity.json"
+  register: nemoclaw_host_build_identity
+  when:
+    - nemoclaw_host_cli_stat.stat.exists
+    - not nemoclaw_host_receipt_stat.stat.exists
+
+- name: Verify unfinished first install matches the pinned source
+  ansible.builtin.assert:
+    that:
+      - >-
+        (nemoclaw_host_build_identity.content | b64decode | from_json).sourceRevision
+        == nemoclaw_host_source_commit
+    fail_msg: >-
+      Existing NemoClaw build identity does not match this pinned installer.
+      Refusing to silently adopt or upgrade a different live installation.
+    quiet: true
+  when:
+    - nemoclaw_host_cli_stat.stat.exists
+    - not nemoclaw_host_receipt_stat.stat.exists
 
 - name: Prepare pinned external-source directory
   ansible.builtin.file:
