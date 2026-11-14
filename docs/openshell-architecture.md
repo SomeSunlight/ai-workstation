@@ -26,7 +26,7 @@ Strict operator-reviewed OpenShell policy (including `landlock.compatibility: ha
 
 ## Workstation and data lifecycle
 
-- **Create:** choose a human title, supply an existing reviewed Linux policy YAML, review and type `CREATE`. The adapter creates the pinned Goose sandbox using OpenShell; it neither pulls an image explicitly nor registers a provider. If these external prerequisites are absent, let OpenShell fail rather than silently install or broaden access.
+- **Create:** choose a human title and a readable network choice. The default is the bundled strict policy, not a requested YAML path. A specific website produces a short-lived derived OpenShell policy; flexible mode uses OpenShell's automatic policy-advisor approval (NOT unrestricted Internet). Type `CREATE`, or `ALLOW` for the riskier flexible mode. Experts may explicitly supply a custom policy file. The adapter neither installs an image explicitly nor registers a provider; missing OpenShell prerequisites fail without silent changes.
 - **Start / continue:** reuse the same persistent sandbox, and optionally enter an interactive Goose session or development shell. Interactive Goose's `loading extensions in background...` stall and missing Python/uv/Node tooling remain unresolved; they must not be declared functional by the mere ability to launch the process.
 - **Import source:** select an **existing registered Linux project folder** and type `COPY`; OpenShell uploads a **complete independent copy**, including `.git` and ignored files, without mounting the original. It refuses an already existing destination basename instead of silently merging or overwriting. This can also copy hidden credentials or sensitive Git history. Until remaining exfiltration tests are approved, use **synthetic/nonconfidential source data only**.
 - **Export result:** choose an explicit sandbox-relative file/folder and a **new** trusted Linux destination; type `EXPORT`. The adapter rejects traversal, existing destinations and WSL-mounted targets. Transferred content is untrusted and must be inspected. This is not automatic sync and not a backup. CLI-native upload/download remain the transfer authority.
@@ -39,19 +39,23 @@ A long-lived workstation may contain **several unrelated Git repositories**, bui
 
 ```text
 aiw
-  8) Agent workstations (OpenShell / WSL)
+  8) Goose work areas (OpenShell)
 ```
 
 The workstations menu shows numbered **titles**. The advanced CLI also accepts exact titles:
 
 ```bash
 aiw workstations list
-aiw workstations create "Explore Project" --policy /path/to/reviewed-strict-policy.yaml
+aiw workstations create "Explore Project"  # bundled restrictive policy
+aiw workstations create "Public docs" --profile website --website https://docs.python.org/3/
+aiw workstations create "Flexible research" --profile flexible
 aiw workstations import-project "Explore Project" registered-project
 aiw workstations goose "Explore Project" --endpoint https://dispatcher.example.invalid --session work --directory registered-project
 aiw workstations export "Explore Project" project/result.html "$HOME/aiw-export/new-result.html"
 aiw workstations stop "Explore Project"
 ```
+
+See [OpenShell network choices and safety warnings](openshell-network-profiles.md). Flexible web is **not** a verified all-Internet grant.
 
 `dispatcher.example.invalid` is an intentionally invalid example hostname. Substitute the approved local HTTPS origin only on the operator's machine; do **not** commit secrets, actual hostnames or local provider files. Create the destination parent directory manually before export, attach/review the trusted OpenShell provider separately, and do not assume the command sequence above was executed in the first PR. For the manually tested OpenShell setup and restricted provider procedure, consult [the first-flight runbook](openshell-hands-on.md). Advanced titles map to upstream names internally; users should not need to memorize them.
 
