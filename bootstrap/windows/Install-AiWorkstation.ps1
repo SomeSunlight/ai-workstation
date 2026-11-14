@@ -14,6 +14,9 @@ param(
     [ValidateSet('Install', 'Status', 'Verify', 'Shortcuts')]
     [string]$Action = 'Install',
 
+    [ValidateSet('Legacy', 'NemoClaw')]
+    [string]$Profile = 'Legacy',
+
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')]
     [string]$DistroName = 'Ubuntu-24.04',
     [string]$InstallLocation = 'C:\WSL\Ubuntu-24.04',
@@ -30,6 +33,7 @@ param(
 
     [switch]$NoAutomaticRestart,
     [switch]$SkipLinuxInstall,
+    [switch]$SkipOnboarding,
     [switch]$ResumeAfterReboot
 )
 
@@ -150,6 +154,8 @@ function Get-InvocationArguments {
         ('"{0}"' -f $script:StagedEntryPoint)
         '-Action'
         $Action
+        '-Profile'
+        $Profile
         '-DistroName'
         ('"{0}"' -f $DistroName)
         '-InstallLocation'
@@ -176,6 +182,9 @@ function Get-InvocationArguments {
     }
     if ($SkipLinuxInstall) {
         $arguments += '-SkipLinuxInstall'
+    }
+    if ($SkipOnboarding) {
+        $arguments += '-SkipOnboarding'
     }
     if ($ForResume) {
         $arguments += '-ResumeAfterReboot'
@@ -288,6 +297,10 @@ function Register-ResumeAndRestart {
 function Ensure-WslPlatform {
     if (Test-WslPlatform) {
         Write-Step 'WSL platform is available.' Ok
+        if ($Profile -eq 'NemoClaw') {
+            Write-Step 'Existing WSL version preserved; no global WSL update in NemoClaw profile.' Ok
+            return
+        }
         Write-Step 'Checking for WSL updates. This can take several minutes and may produce little output.'
         Invoke-Wsl -Arguments @('--update')
         Write-Step 'WSL update check completed.' Ok
@@ -386,6 +399,14 @@ function Ensure-Distro {
             }
         }
 
+        if ($Profile -eq 'NemoClaw') {
+            $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script @'
+test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw"
+'@
+            if ($profileCode -ne 0) {
+                throw "Existing WSL distribution '$DistroName' is not marked as the NemoClaw profile; refusing adoption."
+            }
+        }
         Write-Step "Distribution '$DistroName' already exists." Ok
         return
     }
@@ -428,6 +449,10 @@ function Ensure-Distro {
         throw "Distribution '$DistroName' was not registered."
     }
 
+    if ($Profile -eq 'NemoClaw') {
+        Invoke-Bash -User 'root' -Script "printf '%s
+' nemoclaw > /etc/aiw-install-profile && chmod 0644 /etc/aiw-install-profile"
+    }
     Write-Step "Distribution '$DistroName' is installed." Ok
 }
 
@@ -654,6 +679,9 @@ function Get-LinuxRepositoryPath {
 }
 
 function Get-ShortcutDisplayName {
+    if ($Profile -eq 'NemoClaw') {
+        return "$ShortcutName ($DistroName)"
+    }
     if ($DistroName -eq 'Ubuntu-24.04') {
         return $ShortcutName
     }
@@ -672,6 +700,13 @@ function Get-TerminalShortcutDisplayName {
 function Ensure-WindowsShortcuts {
     if ($NoShortcuts) {
         Write-Step 'Windows shortcuts were skipped by request.' Warning
+        return
+    }
+
+    if ($Profile -eq 'NemoClaw') {
+        & (Join-Path $PSScriptRoot 'Create-NemoClawShortcut.ps1') -DistroName $DistroName -LinuxUser $LinuxUser
+        if (-not $?) { throw 'Creating NemoClaw launcher failed.' }
+        Write-Step "NemoClaw Hermes ($DistroName) shortcut created (one per Desktop/Start)." Ok
         return
     }
 
@@ -715,6 +750,7 @@ else
   git clone --branch $refLiteral --single-branch $urlLiteral $repositoryLiteral
 fi
 chmod +x $repositoryLiteral/install.sh $repositoryLiteral/bin/aiw $repositoryLiteral/bootstrap/linux/install.sh
+if [ -f $repositoryLiteral/bin/aiw-nemo ]; then chmod +x $repositoryLiteral/bin/aiw-nemo; fi
 "@
 
     Write-Step "Linux repository is available at $repositoryPath." Ok
@@ -735,7 +771,7 @@ function Invoke-LinuxInstall {
         '--'
         'bash'
         '-lc'
-        'cd ~/ai-workstation && ./install.sh install --yes'
+        $(if ($Profile -eq 'NemoClaw') { 'cd ~/ai-workstation && ./install.sh install --yes --profile nemoclaw' } else { 'cd ~/ai-workstation && ./install.sh install --yes' })
     )
     Write-Step 'Linux host installation completed.' Ok
 }
@@ -778,7 +814,7 @@ function Show-Status {
             '--'
             'bash'
             '-lc'
-            'if [ -x ~/ai-workstation/bin/aiw ]; then ~/ai-workstation/bin/aiw status; else echo "Linux repository not installed"; fi'
+            $(if ($Profile -eq 'NemoClaw') { 'if [ -f ~/ai-workstation/bin/aiw-nemo ]; then bash ~/ai-workstation/bin/aiw-nemo status; else echo "Nemo profile repository not installed"; fi' } else { 'if [ -x ~/ai-workstation/bin/aiw ]; then ~/ai-workstation/bin/aiw status; else echo "Linux repository not installed"; fi' })
         )
         if ($linuxStatusExitCode -ne 0) {
             Write-Step "Linux status unavailable. WSL returned exit code $linuxStatusExitCode." Warning
@@ -811,13 +847,36 @@ function Verify-All {
         '--'
         'bash'
         '-lc'
-        'cd ~/ai-workstation && ./install.sh verify'
+        $(if ($Profile -eq 'NemoClaw') { 'cd ~/ai-workstation && ./install.sh verify --profile nemoclaw' } else { 'cd ~/ai-workstation && ./install.sh verify' })
     )
 
     Write-Step 'Windows and Linux verification completed successfully.' Ok
 }
 
+function Invoke-NemoOnboarding {
+    if ($SkipOnboarding -or $SkipLinuxInstall) {
+        Write-Step 'Official NemoClaw onboarding deferred; use the new penguin shortcut.' Warning
+        return
+    }
+    Write-Host ''
+    Write-Host 'NemoClaw CLI installed. Hermes/OpenShell and OpenRouter are configured by the upstream wizard.'
+    Write-Host 'It will ask for a provider and credentials. AIW never receives or stores your key.'
+    $answer = Read-Host 'Start the official NemoClaw Hermes setup wizard now? [y/N]'
+    if ($answer -notin @('y', 'Y')) {
+        Write-Step 'Open the new NemoClaw penguin shortcut and select Hermes setup later.' Ok
+        return
+    }
+    Invoke-Wsl -Arguments @(
+        '--distribution', $DistroName, '--user', $LinuxUser, '--',
+        'bash', '-lc', 'cd ~/ai-workstation && bash ./bin/aiw-nemo onboard'
+    )
+    Write-Step 'NemoClaw guided setup completed. Verify with the acceptance checklist.' Ok
+}
+
 try {
+    if ($Profile -eq 'NemoClaw' -and $DistroName -eq 'Ubuntu-24.04') {
+        throw 'Choose a dedicated NemoClaw distro name, not the existing default AIW Ubuntu.'
+    }
     if ($Action -eq 'Install' -and -not (Test-Administrator)) {
         Restart-Elevated
     }
@@ -825,6 +884,7 @@ try {
     Start-Log
     Write-Section 'AI Workstation Windows installer'
     Write-Step "Action: $Action"
+    Write-Step "Profile: $Profile"
     Write-Step "Distribution: $DistroName"
     Write-Step "Location: $InstallLocation"
 
@@ -841,13 +901,18 @@ try {
         }
         'Install' {
             Ensure-WslPlatform
-            Merge-WslConfig
+            if ($Profile -eq 'Legacy') {
+                Merge-WslConfig
+            } else {
+                Write-Step 'Preserving global .wslconfig and other WSL distributions.' Ok
+            }
             Ensure-Distro
             Ensure-LinuxPrerequisites
             Ensure-LinuxUser
             Ensure-LinuxRepository
             Ensure-WindowsShortcuts
             Invoke-LinuxInstall
+            if ($Profile -eq 'NemoClaw') { Invoke-NemoOnboarding }
             Write-Step 'AI Workstation installation completed successfully.' Ok
             Write-Step 'Run ".\install.ps1 -Action Status" to show the current installation state.'
         }
