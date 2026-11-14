@@ -3,8 +3,8 @@
 **Baseline:** current `main` after merged docs PR #72. This independent review branch changes no host, Docker runtime, existing Goose sessions, or data. OpenShell v0.1.8 is operator-tested on one WSL2 + in-WSL Docker host, not generally security-qualified. Owner explicitly approves any host test and any merge.
 
 - [x] Read #71, closed research gates #68/#69, merged PR #72 runbook, source context and Development Workflow; decide responsibility split first.
-- [ ] Write short ADR describing upstream ownership, typed user actions, trust boundary, state/export policy and unchanged #65 fallback.
-- [ ] Add one opt-in Goose-first `aiw workstations` entry and standalone stdlib adapter: title-first list/selection, create with reviewed policy + pinned OCI reference, status/start/stop, interactive Goose/shell, full registered-project copy and targeted export.
+- [x] Write short ADR describing upstream ownership, typed user actions, trust boundary, state/export policy and unchanged #65 fallback.
+- [x] Add one opt-in Goose-first `aiw workstations` entry and standalone stdlib adapter: title-first list/selection, create with reviewed policy + pinned OCI reference, status/start/stop, interactive Goose/shell, full registered-project copy and targeted export.
 - [ ] Add offline mocks for strict no-overwrite/no-delete and command/approval contracts; integrate into CI without accessing OpenShell, Docker or a user host.
 - [ ] Review focused tests and diff; open independent Draft PR. No ContextCanon source changes in this first slice: update authorized source and regenerate only after owner reviews the ADR.
 - [ ] Owner reviews and authorizes any real WSL test / exact-head merge. Unresolved: interactive extension hang, pinned offline tools, provider convenience, full backup/restore and broader negative security tests.
