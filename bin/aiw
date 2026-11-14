@@ -11,6 +11,7 @@ source "${ROOT}/bin/aiw-menu-config.sh"
 readonly LOCAL_INFERENCE_MANAGER="${ROOT}/runtimes/local-inference/manage.sh"
 readonly LOCAL_INFERENCE_SERVICE="${ROOT}/runtimes/local-inference/service.sh"
 readonly NATIVE_SERVICES="${ROOT}/tools/aiw-services.py"
+readonly AGENT_WORKSTATIONS="${ROOT}/tools/agent_workstations.py"
 readonly LOCAL_INFERENCE_CONFIG="${AIW_LOCAL_INFERENCE_CONFIG:-${HOME}/.config/ai-workstation/local-inference.env}"
 
 fail() {
@@ -65,6 +66,11 @@ native_services() {
     fi
     [[ -n "$py" ]] || fail "Python is missing; use aiw install."
     "$py" "$NATIVE_SERVICES" "$@"
+}
+
+agent_workstations() {
+    command -v python3 >/dev/null 2>&1 || fail "Python 3 is required for the WSL OpenShell adapter."
+    python3 "$AGENT_WORKSTATIONS" "$@"
 }
 
 native_services_menu_help() {
@@ -184,6 +190,12 @@ show_help() {
     run_core help
     cat <<'EOF'
 
+Agent workstations (OpenShell on Linux / WSL, opt-in):
+  aiw workstations              Human-title workstation selection and transfer menu
+  aiw workstations list         View OpenShell-managed AIW Goose workstations
+  aiw workstations --help       Show advanced commands
+  See docs/openshell-architecture.md and docs/openshell-hands-on.md
+
 Native host processes (Process Compose, optional):
   aiw services init          Create the PRIVATE per-host YAML (once)
   aiw services install       Install pinned, checksum-verified native binary
@@ -302,6 +314,7 @@ AI Workstation
 5) Command help
 6) Configure AI Workstation (edit YAML settings)
 7) Native services (Process Compose)
+8) Agent workstations (OpenShell / WSL)
 q) Exit
 EOF
         read -r -p 'Select: ' choice || return 0
@@ -313,6 +326,7 @@ EOF
             5) run_menu_action show_help ;;
             6) run_menu_action aiw_menu_edit_config ;;
             7) native_services_menu ;;
+            8) agent_workstations menu ;;
             q|Q) return ;;
             *) printf 'Unknown selection.\n' ;;
         esac
@@ -330,6 +344,9 @@ case "$command_name" in
         ;;
     services|service)
         native_services "$@"
+        ;;
+    workstations|agent-workstations)
+        agent_workstations "$@"
         ;;
     status)
         show_status
