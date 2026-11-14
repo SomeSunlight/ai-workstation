@@ -888,11 +888,15 @@ function Invoke-NemoOnboarding {
         Write-Step 'Open the new NemoClaw penguin shortcut and select Hermes setup later.' Ok
         return
     }
+    # Provider/API-key prompts belong exclusively to the official upstream wizard.
+    # Stop the Windows transcription before invoking an interactive secret prompt.
+    Stop-Log
+    $script:TranscriptStarted = $false
     Invoke-Wsl -Arguments @(
         '--distribution', $DistroName, '--user', $LinuxUser, '--',
         'bash', '-lc', 'cd ~/ai-workstation && bash ./bin/aiw-nemo onboard'
     )
-    Write-Step 'NemoClaw guided setup completed. Verify with the acceptance checklist.' Ok
+    Write-Step 'NemoClaw guided setup completed; credential interactions were not transcribed.' Ok
 }
 
 try {
