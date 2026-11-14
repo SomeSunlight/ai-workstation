@@ -361,6 +361,34 @@ openshell sandbox delete aiw-p0-scratch
 
 **Do not execute deletion during a normal test handoff.** It is *not* a stop operation and may irreversibly discard private workspace/history. No `docker system prune`, volume reset or automated apt autoremove. If uninstalling OpenShell entirely is later approved, separately verify all test-only resources, service state and package ownership. Avoid generic deletion of the user's profile/configuration/data.
 
+### After-flight cleanup — separate sandbox state from Docker images
+
+**Important: the operator may still be using interactive Goose to refine the bouquet. Do not run these commands until that interaction is finished.** A test sandbox is *persistent private work*, not just a running process. **Stop/start preserves it; delete may destroy both its files and private Git history.**
+
+1. **Inspect:** `openshell sandbox list`, `docker system df -v` (read-only). If a sandbox holds a result worth keeping, explicitly download the specific artifact(s), verify the files on the trusted host, and separately arrange any needed history/state backup *before* deleting it. The HTML file export above is only a partial backup; `bouquet.html` is not the whole workspace.
+2. **Finish or exit** all interactive Goose sessions and confirm the three exact test-only names. Keep `aiw-goose-test` if there is still useful active work. Never delete it merely to improve a disk-space statistic.
+3. **Targeted cleanup (operator approval only):**
+
+```bash
+openshell sandbox list
+
+# Only when these exact named sandboxes are no longer needed:
+openshell sandbox delete aiw-p0-scratch
+openshell sandbox delete aiw-p0-hardened
+openshell sandbox delete aiw-goose-test
+
+openshell sandbox list
+docker system df -v
+```
+
+The sandbox **deletion CLI family exists upstream but was not exercised in this first-flight research**. Review the actual list, errors, effects and surviving data before assuming every sandbox-owned filesystem volume was removed. A declined deletion or failed operation must be investigated, **not** followed by broad Docker prune.
+
+4. **Do not automatically remove OCI images or Docker volumes.** Docker Engine is the required backend for the successful OpenShell sandbox driver. The pulled `ghcr.io/aaif-goose/goose:v1.59.0` image is a reusable base layer, *not* a second live Goose service. The OpenShell gateway/supervisor uses its own OCI/container resources. Meanwhile, the old AIW `compose/goose.yml` and the merged #65 named sandbox templates, their distinct images and **persistent volumes including `ai-workstation_goose-home`**, remain functional **legacy/fallback** machinery until a separately approved retirement. Open WebUI and unrelated OCI images remain independent and must not be affected.
+5. **Only in a separate retirement decision** inventory each image's tag/digest, its actual consumers (including stopped containers), and all volumes/backup locations. Delete exact, unreferenced images through a reviewed operation; avoid `docker system prune`, `docker volume prune`, `docker compose down -v`, `apt autoremove` or other blanket cleanup commands. Container/sandbox removal and cached OCI image removal are different actions.
+6. **Host-only local helper files** `/tmp/aiw-p0-hard-policy.yaml`, `/tmp/aiw-dispatcher-profile.yaml`, `/tmp/openshell-install-v0.1.8.sh` are separate from OpenShell's persisted provider and sandbox records. Keep/share the *nonsecret* policy through a reviewed config if needed. Never delete a host file thinking it revokes a provider/key; use the trusted OpenShell/Dispatcher revocation operations if retiring the identity.
+
+**Outcome:** Test sandboxes and cached images can consume disk; removing test-owned sandboxes is a good end-of-flight practice, but **image pruning is not a substitute for identifying the source of space usage**, and deleting state is not a backup.
+
 ### What this flight proved — and what it did not
 
 | Capability | Empirical result |
