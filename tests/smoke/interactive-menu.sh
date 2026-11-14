@@ -13,6 +13,7 @@ grep -Fq 'Goose' <<< "$menu_output"
 grep -Fq 'Open WebUI' <<< "$menu_output"
 grep -Fq 'Local inference' <<< "$menu_output"
 grep -Fq 'llama.cpp / Llama Dispatcher' <<< "$menu_output"
+grep -Fq '8) Goose work areas (OpenShell)' <<< "$menu_output"
 
 local_menu_output="$(printf '2\nb\nq\n' | HOME="$temp_home" "$cli")"
 grep -Fq 'Local inference' <<< "$local_menu_output"
