@@ -160,7 +160,7 @@ class WorkstationTests(unittest.TestCase):
         self.assertIn("aiw.profile=website", args)
         self.assertIn("aiw.site=docs.python.org", args)
         self.assertIn("--policy", args)
-        self.assertIn("host: \\"docs.python.org\\"", captured[1][0])
+        self.assertIn('host: "docs.python.org"', captured[1][0])
         self.assertEqual(captured[1][1], 0o600)
         self.assertFalse(Path(args[-1]).exists(), "No persistent AIW-generated policy files")
 
