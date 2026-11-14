@@ -5,8 +5,8 @@
 - [x] Read #71, closed research gates #68/#69, merged PR #72 runbook, source context and Development Workflow; decide responsibility split first.
 - [x] Write short ADR describing upstream ownership, typed user actions, trust boundary, state/export policy and unchanged #65 fallback.
 - [x] Add one opt-in Goose-first `aiw workstations` entry and standalone stdlib adapter: title-first list/selection, create with reviewed policy + pinned OCI reference, status/start/stop, interactive Goose/shell, full registered-project copy and targeted export.
-- [ ] Add offline mocks for strict no-overwrite/no-delete and command/approval contracts; integrate into CI without accessing OpenShell, Docker or a user host.
-- [ ] Review focused tests and diff; open independent Draft PR. No ContextCanon source changes in this first slice: update authorized source and regenerate only after owner reviews the ADR.
+- [x] Add offline mocks for strict no-overwrite/no-delete and command/approval contracts; integrate into CI without accessing OpenShell, Docker or a user host. (8 tests; GitHub Ubuntu `Verify repository files` passed on head `e0a6884`.)
+- [x] Review focused tests and six-file diff; open independent [Draft PR #73](https://github.com/SomeSunlight/ai-workstation/pull/73). Ubuntu validation and disposable legacy Docker job passed on prior head `e0a6884`; remaining Windows/updated-head CI is checked separately. No ContextCanon source changes in this first slice: update authorized source and regenerate only after owner reviews the ADR.
 - [ ] Owner reviews and authorizes any real WSL test / exact-head merge. Unresolved: interactive extension hang, pinned offline tools, provider convenience, full backup/restore and broader negative security tests.
 
 ---
