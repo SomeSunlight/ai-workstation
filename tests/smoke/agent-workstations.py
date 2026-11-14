@@ -111,6 +111,11 @@ class WorkstationTests(unittest.TestCase):
             self.assertIn("--tty", args)
             self.assertIn("GOOSE_MODE=approve", args)
             self.assertNotIn("OPENAI_API_KEY", str(args))
+            module.goose(entry, "https://example.invalid", "work", directory="project")
+            self.assertIn("--workdir", cli.call_args.args)
+            self.assertIn("/sandbox/project", cli.call_args.args)
+            with self.assertRaises(module.Refused):
+                module.goose(entry, "https://example.invalid", "work", directory="../etc")
 
     def test_no_implicit_start_and_stop_requires_approval(self):
         entry = {"name": "internal", "title": "Display", "phase": "Ready"}
