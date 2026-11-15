@@ -37,6 +37,17 @@ class NemoClawProfileContracts(unittest.TestCase):
         self.assertNotIn("curl -fsSL", role)
         self.assertNotIn("docker-desktop", role)
 
+    def test_openrouter_onboarding_skips_nvidia_gpu_cdi(self):
+        menu = self.text("bin/aiw-nemo")
+        self.assertIn('nemohermes onboard --no-gpu "$@"', menu)
+        self.assertIn('6) onboard --resume', menu)
+        self.assertIn("GPU passthrough: DISABLED", menu)
+        self.assertNotIn("nvidia-container-toolkit", menu)
+        installer = self.text("bootstrap/windows/Install-AiWorkstation.ps1")
+        self.assertIn("Invoke-AiwObservedWslImport", installer)
+        self.assertIn("NemoClaw WSL user/systemd configuration already correct", installer)
+        self.assertIn("if ($wslConfigReady)", installer)
+
     def test_pinned_nemoclaw_and_no_old_wsl_deletion(self):
         defaults = self.text("ansible/roles/nemoclaw_host/defaults/main.yml")
         self.assertIn("82e1ad7474ec7175c5b860b2bfa9d7940bc6e75f", defaults)
