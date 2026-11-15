@@ -28,9 +28,14 @@ onboard() {
         return 1
     }
     printf 'Official NemoClaw Hermes onboarding. Select OpenRouter as first provider.\n'
+    printf 'GPU passthrough: DISABLED (--no-gpu). OpenRouter needs no NVIDIA CUDA/CDI.\n'
     printf 'Enter credentials ONLY in the official wizard, never in AIW or Git.\n'
     printf 'NVIDIA Express (managed Windows Ollama) is disabled for this native Docker setup.\n'
-    nemohermes onboard "$@"
+    # The CPU/remote-inference profile must skip NVIDIA CDI checks even when
+    # Docker advertises generic CDISpecDirs without nvidia.com/gpu devices.
+    # Preserve the choice on --resume; any future GPU enablement is an
+    # explicitly reviewed separate profile, not an implicit toolkit install.
+    nemohermes onboard --no-gpu "$@"
 }
 connect() {
     command -v nemohermes >/dev/null 2>&1 || { printf 'NemoClaw not installed.\n' >&2; return 1; }
