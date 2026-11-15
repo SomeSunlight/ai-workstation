@@ -114,6 +114,7 @@ function Stop-Log {
 }
 
 . (Join-Path $PSScriptRoot 'Filesystem.ps1')
+. (Join-Path $PSScriptRoot 'Observe-WslImport.ps1')
 
 function Stage-Installer {
     $sourceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -430,19 +431,22 @@ test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw"
 
     $imagePath = Ensure-UbuntuImage
 
+    # Start-Process joins ArgumentList, so quote the two Windows file paths.
+    # Names and paths are never evaluated as shell commands.
     $arguments = @(
         '--install'
         '--from-file'
-        $imagePath
+        ('"{0}"' -f $imagePath)
         '--name'
         $DistroName
         '--location'
-        $InstallLocation
+        ('"{0}"' -f $InstallLocation)
         '--no-launch'
     )
 
     Write-Step "Installing the pinned Ubuntu image as '$DistroName' in $InstallLocation."
-    Invoke-Wsl -Arguments $arguments | Out-Null
+    Write-Step 'This WSL operation may take time; AIW will print a heartbeat every 15 seconds.'
+    Invoke-AiwObservedWslImport -Executable (Join-Path $env:WINDIR 'System32\wsl.exe') -Arguments $arguments -InstallLocation $InstallLocation -LogDirectory $script:LogRoot
 
     $registeredDistros = @(Get-Distros)
     if ($DistroName -notin $registeredDistros) {
