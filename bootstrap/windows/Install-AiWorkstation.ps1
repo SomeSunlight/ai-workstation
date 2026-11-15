@@ -585,9 +585,39 @@ with path.open('w', encoding='utf-8') as handle:
 PY
 "@
 
-    Invoke-Bash -Script $configuration
-    Invoke-Wsl -Arguments @('--terminate', $DistroName) | Out-Null
-    Start-Sleep -Seconds 2
+    # Avoid restarting a live NemoClaw gateway or Hermes sandbox on every
+    # idempotent install. Rewriting /etc/wsl.conf would otherwise force the
+    # legacy unconditional "wsl --terminate" even for a correct configuration.
+    $wslConfigReady = $false
+    if ($Profile -eq 'NemoClaw') {
+        $probe = @"
+set -e
+python3 - <<'PY'
+from configparser import ConfigParser
+from pathlib import Path
+import sys
+config = ConfigParser()
+config.read('/etc/wsl.conf')
+try:
+    configured = config.getboolean('boot', 'systemd') and config.get('user', 'default') == '$LinuxUser'
+except (ValueError, Exception):
+    configured = False
+sys.exit(0 if configured else 1)
+PY
+"@
+        $wslConfigReady = (Invoke-Bash -Script $probe -User 'root' -AllowFailure) -eq 0
+    }
+    if ($wslConfigReady) {
+        Write-Step 'NemoClaw WSL user/systemd configuration already correct; preserving running Linux processes.' Ok
+    }
+    else {
+        if ($Profile -eq 'NemoClaw') {
+            Write-Step 'NemoClaw WSL configuration needs an initial update; this distribution alone will restart.' Warning
+        }
+        Invoke-Bash -Script $configuration
+        Invoke-Wsl -Arguments @('--terminate', $DistroName) | Out-Null
+        Start-Sleep -Seconds 2
+    }
 
     $actualOutput = @(
         & wsl.exe --distribution $DistroName --user $LinuxUser -- sh -lc 'id -un' 2>&1 |
