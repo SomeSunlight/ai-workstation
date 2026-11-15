@@ -35,6 +35,22 @@ The script checks out the **same Git branch** in the new WSL distro. The current
 
 The upstream install stage is explicitly version-pinned to NVIDIA/NemoClaw Git commit `82e1ad7474ec7175c5b860b2bfa9d7940bc6e75f`; it uses the upstream `scripts/install.sh --defer-onboarding` with `NEMOCLAW_AGENT=hermes`, disables Express (which would prefer a Windows-host Ollama path), and disables optional NemoClaw telemetry. The upstream installer is still able to download dependencies and to install or upgrade **its own OpenShell** components; this is why the new distribution must be independent and empty.
 
+### Remote-model (OpenRouter) mode: GPU disabled
+
+**The AIW Hermes menu explicitly calls `nemohermes onboard --no-gpu`, including `--resume`.** This is a deliberate, stable first-test default, not a guess based on missing GPU binaries. Docker's `CDISpecDirs` may be configured even when this WSL installation has no `nvidia.com/gpu` CDI devices: NemoClaw would otherwise stop at preflight and propose installing NVIDIA Container Toolkit. For OpenRouter, **do not install NVIDIA Container Toolkit or NVIDIA CUDA solely to satisfy that check**. GPU passthrough and local NVIDIA inference require a later explicit profile and review.
+
+A Windows host with a suitable NVIDIA GPU can expose CUDA inside WSL through its Windows NVIDIA driver, and NVIDIA Container Toolkit can expose it to Docker containers. This is *not* an intrinsic WSL restriction; it simply has no role in this remote-inference test. The older AIW/OpenShell Docker Engine path never provisioned NVIDIA Container Toolkit.
+
+In a real installation test on 2026-11-15/16, pinned Ubuntu, Docker 29.6.1, Compose 5.3.0, Buildx and NemoHermes CLI 0.0.144 passed. The first `nemohermes onboard` stopped at the generic Docker/CDI probe **before** the provider or Hermes sandbox was created. The vendor output explicitly suggested `--no-gpu`. After updating the Windows checkout to this PR head, **rerun the same `install-nemoclaw.ps1`**: it advances the in-WSL Git checkout, checks the already provisioned Nemo environment, then offers to launch the CPU-only official wizard. No manual `nvidia-ctk` or WSL repair commands are required. The owner's CPU-mode onboarding result is not yet known.
+
+### Windows WSL image import progress
+
+The native Windows `wsl.exe --install --from-file` command formerly blocked the AIW console for an unknown duration without progress output. AIW now runs that *one* import as an observed subprocess: it reports elapsed wall-clock time and child PID every 15 seconds, virtual-disk size where detectable, and saves stdout/stderr logs separately. Its stdin is explicitly empty so an interactive prompt cannot silently demand a Return. The operation is **not** automatically terminated by a timeout, which would risk corrupting an in-progress WSL registration. An error leaves the target for diagnosis rather than deleting or reimporting it.
+
+The first owner log shows the import was initiated in the Windows install started at 22:29, and the Linux installer log started at 00:18. The log has no per-command timestamps and cannot prove whether pressing Return released the import or merely coincided with its completion. No timing/success claim should be inferred from that observation.
+
+The Windows installer also skips rewriting `/etc/wsl.conf` and **does not terminate a running NemoClaw distro** when systemd and its default user already match the intended configuration. The legacy installer retains its existing behavior.
+
 **Defer-onboarding means the agent/gateway/provider is not fully configured by Ansible.** The same installation script offers to run the **official** interactive `nemohermes onboard` wizard when the CLI installation succeeds. The separate mascot launcher also exposes **Set up Hermes**, **Resume interrupted onboarding**, **Connect to a named sandbox**, and **Verify host**. Choose **OpenRouter** during the wizard and enter the API credential *there*, never in AIW configuration, source code, logs, Git or an answer pasted into chat.
 
 Use NemoClaw's own CLI and documentation for agent management, snapshots, model changes and network policy. Do **not** also install standalone OpenShell or change its gateway through the old AIW adapter.
