@@ -916,19 +916,27 @@ function Invoke-NemoOnboarding {
     }
     Write-Host ''
     Write-Host 'NemoClaw CLI installed. Hermes/OpenShell and OpenRouter are configured by the upstream wizard.'
+    Write-Host 'Remote-model test: NVIDIA GPU passthrough is disabled (--no-gpu).'
     Write-Host 'It will ask for a provider and credentials. AIW never receives or stores your key.'
-    $answer = Read-Host 'Start the official NemoClaw Hermes setup wizard now? [y/N]'
-    if ($answer -notin @('y', 'Y')) {
-        Write-Step 'Open the new NemoClaw penguin shortcut and select Hermes setup later.' Ok
+    $answer = Read-Host 'Hermes setup: [Y] new, [R] resume interrupted setup, [N/Enter] later'
+    if ($answer -notin @('y', 'Y', 'r', 'R')) {
+        Write-Step 'Open the NemoClaw penguin shortcut and select setup or resume later.' Ok
         return
     }
+    $linuxOnboard = if ($answer -in @('r', 'R')) {
+        'cd ~/ai-workstation && bash ./bin/aiw-nemo onboard --resume'
+    }
+    else {
+        'cd ~/ai-workstation && bash ./bin/aiw-nemo onboard'
+    }
+
     # Provider/API-key prompts belong exclusively to the official upstream wizard.
     # Stop the Windows transcription before invoking an interactive secret prompt.
     Stop-Log
     $script:TranscriptStarted = $false
     Invoke-Wsl -Arguments @(
         '--distribution', $DistroName, '--user', $LinuxUser, '--',
-        'bash', '-lc', 'cd ~/ai-workstation && bash ./bin/aiw-nemo onboard'
+        'bash', '-lc', $linuxOnboard
     )
     Write-Step 'NemoClaw guided setup completed; credential interactions were not transcribed.' Ok
 }
