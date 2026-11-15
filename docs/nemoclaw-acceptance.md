@@ -2,18 +2,18 @@
 
 **Draft PR:** [NemoClaw reference environment](https://github.com/SomeSunlight/ai-workstation/pulls) · **Issue:** [#75](https://github.com/SomeSunlight/ai-workstation/issues/75)
 
-**Date:** ________ · **Host:** ________ · **AIW commit:** ________ · **NemoClaw commit:** `82e1ad7474ec7175c5b860b2bfa9d7940bc6e75f`
+**Date:** 2026-11-15 · **Host:** laptop · **Revision number:902595a8ff28a83d68bdf0d2a301102c1ce71de0**  · **NemoClaw commit:** `82e1ad7474ec7175c5b860b2bfa9d7940bc6e75f`
 
 Check boxes in this Markdown file or print it. A check means you actually observed the behavior on the target machine, **not** merely that a command returned 0 in CI. Note deviations below each section.
 
 ## A. Before installing
 
-- [ ] The previous WSL distributions, their names and available disk space have been recorded; original Docker images/volumes, projects and OpenShell data are backed up if important.
-- [ ] The new `AIW-Nemo` name and `C:\WSL\AIW-Nemo` directory are unused (or clearly belong to our previous partial install).
-- [ ] Windows 11, WSL2, Ubuntu 24.04 image download and Linux sudo permissions are available; **no Docker Desktop** is installed or requested.
-- [ ] Company policy permits WSL2, Docker Engine and processing only *approved test data*. OpenRouter testing will use synthetic data.
-- [ ] At least 20 GB extra disk and 8 GB usable RAM exist, preferably 40 GB and 16 GB.
-- [ ] The Git branch is the intended PR branch and the new `install-nemoclaw.ps1` is being executed from that checkout.
+- [x] The previous WSL distributions, their names and available disk space have been recorded; original Docker images/volumes, projects and OpenShell data are backed up if important.
+- [x] The new `AIW-Nemo` name and `C:\WSL\AIW-Nemo` directory are unused (or clearly belong to our previous partial install).
+- [x] Windows 11, WSL2, Ubuntu 24.04 image download and Linux sudo permissions are available; **no Docker Desktop** is installed or requested.
+- [x] Company policy permits WSL2, Docker Engine and processing only *approved test data*. OpenRouter testing will use synthetic data.
+- [x] At least 20 GB extra disk and 8 GB usable RAM exist, preferably 40 GB and 16 GB.
+- [x] The Git branch is the intended PR branch and the new `install-nemoclaw.ps1` is being executed from that checkout.
 
 **Notes / blockers:**
 
