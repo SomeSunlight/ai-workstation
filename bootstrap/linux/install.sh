@@ -180,9 +180,16 @@ prepare_become_password() {
 
 install_base_packages() {
     section 'Install bootstrap packages'
+    local packages=(ca-certificates curl git python3 python3-apt python3-venv)
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        # Ubuntu 26.04 defaults to sudo-rs. Our locked Ansible 2.21.1
+        # cannot reliably parse the sudo-rs password prompt (LP #2122414).
+        # Install the coexisting, Ubuntu-supported classic sudo.ws package,
+        # WITHOUT changing the system-wide sudo alternative.
+        packages+=(sudo)
+    fi
     sudo apt-get update
-    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        ca-certificates curl git python3 python3-apt python3-venv
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${packages[@]}"
     if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
         python3 -c 'import sys; assert sys.version_info >= (3, 12), "Python 3.12+ required"'
     else
@@ -190,6 +197,27 @@ install_base_packages() {
            "$(json_value versions.ubuntu.python)" ]] || fail "Unexpected Python version."
     fi
     ok "Bootstrap packages are installed."
+}
+
+configure_podman_ansible_sudo() {
+    [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]] || return 0
+
+    section 'Check Ansible privilege escalation (Ubuntu 26.04)'
+    # Only override the executable used by Ansible. Do not change system-wide
+    # /usr/bin/sudo, update-alternatives or sudoers/policy. No password is
+    # placed into an environment variable, playbook or command arguments.
+    [[ -x /usr/bin/sudo.ws ]] || fail \
+        "Classic sudo.ws is missing from Ubuntu. The signed sudo APT package must be installed."
+    [[ -n "${AIW_BECOME_PASSWORD_FILE:-}" && -r "$AIW_BECOME_PASSWORD_FILE" ]] || \
+        fail "Linux sudo password handoff is missing; refusing Ansible privilege escalation."
+
+    export ANSIBLE_SUDO_EXE=/usr/bin/sudo.ws
+    # The existing Ansible CLI wrapper passes --become-password-file. The
+    # test checks that the real Ansible become plugin can read and use that
+    # password with this executable. A bare sudo -v would NOT prove this.
+    info 'Using Ubuntu classic sudo.ws for Ansible only (system sudo-rs stays unchanged).'
+    "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw-become-preflight.yml
+    ok 'Ansible root escalation succeeded; proceeding to the Podman installer.'
 }
 
 installed_uv_version() {
@@ -325,6 +353,7 @@ main() {
             install_collections
             bootstrap_verify
             if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+                configure_podman_ansible_sudo
                 "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw.yml
                 "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw-verify.yml
                 ok "NemoClaw host configured; Hermes sandbox/provider onboarding remains upstream."
@@ -337,6 +366,7 @@ main() {
             bootstrap_verify
             prepare_become_password
             if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+                configure_podman_ansible_sudo
                 "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw-verify.yml
             else
                 "${ROOT}/bin/aiw" verify
