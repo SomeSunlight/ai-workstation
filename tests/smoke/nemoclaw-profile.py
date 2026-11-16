@@ -30,6 +30,23 @@ class NemoPodmanProfileContracts(unittest.TestCase):
         self.assertIn('python install 3.12', linux)
         self.assertIn('ansible/playbooks/nemoclaw-bootstrap-verify.yml', linux)
 
+    def test_ubuntu26_sudo_rs_compatibility_is_scoped_to_podman(self):
+        linux = self.read("bootstrap/linux/install.sh")
+        self.assertIn('packages+=(sudo)', linux)
+        self.assertIn('export ANSIBLE_SUDO_EXE=/usr/bin/sudo.ws', linux)
+        self.assertIn('configure_podman_ansible_sudo', linux)
+        self.assertIn('ansible/playbooks/nemoclaw-become-preflight.yml', linux)
+        self.assertIn('AIW_BECOME_PASSWORD_FILE', linux)
+        self.assertIn('if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]', linux)
+        self.assertNotIn('sudo update-alternatives --set', linux)
+        self.assertNotIn('ansible_become_password:', linux)
+
+        preflight = self.read("ansible/playbooks/nemoclaw-become-preflight.yml")
+        self.assertIn('become: true', preflight)
+        self.assertIn('argv: [id, -u]', preflight)
+        self.assertIn('nemoclaw_become_root_uid.stdout', preflight)
+        self.assertNotIn('password:', preflight)
+
     def test_podman_only_ansible_and_official_vendor_authority(self):
         playbook = self.read("ansible/playbooks/nemoclaw.yml")
         self.assertIn("role: nemoclaw_podman", playbook)
