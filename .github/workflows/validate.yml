@@ -47,6 +47,7 @@ jobs:
           python tests/smoke/agent-sandbox.py
           python -B tests/smoke/openshell-preflight.py
           python -B tests/smoke/nemoclaw-profile.py
+          python -B tests/smoke/nemoclaw-runtime.py
           bash tests/smoke/open-webui-runtime.sh
           bash tests/smoke/interactive-menu.sh
           uv run --frozen python tests/smoke/services-registry.py
