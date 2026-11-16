@@ -21,3 +21,16 @@ function Assert-AiwWslDefaultUserIdentity {
         throw "Expected default Linux user '$ExpectedUser' in '$DistroName', found '$($lines[0])'."
     }
 }
+
+# PowerShell's Get-Content -Raw may return $null for a zero-byte stderr
+# redirection file (normal after a clean wsl.exe invocation). Never call
+# .Trim() on that untyped result under Set-StrictMode.
+function Get-AiwWslStderrText {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return ''
+    }
+    $raw = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop
+    return ([string]$raw).Trim()
+}
