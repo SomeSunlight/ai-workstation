@@ -62,6 +62,20 @@ Vor dem eigentlichen Podman-Playbook führt AIW jetzt mit *derselben* Ansible-`b
 
 **Wiederaufnahme:** Den Branch `feat/77-nemoclaw-podman-wsl` aktualisieren und denselben Windows-Einstieg `install-nemoclaw.ps1` erneut ausführen. Die bereits eingerichteten Ubuntu-, Git-, uv- und Ansible-Komponenten bleiben erhalten. Kein Löschen der WSL-Distribution und keine manuelle Änderung von `update-alternatives`.
 
+### WSL systemd `user@1000.service` und parallele Linux-Distributionen
+
+Der vierte reale Laptop-Test konnte den früheren Ansible-/`sudo-rs`-Fehler vollständig überwinden: Das Ansible-`sudo.ws`-Preflight war erfolgreich, Ubuntu 26.04-Pakete und **rootless Podman 5.7** samt Netzwerkabhängigkeiten wurden installiert, Subuid/Subgid waren bereits vorhanden, und `loginctl enable-linger` war erfolgreich. Der **systemd-Benutzermanager `user@1000.service`** startete jedoch nicht. Das ist ein Plattformproblem **vor** dem NemoClaw- und Hermes-Onboarding; es darf nicht durch rootful Podman, Entfernen von cgroup-Policies oder Löschen der Distribution umgangen werden.
+
+Im Microsoft WSL-Issue [#40593](https://github.com/microsoft/WSL/issues/40593) hat ein WSL-Entwickler die zugrunde liegende Kollision erklärt: Mehrere WSL-Distributionen teilten sich Teile derselben cgroup-Hierarchie. Wenn die systemd-Benutzersitzungen gleichzeitig starten, kann `user@1000.service` an `Device or resource busy` scheitern. Unsere frühere WSL-Warnung **und** der Fehlschlag passen exakt zum Symptombild, aber die konkrete Ursache auf dem Laptop ist **noch nicht bestätigt**, solange das Journal fehlt.
+
+Microsoft hat die **per-Distro-cgroup-Isolation** mit [WSL 2.9.8](https://github.com/microsoft/WSL/releases/tag/2.9.8) (24. August 2026, PR [#40519](https://github.com/microsoft/WSL/pull/40519)) veröffentlicht. [WSL 2.9.13](https://github.com/microsoft/WSL/releases/tag/2.9.13) enthält am 25. September eine weitere Korrektur für Distro-cgroup-Namespaces; [WSL 3.0.5](https://github.com/microsoft/WSL/releases/tag/3.0.5) ist am 3. November 2026 erschienen.
+
+**AIW-Entscheid:** Das neue `NemoPodman`-Profil verlangt deshalb **WSL >=2.9.13**, prüft diese Version unmittelbar beim Windows-Installationsstart, und gibt bei zu alter WSL-Version **vor** einem langen Linux-Installationslauf eine begründete Fehlermeldung aus. Es führt **kein** `wsl --update` aus, da die WSL-Version die **anderen** vorhandenen Distributionen und ihren Betrieb mitbetrifft. Ein Upgrade der offiziellen Microsoft-WSL-Installation muss der Besitzer bewusst freigeben und auf mögliche Auswirkungen auf seine bisherigen Linux- und OpenShell-Umgebungen prüfen. `wsl.exe --version` kann ohne Administratorrechte und ohne Änderung ausgeführt werden.
+
+Falls das Problem auf einer ausreichend neuen WSL-Version dennoch besteht, dokumentiert die Ansible-Rolle bei gescheitertem `user@UID.service` künftig **automatisch** den `systemctl show`-Status und einen begrenzten `journalctl -b -u user@UID.service`-Auszug (30 Zeilen) im lokalen Installationslog. Der konkrete Befund entscheidet über die nächste Korrektur. **Keine automatische UID-Änderung, keine Beendigung anderer Distributionen, keine systemweite WSL-Konfigurationsänderung, keine unsichere Root-Podman-Ausweichlösung.**
+
+Die aktuelle `AIW-Nemo`-Distribution und alle erfolgreich installierten Komponenten sind zu behalten; die Installation läuft nach Erfüllung der WSL-Voraussetzung idempotent weiter.
+
 ## Diagnose und Nachweise
 
 Die **GitHub-Actions-Tests** prüfen Bash-Syntax, Python-Verträge, Ansible-Lint/-Syntax, Windows-PowerShell-Parsen/Installationslogik und alte Regressionen, verändern aber keinen Besitzerrechner. Die eigentliche Abnahme ist zunächst ein Durchstich: Podman-Rootless-Socket erreichbar, NemoClaw-Preflight akzeptiert WSL, Hermes-Sandbox erstellt, OpenRouter antwortet, ein Markdown-/Git-Projekt ist bearbeitbar. Das Ergebnis wird mit kurzer, datenschutzbereinigter Fehlerbeschreibung in [Issue #77](https://github.com/SomeSunlight/ai-workstation/issues/77) festgehalten.
