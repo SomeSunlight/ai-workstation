@@ -115,6 +115,7 @@ function Stop-Log {
 
 . (Join-Path $PSScriptRoot 'Filesystem.ps1')
 . (Join-Path $PSScriptRoot 'Observe-WslImport.ps1')
+. (Join-Path $PSScriptRoot 'WslUserIdentity.ps1')
 
 function Stage-Installer {
     $sourceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -625,27 +626,41 @@ PY
         Start-Sleep -Seconds 2
     }
 
-    $actualOutput = @(
-        & wsl.exe --distribution $DistroName --user $LinuxUser -- sh -lc 'id -un' 2>&1 |
-            Select-Object -First 1
-    )
-    $actualCode = $LASTEXITCODE
-    $actual = ($actualOutput | ForEach-Object { [string]$_ }) -join "`n"
-    $actual = $actual.Trim()
-
-    if ($actualCode -ne 0) {
-        throw "Failed to read Linux user from '$DistroName' as '$LinuxUser': $actual"
+    # Check the configured *default* user (no explicit --user override).
+    # WSL can print a separate "Failed to start the systemd user session"
+    # diagnostic to stderr while /usr/bin/id -un successfully returns the
+    # correct user on stdout. Never merge 2>&1 or select the first line:
+    # that previously misidentified the warning as the user name.
+    $stderrPath = Join-Path $script:LogRoot "wsl-default-user-$($script:RunId).stderr.log"
+    $nativePreference = $PSNativeCommandUseErrorActionPreference
+    try {
+        $PSNativeCommandUseErrorActionPreference = $false
+        $actualOutput = @(
+            & wsl.exe --distribution $DistroName --exec /usr/bin/id -un 2> $stderrPath
+        )
+        $actualCode = $LASTEXITCODE
+    }
+    finally {
+        $PSNativeCommandUseErrorActionPreference = $nativePreference
     }
 
-    if (-not $actual) {
-        throw "Failed to read Linux user from '$DistroName' as '$LinuxUser': command returned no output."
-    }
+    # Fail on an incorrect identity or a native command failure; a WSL
+    # systemd user-session diagnostic is evaluated separately below.
+    Assert-AiwWslDefaultUserIdentity -StandardOutput ([string[]]$actualOutput) `
+        -ExpectedUser $LinuxUser -DistroName $DistroName -ExitCode $actualCode
+    Write-Step "Configured default Linux user is '$LinuxUser'." Ok
 
-    if ($actual -ne $LinuxUser) {
-        throw "Expected default Linux user '$LinuxUser', found '$actual'."
+    $stderrMessage = if (Test-Path -LiteralPath $stderrPath) {
+        (Get-Content -LiteralPath $stderrPath -Raw).Trim()
+    } else { '' }
+    if ($stderrMessage -match 'Failed to start the systemd user session') {
+        Write-Step "WSL reported a SYSTEMD USER SESSION problem (not a wrong username)." Warning
+        Write-Step 'The rootless Podman installation will configure and validate the user systemd manager and socket.' Warning
+        Write-Step "If Podman fails, inspect WSL user-session diagnostics: $stderrPath" Warning
     }
-
-    Write-Step "Default Linux user is '$LinuxUser'." Ok
+    elseif ($stderrMessage) {
+        Write-Step "WSL produced additional diagnostics (not a user-identity mismatch): $stderrPath" Warning
+    }
 }
 
 function Merge-WslConfig {
