@@ -14,7 +14,7 @@ param(
     [ValidateSet('Install', 'Status', 'Verify', 'Shortcuts')]
     [string]$Action = 'Install',
 
-    [ValidateSet('Legacy', 'NemoClaw')]
+    [ValidateSet('Legacy', 'NemoPodman')]
     [string]$Profile = 'Legacy',
 
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')]
@@ -298,7 +298,7 @@ function Register-ResumeAndRestart {
 function Ensure-WslPlatform {
     if (Test-WslPlatform) {
         Write-Step 'WSL platform is available.' Ok
-        if ($Profile -eq 'NemoClaw') {
+        if ($Profile -eq 'NemoPodman') {
             Write-Step 'Existing WSL version preserved; no global WSL update in NemoClaw profile.' Ok
             return
         }
@@ -348,8 +348,14 @@ function Get-DistroBasePath {
 
 function Ensure-UbuntuImage {
     $configuration = Get-VersionConfiguration
-    $url = [string]$configuration.versions.ubuntu.wsl_image_url
-    $expectedHash = ([string]$configuration.versions.ubuntu.wsl_image_sha256).ToLowerInvariant()
+    $ubuntu = if ($Profile -eq 'NemoPodman') {
+        $configuration.versions.nemoclaw_podman.ubuntu
+    }
+    else {
+        $configuration.versions.ubuntu
+    }
+    $url = [string]$ubuntu.wsl_image_url
+    $expectedHash = ([string]$ubuntu.wsl_image_sha256).ToLowerInvariant()
 
     if ([string]::IsNullOrWhiteSpace($url) -or [string]::IsNullOrWhiteSpace($expectedHash)) {
         throw 'Ubuntu WSL image URL or checksum is missing from config\versions.json.'
@@ -400,9 +406,9 @@ function Ensure-Distro {
             }
         }
 
-        if ($Profile -eq 'NemoClaw') {
+        if ($Profile -eq 'NemoPodman') {
             $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script @'
-test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw"
+test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw-podman"
 '@
             if ($profileCode -ne 0) {
                 throw "Existing WSL distribution '$DistroName' is not marked as the NemoClaw profile; refusing adoption."
@@ -453,7 +459,7 @@ test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw"
         throw "Distribution '$DistroName' was not registered."
     }
 
-    if ($Profile -eq 'NemoClaw') {
+    if ($Profile -eq 'NemoPodman') {
         Invoke-Bash -User 'root' -Script "printf '%s' nemoclaw > /etc/aiw-install-profile && chmod 0644 /etc/aiw-install-profile"
     }
     Write-Step "Distribution '$DistroName' is installed." Ok
@@ -589,7 +595,7 @@ PY
     # idempotent install. Rewriting /etc/wsl.conf would otherwise force the
     # legacy unconditional "wsl --terminate" even for a correct configuration.
     $wslConfigReady = $false
-    if ($Profile -eq 'NemoClaw') {
+    if ($Profile -eq 'NemoPodman') {
         $probe = @"
 set -e
 python3 - <<'PY'
@@ -611,7 +617,7 @@ PY
         Write-Step 'NemoClaw WSL user/systemd configuration already correct; preserving running Linux processes.' Ok
     }
     else {
-        if ($Profile -eq 'NemoClaw') {
+        if ($Profile -eq 'NemoPodman') {
             Write-Step 'NemoClaw WSL configuration needs an initial update; this distribution alone will restart.' Warning
         }
         Invoke-Bash -Script $configuration
@@ -712,7 +718,7 @@ function Get-LinuxRepositoryPath {
 }
 
 function Get-ShortcutDisplayName {
-    if ($Profile -eq 'NemoClaw') {
+    if ($Profile -eq 'NemoPodman') {
         return "$ShortcutName ($DistroName)"
     }
     if ($DistroName -eq 'Ubuntu-24.04') {
@@ -736,7 +742,7 @@ function Ensure-WindowsShortcuts {
         return
     }
 
-    if ($Profile -eq 'NemoClaw') {
+    if ($Profile -eq 'NemoPodman') {
         & (Join-Path $PSScriptRoot 'Create-NemoClawShortcut.ps1') -DistroName $DistroName -LinuxUser $LinuxUser
         if (-not $?) { throw 'Creating NemoClaw launcher failed.' }
         Write-Step "NemoClaw Hermes ($DistroName) shortcut created (one per Desktop/Start)." Ok
@@ -804,7 +810,7 @@ function Invoke-LinuxInstall {
         '--'
         'bash'
         '-lc'
-        $(if ($Profile -eq 'NemoClaw') { 'cd ~/ai-workstation && ./install.sh install --yes --profile nemoclaw' } else { 'cd ~/ai-workstation && ./install.sh install --yes' })
+        $(if ($Profile -eq 'NemoPodman') { 'cd ~/ai-workstation && ./install.sh install --yes --profile nemoclaw-podman-podman' } else { 'cd ~/ai-workstation && ./install.sh install --yes' })
     )
     Write-Step 'Linux host installation completed.' Ok
 }
@@ -829,14 +835,14 @@ function Show-Status {
         }
     }
 
-    if ($Profile -eq 'NemoClaw') {
+    if ($Profile -eq 'NemoPodman') {
         $displayName = Get-ShortcutDisplayName
         $desktopLink = Join-Path ([Environment]::GetFolderPath('Desktop')) "$displayName.lnk"
         $startLink = Join-Path (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs') "$displayName.lnk"
         Write-Step "NemoClaw Desktop shortcut: $(if (Test-Path -LiteralPath $desktopLink) { 'present' } else { 'missing' })"
         Write-Step "NemoClaw Start Menu shortcut: $(if (Test-Path -LiteralPath $startLink) { 'present' } else { 'missing' })"
         if ($DistroName -in $distros) {
-            $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script 'test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw"'
+            $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script 'test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw-podman"'
             if ($profileCode -ne 0) {
                 Write-Step "The selected WSL distro is NOT an AIW NemoClaw profile; no runtime was accessed." Warning
                 return
@@ -865,7 +871,7 @@ function Show-Status {
             '--'
             'bash'
             '-lc'
-            $(if ($Profile -eq 'NemoClaw') { 'if [ -f ~/ai-workstation/bin/aiw-nemo ]; then bash ~/ai-workstation/bin/aiw-nemo status; else echo "Nemo profile repository not installed"; fi' } else { 'if [ -x ~/ai-workstation/bin/aiw ]; then ~/ai-workstation/bin/aiw status; else echo "Linux repository not installed"; fi' })
+            $(if ($Profile -eq 'NemoPodman') { 'if [ -f ~/ai-workstation/bin/aiw-nemo ]; then bash ~/ai-workstation/bin/aiw-nemo status; else echo "Nemo profile repository not installed"; fi' } else { 'if [ -x ~/ai-workstation/bin/aiw ]; then ~/ai-workstation/bin/aiw status; else echo "Linux repository not installed"; fi' })
         )
         if ($linuxStatusExitCode -ne 0) {
             Write-Step "Linux status unavailable. WSL returned exit code $linuxStatusExitCode." Warning
@@ -886,12 +892,12 @@ function Verify-All {
         throw "Distribution '$DistroName' is missing."
     }
 
-    if ($Profile -eq 'NemoClaw') {
-        $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script 'test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw"'
+    if ($Profile -eq 'NemoPodman') {
+        $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script 'test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw-podman"'
         if ($profileCode -ne 0) { throw "Refusing to verify non-NemoClaw WSL distribution '$DistroName'." }
     }
 
-    # Ubuntu release, systemd, Python, uv, Ansible and Docker are verified by
+    # Ubuntu release, systemd, Python, uv, Ansible and Podman are verified by
     # the Linux verifier below. Keeping that logic in one place avoids fragile
     # Windows-side parsing of scalar native-command output from WSL.
 
@@ -903,7 +909,7 @@ function Verify-All {
         '--'
         'bash'
         '-lc'
-        $(if ($Profile -eq 'NemoClaw') { 'cd ~/ai-workstation && ./install.sh verify --profile nemoclaw' } else { 'cd ~/ai-workstation && ./install.sh verify' })
+        $(if ($Profile -eq 'NemoPodman') { 'cd ~/ai-workstation && ./install.sh verify --profile nemoclaw-podman-podman' } else { 'cd ~/ai-workstation && ./install.sh verify' })
     )
 
     Write-Step 'Windows and Linux verification completed successfully.' Ok
@@ -942,7 +948,7 @@ function Invoke-NemoOnboarding {
 }
 
 try {
-    if ($Profile -eq 'NemoClaw' -and $DistroName -eq 'Ubuntu-24.04') {
+    if ($Profile -eq 'NemoPodman' -and $DistroName -in @('Ubuntu-24.04','Ubuntu-26.04')) {
         throw 'Choose a dedicated NemoClaw distro name, not the existing default AIW Ubuntu.'
     }
     if ($Action -eq 'Install' -and -not (Test-Administrator)) {
@@ -980,7 +986,7 @@ try {
             Ensure-LinuxRepository
             Ensure-WindowsShortcuts
             Invoke-LinuxInstall
-            if ($Profile -eq 'NemoClaw') { Invoke-NemoOnboarding }
+            if ($Profile -eq 'NemoPodman') { Invoke-NemoOnboarding }
             Write-Step 'AI Workstation installation completed successfully.' Ok
             Write-Step 'Run ".\install.ps1 -Action Status" to show the current installation state.'
         }
