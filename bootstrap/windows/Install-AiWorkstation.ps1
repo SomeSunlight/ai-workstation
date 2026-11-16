@@ -460,7 +460,7 @@ test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw-podman"
     }
 
     if ($Profile -eq 'NemoPodman') {
-        Invoke-Bash -User 'root' -Script "printf '%s' nemoclaw > /etc/aiw-install-profile && chmod 0644 /etc/aiw-install-profile"
+        Invoke-Bash -User 'root' -Script "printf '%s' nemoclaw-podman > /etc/aiw-install-profile && chmod 0644 /etc/aiw-install-profile"
     }
     Write-Step "Distribution '$DistroName' is installed." Ok
 }
@@ -810,7 +810,7 @@ function Invoke-LinuxInstall {
         '--'
         'bash'
         '-lc'
-        $(if ($Profile -eq 'NemoPodman') { 'cd ~/ai-workstation && ./install.sh install --yes --profile nemoclaw-podman-podman' } else { 'cd ~/ai-workstation && ./install.sh install --yes' })
+        $(if ($Profile -eq 'NemoPodman') { 'cd ~/ai-workstation && ./install.sh install --yes --profile nemoclaw-podman' } else { 'cd ~/ai-workstation && ./install.sh install --yes' })
     )
     Write-Step 'Linux host installation completed.' Ok
 }
@@ -909,7 +909,7 @@ function Verify-All {
         '--'
         'bash'
         '-lc'
-        $(if ($Profile -eq 'NemoPodman') { 'cd ~/ai-workstation && ./install.sh verify --profile nemoclaw-podman-podman' } else { 'cd ~/ai-workstation && ./install.sh verify' })
+        $(if ($Profile -eq 'NemoPodman') { 'cd ~/ai-workstation && ./install.sh verify --profile nemoclaw-podman' } else { 'cd ~/ai-workstation && ./install.sh verify' })
     )
 
     Write-Step 'Windows and Linux verification completed successfully.' Ok
