@@ -50,6 +50,18 @@ Das ist keine allgemeine Entwarnung: **rootless Podman braucht einen funktionsf�
 
 Die normale Wiederaufnahme nach dem behobenen Benutzerprüffehler ist ein **erneuter Aufruf von `install-nemoclaw.ps1`** im aktualisierten Branch: die bereits angelegte Ubuntu-Distribution und der Benutzer bleiben erhalten. Keine Neuinstallation und keine Löschung notwendig.
 
+### Ubuntu 26.04: `sudo-rs` und Ansible `become`
+
+Beim ersten echten Podman-Durchstich unter Ubuntu 26.04.1 wurde das Linux-`sudo`-Passwort erfolgreich angenommen, doch **Ansible 2.21.1** scheiterte noch vor den Podman-Tasks bei `Gathering Facts` mit `Timed out waiting for become success or become password prompt`. Nach einem zweiten Installationslauf trat **derselbe** Fehler auf. Auch Windows-Administratorrechte änderten daran nichts: Windows-UAC und Linux-Ansible-`become` sind getrennte Berechtigungsräume.
+
+**Ursache:** Ubuntu 26.04 verwendet standardmässig das neue `sudo-rs`, dessen Passwortprompt von der gepinnten Ansible-Version nicht zuverlässig erkannt wird. Die Fehlermeldung stimmt mit dem Ubuntu-Bug [LP #2122414](https://bugs.launchpad.net/bugs/2122414) überein. Ubuntu dokumentiert, dass die frühere klassische Variante **`sudo.ws`** weiterhin unterstützt wird: [Ubuntu Server: sudo-rs](https://ubuntu.com/server/docs/reference/other-tools/sudo-rs/).
+
+**AIW-Lösung:** Ausschliesslich das `nemoclaw-podman`-Profil stellt mittels Ubuntus signiertem `sudo`-Paket sicher, dass `/usr/bin/sudo.ws` vorhanden ist, und exportiert **nur für seine Ansible-Unterprozesse** `ANSIBLE_SUDO_EXE=/usr/bin/sudo.ws`. Die systemweite `sudo`-Alternative, die Linux-Sicherheitsrichtlinien und der normale Ubuntu-Standard **bleiben unverändert**. Das Linux-Passwort wird wie bisher einmal interaktiv angenommen und über eine temporäre, nur für den Benutzer lesbare Datei an `ansible-playbook --become-password-file` übergeben, nicht in Git oder eine Prozessargumentliste geschrieben.
+
+Vor dem eigentlichen Podman-Playbook führt AIW jetzt mit *derselben* Ansible-`become`-Konfiguration ein winziges `id -u`-Playbook aus und erwartet die Benutzer-ID `0`. Falls das fehlschlägt, endet die Installation **sofort am Rechte-Preflight**, statt nochmals minutenlang beim Podman-Playbook zu warten. Dies prüft den tatsächlichen Ansible-Mechanismus; ein erfolgreiches `sudo -v` allein hätte diesen Fehler nicht entdeckt.
+
+**Wiederaufnahme:** Den Branch `feat/77-nemoclaw-podman-wsl` aktualisieren und denselben Windows-Einstieg `install-nemoclaw.ps1` erneut ausführen. Die bereits eingerichteten Ubuntu-, Git-, uv- und Ansible-Komponenten bleiben erhalten. Kein Löschen der WSL-Distribution und keine manuelle Änderung von `update-alternatives`.
+
 ## Diagnose und Nachweise
 
 Die **GitHub-Actions-Tests** prüfen Bash-Syntax, Python-Verträge, Ansible-Lint/-Syntax, Windows-PowerShell-Parsen/Installationslogik und alte Regressionen, verändern aber keinen Besitzerrechner. Die eigentliche Abnahme ist zunächst ein Durchstich: Podman-Rootless-Socket erreichbar, NemoClaw-Preflight akzeptiert WSL, Hermes-Sandbox erstellt, OpenRouter antwortet, ein Markdown-/Git-Projekt ist bearbeitbar. Das Ergebnis wird mit kurzer, datenschutzbereinigter Fehlerbeschreibung in [Issue #77](https://github.com/SomeSunlight/ai-workstation/issues/77) festgehalten.
