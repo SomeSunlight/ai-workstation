@@ -92,6 +92,23 @@ and preserves the encrypted original key. A useful, optional client-name convent
 `<host>-<runtime>-<application>` (e.g. `laptop-wsl-webui`, `speedy-win-webui`).
 Host labels are chosen by the operator; AIW does not assume a particular machine layout.
 
+**If creating a new Windows client fails:** AIW now identifies the failed
+`services.yaml` write (with a sanitized Windows error code) and attempts to
+remove *only* the newly generated credential. If rollback succeeds, retry
+after resolving the reported access/locking problem. The new key is **not**
+activated in a running Dispatcher by registration alone.
+
+For keys left orphaned by older AIW versions, the menu cannot copy or remove
+an ID that is absent from `services.yaml`. First check **List applications**
+and make sure that ID is not registered; also verify it is absent from the
+current `clients.json` before changing anything. On the native Windows host,
+archive **only that ID's** `secrets/ID.dpapi` file under a different filename,
+rather than deleting it or using **Remove an application**. Do not touch other
+credentials, `services.yaml`, or the running Dispatcher. Then retry client
+creation with the same ID. Never overwrite an existing credential silently.
+If AIW reports that it cannot verify the manifest, or that rollback itself
+failed, preserve the file and investigate rather than attempting a blind retry.
+
 **Change model parameter policy for an existing application** lets you choose an
 existing identity and set `default`, `enforce` or `passthrough` **without changing its API key**:
 - `passthrough`: only alias/model remapping; no alias parameter injection.
