@@ -62,7 +62,8 @@ class NemoPodmanProfileContracts(unittest.TestCase):
         self.assertIn("Invoke-AiwObservedWslImport", platform)
         deletion = self.read("bootstrap/windows/Remove-OldNemoWsl.ps1")
         self.assertIn("DELETE AIW-Nemo", deletion)
-        self.assertIn("VERSION_ID", deletion)
+        self.assertIn("Get-AiwNemoUbuntuVersion", deletion)
+        self.assertIn("VERSION_ID", self.read("bootstrap/windows/NemoWslRelease.ps1"))
         self.assertIn("--unregister", deletion)
         self.assertNotIn("wsl --shutdown", deletion)
 
