@@ -80,6 +80,21 @@
           "status": "isolated Windows pilot only; not a production release"
         }
       }
+    },
+    "nemoclaw_podman": {
+      "ubuntu": {
+        "release": "26.04",
+        "wsl_image_url": "https://releases.ubuntu.com/26.04.1/ubuntu-26.04.1-wsl-amd64.wsl",
+        "wsl_image_sha256": "48d56724b5c8e60f24893e83e73bbb58c60b3ca22fba3da977075420acd54104"
+      },
+      "podman": {
+        "minimum_version": "5.0.0",
+        "apt_package_version": "5.7.0+ds2-3build1"
+      },
+      "nemoclaw": {
+        "repository": "https://github.com/NVIDIA/NemoClaw.git",
+        "commit": "82e1ad7474ec7175c5b860b2bfa9d7940bc6e75f"
+      }
     }
   }
 }
