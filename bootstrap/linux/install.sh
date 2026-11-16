@@ -22,7 +22,7 @@ INSTALL_PROFILE="legacy"
 usage() {
     cat <<'EOF'
 Usage:
-  ./install.sh [install|status|verify] [--yes] [--profile legacy|nemoclaw]
+  ./install.sh [install|status|verify] [--yes] [--profile legacy|nemoclaw-podman]
 
 Commands:
   install  Bootstrap dependencies and configure the host.
@@ -37,8 +37,8 @@ parse_arguments() {
             install|status|verify) ACTION="$1" ;;
             --yes|-y) ASSUME_YES="true" ;;
             --profile)
-                [[ $# -gt 1 ]] || fail "--profile needs legacy or nemoclaw."
-                case "$2" in legacy|nemoclaw) INSTALL_PROFILE="$2" ;; *) fail "Invalid installation profile." ;; esac
+                [[ $# -gt 1 ]] || fail "--profile needs legacy or nemoclaw-podman."
+                case "$2" in legacy|nemoclaw-podman) INSTALL_PROFILE="$2" ;; *) fail "Invalid installation profile." ;; esac
                 shift ;;
             --help|-h) usage; exit 0 ;;
             *) printf 'Unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
@@ -111,8 +111,14 @@ preflight() {
     source /etc/os-release
 
     [[ "${ID:-}" == "ubuntu" ]] || fail "Ubuntu is required; found ${ID:-unknown}."
-    [[ "${VERSION_ID:-}" == "$(json_value versions.ubuntu.release)" ]] || \
-        fail "Ubuntu $(json_value versions.ubuntu.release) is required; found ${VERSION_ID:-unknown}."
+    local expected_release
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        expected_release="$(json_value versions.nemoclaw_podman.ubuntu.release)"
+    else
+        expected_release="$(json_value versions.ubuntu.release)"
+    fi
+    [[ "${VERSION_ID:-}" == "$expected_release" ]] || \
+        fail "Ubuntu $expected_release is required for $INSTALL_PROFILE; found ${VERSION_ID:-unknown}."
     [[ "$(ps -p 1 -o comm= | xargs)" == "systemd" ]] || fail "systemd must run as PID 1."
     [[ -f "${ROOT}/pyproject.toml" ]] || fail "pyproject.toml is missing."
     if find "$ROOT" -maxdepth 0 -perm -0002 -print -quit | grep -q .; then
@@ -130,7 +136,7 @@ preflight() {
 
 show_status() {
     preflight
-    if [[ "$INSTALL_PROFILE" == "nemoclaw" ]]; then
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
         "${ROOT}/bin/aiw-nemo" status
     else
         "${ROOT}/bin/aiw" status
@@ -177,8 +183,12 @@ install_base_packages() {
     sudo apt-get update
     sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         ca-certificates curl git python3 python3-apt python3-venv
-    [[ "$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" == \
-       "$(json_value versions.ubuntu.python)" ]] || fail "Unexpected Python version."
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        python3 -c 'import sys; assert sys.version_info >= (3, 12), "Python 3.12+ required"'
+    else
+        [[ "$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" == \
+           "$(json_value versions.ubuntu.python)" ]] || fail "Unexpected Python version."
+    fi
     ok "Bootstrap packages are installed."
 }
 
@@ -268,7 +278,11 @@ bootstrap_verify() {
     export AIW_HOME="$HOME"
     export AIW_PRIMARY_GROUP="$(id -gn)"
 
-    "$UV_BIN" run --frozen ansible-playbook "${ROOT}/ansible/playbooks/bootstrap-verify.yml"
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        "$UV_BIN" run --frozen ansible-playbook "${ROOT}/ansible/playbooks/nemoclaw-bootstrap-verify.yml"
+    else
+        "$UV_BIN" run --frozen ansible-playbook "${ROOT}/ansible/playbooks/bootstrap-verify.yml"
+    fi
     "$UV_BIN" run --frozen ansible-lint --config-file "${ROOT}/ansible/.ansible-lint" \
         "${ROOT}/ansible/playbooks"
     ok "Automation bootstrap is valid."
@@ -296,7 +310,7 @@ main() {
             sync_automation_runtime
             install_collections
             bootstrap_verify
-            if [[ "$INSTALL_PROFILE" == "nemoclaw" ]]; then
+            if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
                 "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw.yml
                 "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw-verify.yml
                 ok "NemoClaw host configured; Hermes sandbox/provider onboarding remains upstream."
@@ -308,7 +322,7 @@ main() {
             preflight
             bootstrap_verify
             prepare_become_password
-            if [[ "$INSTALL_PROFILE" == "nemoclaw" ]]; then
+            if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
                 "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw-verify.yml
             else
                 "${ROOT}/bin/aiw" verify
