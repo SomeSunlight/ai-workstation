@@ -1,6 +1,6 @@
 #requires -Version 7.4
 <#
-  Retire ONLY the original AIW-Nemo Ubuntu 24.04 experimental WSL distro.
+  Retire ONLY the user-confirmed AIW-Nemo Ubuntu 24.04 or 26.04 test distro.
   This is never called by the installer. WSL unregister permanently destroys
   the selected distro's filesystem, images, data and containers.
 #>
@@ -12,6 +12,7 @@ $PSNativeCommandUseErrorActionPreference = $false
 $name = 'AIW-Nemo'
 $expected = 'C:\WSL\AIW-Nemo'
 $wsl = Join-Path $env:WINDIR 'System32\wsl.exe'
+. (Join-Path $PSScriptRoot 'NemoWslRelease.ps1')
 
 function Get-Names {
     $out = @(& $wsl --list --quiet 2>$null)
@@ -28,13 +29,16 @@ function Check-Ownership {
         throw "WSL distro '$name' is not registered at the expected path. Refusing."
     }
     $marker = @(& $wsl --distribution $name --user root --exec /bin/cat /etc/aiw-install-profile 2>$null)
-    if ($LASTEXITCODE -ne 0 -or ($marker -join '').Trim() -cne 'nemoclaw') {
-        throw 'Wrong ownership marker. Refusing to remove a possibly unrelated distro.'
+    $ownerMark = ($marker -join '').Trim()
+    if ($LASTEXITCODE -ne 0 -or $ownerMark -cnotin @('nemoclaw', 'nemoclaw-podman')) {
+        throw "Wrong ownership marker '$ownerMark'. Refusing to remove an unrelated distro."
     }
     $release = @(& $wsl --distribution $name --user root --exec /bin/cat /etc/os-release 2>$null)
-    if ($LASTEXITCODE -ne 0 -or (($release -join [Environment]::NewLine) -notmatch '(?m)^VERSION_ID="?24\.04"?$')) {
-        throw 'Expected original Ubuntu 24.04 experiment, found different release. Refusing.'
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Could not read Ubuntu release identity; no changes made.'
     }
+    $version = Get-AiwNemoUbuntuVersion -Lines ([string[]]$release)
+    return [pscustomobject]@{ Version = $version; Marker = $ownerMark }
 }
 function Remove-OwnLinks {
     $shell = New-Object -ComObject WScript.Shell
@@ -55,8 +59,8 @@ if ($name -cnotin @(Get-Names)) {
     Write-Host "Distribution '$name' does not exist; nothing to delete."
     exit 0
 }
-Check-Ownership
-Write-Host "Verified original Ubuntu 24.04 NemoClaw test at $expected."
+$identity = Check-Ownership
+Write-Host "Verified NemoClaw test: Ubuntu $($identity.Version), marker '$($identity.Marker)', path $expected."
 Write-Warning "Unregister destroys all data/images/volumes inside $name permanently."
 Write-Host 'All other WSL distributions and Windows settings remain untouched.'
 if ($Action -ne 'Remove') {
