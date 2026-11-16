@@ -15,7 +15,7 @@ $PSNativeCommandUseErrorActionPreference = $false
 Write-Host "NemoClaw + Hermes | WSL: $DistroName"
 Write-Host "The existing Ubuntu installations are not started or managed here."
 $marker = @(& $WslExecutable --distribution $DistroName --user root --exec /bin/cat /etc/aiw-install-profile 2>&1)
-if ($LASTEXITCODE -ne 0 -or ($marker -join '').Trim() -cne 'nemoclaw') {
+if ($LASTEXITCODE -ne 0 -or ($marker -join '').Trim() -cne 'nemoclaw-podman') {
     throw "WSL '$DistroName' is missing or is not an AIW NemoClaw installation. No command was started."
 }
 $workdir = "/home/$LinuxUser/ai-workstation"
