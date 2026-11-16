@@ -21,11 +21,11 @@ function Invoke-ClientTool([string[]]$ToolArgs) {
 }
 
 try {
-    $setup = Invoke-ClientTool @('init')
+    $setup = Invoke-ClientTool -ToolArgs @('init')
     if ($setup.ExitCode -ne 0) { throw "Fixture init failed: $($setup.Output)" }
-    $first = Invoke-ClientTool @('client', 'add', 'existing-client', '--policy', 'default')
+    $first = Invoke-ClientTool -ToolArgs @('client', 'add', 'existing-client', '--policy', 'default')
     if ($first.ExitCode -ne 0) { throw "Fixture client failed: $($first.Output)" }
-    $render = Invoke-ClientTool @('client', 'render')
+    $render = Invoke-ClientTool -ToolArgs @('client', 'render')
     if ($render.ExitCode -ne 0) { throw "Fixture render failed: $($render.Output)" }
 
     $manifest = Join-Path $dir 'services.yaml'
@@ -39,7 +39,7 @@ try {
     $handle = [IO.File]::Open($manifest, [IO.FileMode]::Open,
                               [IO.FileAccess]::Read, [IO.FileShare]::Read)
     try {
-        $failed = Invoke-ClientTool @('client', 'add', 'locked-client', '--policy', 'passthrough')
+        $failed = Invoke-ClientTool -ToolArgs @('client', 'add', 'locked-client', '--policy', 'passthrough')
     }
     finally {
         $handle.Dispose()
@@ -60,7 +60,7 @@ try {
         throw 'Failed operation modified client hash registry.'
     }
 
-    $retry = Invoke-ClientTool @('client', 'add', 'locked-client', '--policy', 'passthrough')
+    $retry = Invoke-ClientTool -ToolArgs @('client', 'add', 'locked-client', '--policy', 'passthrough')
     if ($retry.ExitCode -ne 0) { throw "Retry after unlocking failed: $($retry.Output)" }
     if (-not (Test-Path -LiteralPath $secret)) { throw 'Retry did not save the DPAPI key.' }
     if ((Get-Content -LiteralPath $manifest -Raw) -notmatch 'locked-client') {
