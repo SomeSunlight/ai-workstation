@@ -50,12 +50,19 @@ try {
 
     $public = Get-Content (Join-Path $root 'install-nemoclaw.ps1') -Raw
     $internal = Get-Content (Join-Path $root 'bootstrap/windows/Install-AiWorkstation.ps1') -Raw
-    Assert-True ($public.Contains("Profile = 'NemoClaw'")) 'Public profile is not selected'
+    Assert-True ($public.Contains("Profile = 'NemoPodman'")) 'Public profile is not selected'
     Assert-True ($public.Contains("DistroName = 'AIW-Nemo'")) 'Wrong default distro'
     Assert-True ($internal.Contains('Preserving global .wslconfig')) 'Shared WSL config is not guarded'
     Assert-True ($internal.Contains('Create-NemoClawShortcut.ps1')) 'New shortcut not routed'
-    Assert-True ($internal.Contains('install --yes --profile nemoclaw')) 'Nemo Linux profile not routed'
+    Assert-True ($internal.Contains('install --yes --profile nemoclaw-podman')) 'Nemo Linux profile not routed'
     Assert-True ($internal.Contains('not marked as the NemoClaw profile')) 'Unrelated existing distro not protected'
+
+    $markerCheck = Get-Content (Join-Path $root 'bootstrap/windows/Launch-NemoClaw.ps1') -Raw
+    Assert-True ($markerCheck.Contains('nemoclaw-podman')) 'Launcher does not validate the Podman WSL profile'
+    $cleanup = Get-Content (Join-Path $root 'bootstrap/windows/Remove-OldNemoWsl.ps1') -Raw
+    Assert-True ($cleanup.Contains('DELETE AIW-Nemo')) 'Dangerous old distribution cleanup is not confirmed'
+    Assert-True ($cleanup.Contains("VERSION_ID")) 'Cleanup is not constrained to the original 24.04 test'
+    Assert-True ((Get-Content (Join-Path $root 'config/versions.json') -Raw).Contains('ubuntu-26.04.1-wsl-amd64.wsl')) 'New WSL image pin missing'
 
     # A preexisting, manually customized shortcut must be rejected.
     $alien = $shell.CreateShortcut((Join-Path $start "$label.lnk"))
