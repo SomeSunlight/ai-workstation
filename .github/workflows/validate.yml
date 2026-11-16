@@ -185,6 +185,9 @@ jobs:
       - name: Validate three individual DPAPI client keys and transitional legacy digest
         shell: pwsh
         run: ./tests/windows/s02-three-clients.ps1
+      - name: Validate DPAPI client rollback with a locked Windows manifest
+        shell: pwsh
+        run: ./tests/windows/client-registration-recovery.ps1
       - name: Test explicit offline Strata hash approval, denial and rollback
         shell: pwsh
         run: ./tests/windows/native-integrity.ps1
