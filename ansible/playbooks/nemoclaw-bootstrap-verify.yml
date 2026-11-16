@@ -1,0 +1,20 @@
+---
+- name: Verify standalone Ubuntu 26.04 Ansible bootstrap
+  hosts: localhost
+  gather_facts: true
+  become: false
+  vars_files:
+    - ../../config/versions.json
+  tasks:
+    - name: Verify target Ubuntu release and systemd
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == "Ubuntu"
+          - ansible_facts.distribution_version == versions.nemoclaw_podman.ubuntu.release
+          - ansible_facts.service_mgr == "systemd"
+        quiet: true
+    - name: Verify Python interpreter selection
+      ansible.builtin.assert:
+        that:
+          - ansible_playbook_python == ansible_facts.python.executable
+        quiet: true
