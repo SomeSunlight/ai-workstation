@@ -231,8 +231,17 @@ sync_automation_runtime() {
         "uv.lock is missing. Copy the tested lockfile before publishing or installing. See docs/repository-setup.md."
 
     cd "$ROOT"
-    "$UV_BIN" lock --check --python /usr/bin/python3
-    "$UV_BIN" sync --frozen --python /usr/bin/python3
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        # Ubuntu 26.04 uses Python 3.14, while the existing locked Ansible
+        # automation project intentionally targets Python 3.12. Do not
+        # re-resolve its lockfile or downgrade system Python.
+        "$UV_BIN" python install 3.12
+        "$UV_BIN" lock --check --python 3.12
+        "$UV_BIN" sync --frozen --python 3.12
+    else
+        "$UV_BIN" lock --check --python /usr/bin/python3
+        "$UV_BIN" sync --frozen --python /usr/bin/python3
+    fi
     ok "The repository-local Python environment is synchronized."
 }
 
@@ -266,8 +275,13 @@ bootstrap_verify() {
     [[ -x "${ROOT}/.venv/bin/ansible-playbook" ]] || fail "Ansible environment is missing."
 
     cd "$ROOT"
-    "$UV_BIN" lock --check --python /usr/bin/python3
-    "$UV_BIN" sync --check --frozen --python /usr/bin/python3
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        "$UV_BIN" lock --check --python 3.12
+        "$UV_BIN" sync --check --frozen --python 3.12
+    else
+        "$UV_BIN" lock --check --python /usr/bin/python3
+        "$UV_BIN" sync --check --frozen --python /usr/bin/python3
+    fi
 
     export ANSIBLE_CONFIG="${ROOT}/ansible/ansible.cfg"
     export ANSIBLE_INVENTORY="${ROOT}/ansible/inventory/localhost.yml"
