@@ -32,5 +32,10 @@ function Get-AiwWslStderrText {
         return ''
     }
     $raw = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop
-    return ([string]$raw).Trim()
+    # In PowerShell 7, [string] casts do not reliably produce an object
+    # suitable for method invocation from a null pipeline result.
+    if ($null -eq $raw) {
+        return ''
+    }
+    return $raw.Trim()
 }
