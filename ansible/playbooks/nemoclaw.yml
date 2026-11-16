@@ -1,0 +1,11 @@
+---
+- name: Configure isolated NemoClaw reference host
+  hosts: localhost
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../../config/versions.json
+  roles:
+    - role: base_system
+    - role: docker_engine
+    - role: nemoclaw_host

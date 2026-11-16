@@ -7,6 +7,8 @@
 param(
     [ValidateSet('Install', 'Status', 'Verify', 'Shortcuts')]
     [string]$Action = 'Install',
+    [ValidateSet('Legacy', 'NemoClaw')]
+    [string]$Profile = 'Legacy',
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')]
     [string]$DistroName = 'Ubuntu-24.04',
     [string]$InstallLocation = 'C:\WSL\Ubuntu-24.04',
@@ -22,6 +24,7 @@ param(
     [switch]$NoShortcuts,
     [switch]$NoAutomaticRestart,
     [switch]$SkipLinuxInstall,
+    [switch]$SkipOnboarding,
     [switch]$ResumeAfterReboot
 )
 

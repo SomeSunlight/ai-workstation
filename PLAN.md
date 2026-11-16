@@ -1,3 +1,35 @@
+## Issue #75 — owner first-install feedback: visible WSL progress + CPU-only Hermes
+
+**Evidence:** First real Windows/WSL NemoClaw install, 2026-11-15/16 (local diagnostic log supplied privately). This update stays within [Draft PR #76](https://github.com/SomeSunlight/ai-workstation/pull/76). No real user host changes are made through GitHub.
+
+- [x] Ubuntu 24.04 image import eventually succeeded; native Docker Engine 29.6.1, Compose 5.3.0, Buildx 0.35.0 and NemoHermes v0.0.144 passed real owner host verification.
+- [x] Pinpointed failure: official Hermes onboarding ran default GPU/CDI check, stopped because Docker advertised CDI directories without an NVIDIA GPU spec; **NVIDIA Container Toolkit is unnecessary for the first OpenRouter test**.
+- [x] Pass official `nemohermes onboard --no-gpu` for both normal and resumed onboarding; keep all other NemoClaw safety/preflight checks intact.
+- [x] Add a native Windows WSL image-import observer with heartbeat every 15 seconds, child process identity, elapsed time, VHDX size and separate stdout/stderr files; no silent infinite console wait or hidden stdin.
+- [x] Avoid restarting an already correctly configured NemoClaw WSL distribution merely because the AIW installer is rerun.
+- [x] Add Windows offline simulated import/watcher test and CPU-only command regression.
+- [ ] Owner verifies repeated installer produces no duplicate distro or shortcut; resumes official NemoClaw Hermes onboarding successfully with OpenRouter.
+- [ ] Owner checks effective OpenShell sandbox security, data persistence, backup and later Dispatcher integration.
+- [ ] Explicit owner approval before merge; old WSL distros/resources are preserved.
+
+The early `wsl --install --from-file` silence has **no per-command timestamps**; a Return key press coincided with progress, but there is no evidence it caused progress. Treat this as an instrumentation gap, not proof of a blocked prompt. Do not log personal path/identity fragments in public artifacts.
+
+## Issue #75 — NemoClaw/Hermes reference WSL (independent Draft PR)
+
+**Decision:** Keep the existing Goose/OpenShell and legacy Docker/Compose installations unchanged. The unmerged Draft PR #73 is paused, **not superseded by an automatic merge**. Prefer one isolated third WSL Ubuntu 24.04 distribution `AIW-Nemo`, native Docker Engine, official upstream NemoClaw and Hermes, OpenRouter first, identical Linux Ansible on the private host. AIW only bootstraps; NemoClaw owns OpenShell, policy, Hermes, provider and agent state. No Docker Desktop. Native Docker under WSL is not NVIDIA's qualified WSL path.
+
+- [x] Reuse the existing sha256-pinned WSL image and Ansible Docker Engine role; opt-in NemoClaw profile does not invoke legacy host playbooks or change global WSL configuration.
+- [x] Create fresh separate Windows install entry point, independently owned WSL name/marker, one mascot shortcut; existing distros and links are retained.
+- [x] Add version-pinned official NemoClaw installer, no secret collection, deferred official Hermes onboarding and operator-selected OpenRouter via NemoClaw wizard.
+- [x] Provide a persistent Markdown checklist for WSL/Docker/Hermes, provider, persistence, data isolation and repeat-run acceptance.
+- [ ] Complete exact-head GitHub Actions Windows/Linux + Ansible syntax/lint checks, fix all findings.
+- [ ] Real WSL acceptance by owner including native-Docker support and NemoClaw/OpenShell/Hermes onboarding. No known successful native WSL test yet.
+- [ ] Confirm multi-host private replication using the same Linux playbook without sharing business/private data.
+- [ ] Review legacy context/source rules and optional cleanup **only after** successful migration; no existing resources are deleted.
+- [ ] Owner explicitly authorizes a merge; neither PR #73 nor this branch may be merged automatically.
+
+See [Issue #75](https://github.com/SomeSunlight/ai-workstation/issues/75) and [tick-box test document](docs/nemoclaw-acceptance.md).
+
 ## Issue #71 — OpenShell first-flight reproduction and #69 research handoff (2026-11-14)
 
 **Scope of this documentation-only PR:** capture the operator-proven OpenShell v0.1.8 / Goose 1.59.0 WSL journey in a sanitized, repeatable runbook; update no runtime, source context, provider credentials, Docker/WSL configuration, or host. Integration architecture, security qualification, legacy migration and new features belong in #71's later scoped PRs. Owner squash-merges only after review.
