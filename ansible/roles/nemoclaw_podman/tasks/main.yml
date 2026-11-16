@@ -1,0 +1,94 @@
+---
+- name: Require pinned Ubuntu 26.04 Linux, without touching Docker host
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == "Ubuntu"
+      - ansible_facts.distribution_version == versions.nemoclaw_podman.ubuntu.release
+      - ansible_facts.service_mgr == "systemd"
+      - ai_workstation_user | length > 0
+      - ai_workstation_home | length > 0
+    quiet: true
+
+- name: Install rootless Podman and network prerequisites from Ubuntu signed APT archives
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    state: present
+    name:
+      - "podman={{ versions.nemoclaw_podman.podman.apt_package_version }}"
+      - uidmap
+      - netavark
+      - aardvark-dns
+      - passt
+      - slirp4netns
+      - fuse-overlayfs
+      - dbus-user-session
+      - lsof
+      - ca-certificates
+      - git
+      - curl
+
+- name: Require a subuid allocation for the dedicated user
+  ansible.builtin.command:
+    argv: [grep, "-E", "^{{ ai_workstation_user }}:[0-9]+:[0-9]+$", /etc/subuid]
+  register: nemoclaw_podman_subuid
+  changed_when: false
+  failed_when: false
+
+- name: Add rootless subuid mapping only when the new user lacks one
+  ansible.builtin.command:
+    argv: [usermod, --add-subuids, "100000-165535", "{{ ai_workstation_user }}"]
+  when: nemoclaw_podman_subuid.rc != 0
+  changed_when: true
+
+- name: Require a subgid allocation for the dedicated user
+  ansible.builtin.command:
+    argv: [grep, "-E", "^{{ ai_workstation_user }}:[0-9]+:[0-9]+$", /etc/subgid]
+  register: nemoclaw_podman_subgid
+  changed_when: false
+  failed_when: false
+
+- name: Add rootless subgid mapping only when the new user lacks one
+  ansible.builtin.command:
+    argv: [usermod, --add-subgids, "100000-165535", "{{ ai_workstation_user }}"]
+  when: nemoclaw_podman_subgid.rc != 0
+  changed_when: true
+
+- name: Query user UID
+  ansible.builtin.command:
+    argv: [id, -u, "{{ ai_workstation_user }}"]
+  register: nemoclaw_podman_uid
+  changed_when: false
+
+- name: Read systemd linger mode
+  ansible.builtin.command:
+    argv: [loginctl, show-user, "{{ ai_workstation_user }}", --property=Linger, --value]
+  register: nemoclaw_podman_linger
+  changed_when: false
+  failed_when: false
+
+- name: Keep user systemd manager alive for Podman socket
+  ansible.builtin.command:
+    argv: [loginctl, enable-linger, "{{ ai_workstation_user }}"]
+  when: nemoclaw_podman_linger.stdout | trim != "yes"
+  changed_when: true
+
+- name: Ensure user systemd manager exists
+  ansible.builtin.systemd_service:
+    name: "user@{{ nemoclaw_podman_uid.stdout }}.service"
+    state: started
+
+- name: Start current-user Podman API socket, systemd-managed
+  ansible.builtin.systemd_service:
+    name: podman.socket
+    scope: user
+    enabled: true
+    state: started
+  become: true
+  become_user: "{{ ai_workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ nemoclaw_podman_uid.stdout }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ nemoclaw_podman_uid.stdout }}/bus"
+
+- name: Verify effective Podman rootless runtime
+  ansible.builtin.include_tasks: verify.yml
