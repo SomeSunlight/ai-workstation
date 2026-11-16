@@ -1,0 +1,142 @@
+---
+- name: Require pinned Ubuntu 26.04 Linux, without touching Docker host
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == "Ubuntu"
+      - ansible_facts.distribution_version == versions.nemoclaw_podman.ubuntu.release
+      - ansible_facts.service_mgr == "systemd"
+      - ai_workstation_user | length > 0
+      - ai_workstation_home | length > 0
+    quiet: true
+
+- name: Install rootless Podman and network prerequisites from Ubuntu signed APT archives
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    state: present
+    name:
+      - "podman={{ versions.nemoclaw_podman.podman.apt_package_version }}"
+      - uidmap
+      - netavark
+      - aardvark-dns
+      - passt
+      - slirp4netns
+      - fuse-overlayfs
+      - dbus-user-session
+      - lsof
+      - ca-certificates
+      - git
+      - curl
+
+- name: Require a subuid allocation for the dedicated user
+  ansible.builtin.command:
+    argv: [grep, "-E", "^{{ ai_workstation_user }}:[0-9]+:[0-9]+$", /etc/subuid]
+  register: nemoclaw_podman_subuid
+  changed_when: false
+  failed_when: false
+
+- name: Add rootless subuid mapping only when the new user lacks one
+  ansible.builtin.command:
+    argv: [usermod, --add-subuids, "100000-165535", "{{ ai_workstation_user }}"]
+  when: nemoclaw_podman_subuid.rc != 0
+  changed_when: true
+
+- name: Require a subgid allocation for the dedicated user
+  ansible.builtin.command:
+    argv: [grep, "-E", "^{{ ai_workstation_user }}:[0-9]+:[0-9]+$", /etc/subgid]
+  register: nemoclaw_podman_subgid
+  changed_when: false
+  failed_when: false
+
+- name: Add rootless subgid mapping only when the new user lacks one
+  ansible.builtin.command:
+    argv: [usermod, --add-subgids, "100000-165535", "{{ ai_workstation_user }}"]
+  when: nemoclaw_podman_subgid.rc != 0
+  changed_when: true
+
+- name: Query user UID
+  ansible.builtin.command:
+    argv: [id, -u, "{{ ai_workstation_user }}"]
+  register: nemoclaw_podman_uid
+  changed_when: false
+
+- name: Read systemd linger mode
+  ansible.builtin.command:
+    argv: [loginctl, show-user, "{{ ai_workstation_user }}", --property=Linger, --value]
+  register: nemoclaw_podman_linger
+  changed_when: false
+  failed_when: false
+
+- name: Keep user systemd manager alive for Podman socket
+  ansible.builtin.command:
+    argv: [loginctl, enable-linger, "{{ ai_workstation_user }}"]
+  when: nemoclaw_podman_linger.stdout | trim != "yes"
+  changed_when: true
+
+- name: Ensure the user systemd manager exists, or collect failure evidence
+  block:
+    - name: Start NemoClaw user's systemd manager
+      ansible.builtin.systemd_service:
+        name: "user@{{ nemoclaw_podman_uid.stdout }}.service"
+        state: started
+  rescue:
+    - name: Read failed user manager state for WSL diagnosis
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - show
+          - "user@{{ nemoclaw_podman_uid.stdout }}.service"
+          - --property=ActiveState,SubState,Result
+      register: nemoclaw_podman_systemd_state
+      changed_when: false
+      failed_when: false
+
+    - name: Read bounded systemd journal for failed user manager
+      ansible.builtin.command:
+        argv:
+          - journalctl
+          - --boot
+          - --unit
+          - "user@{{ nemoclaw_podman_uid.stdout }}.service"
+          - --no-pager
+          - --lines=30
+          - --output=short
+      register: nemoclaw_podman_systemd_journal
+      changed_when: false
+      failed_when: false
+
+    - name: Display precise systemd state and last journal lines
+      ansible.builtin.debug:
+        msg:
+          - "systemctl show: {{ nemoclaw_podman_systemd_state.stdout }}"
+          - "journalctl user manager: {{ nemoclaw_podman_systemd_journal.stdout_lines }}"
+          - >-
+            If journalctl says 'Device or resource busy' or
+            'Failed to attach to cgroup', a Microsoft WSL multi-distro
+            cgroup collision is likely (microsoft/WSL#40593).
+            WSL 2.9.8 introduced isolation, with a 2.9.13 follow-up.
+            Confirm WSL version before changing Linux user IDs.
+
+    - name: Abort if rootless Podman cannot use the systemd user manager
+      ansible.builtin.fail:
+        msg: >-
+          Failed to start user@{{ nemoclaw_podman_uid.stdout }}.service.
+          The preceding journal and systemctl output show the underlying
+          Linux failure. Do not disable cgroups, run rootful Podman, change
+          UIDs or terminate other WSL distributions automatically.
+          See docs/nemoclaw-podman.md and issue #77.
+
+- name: Start current-user Podman API socket, systemd-managed
+  ansible.builtin.systemd_service:
+    name: podman.socket
+    scope: user
+    enabled: true
+    state: started
+  become: true
+  become_user: "{{ ai_workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ nemoclaw_podman_uid.stdout }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ nemoclaw_podman_uid.stdout }}/bus"
+
+- name: Verify effective Podman rootless runtime
+  ansible.builtin.include_tasks: verify.yml

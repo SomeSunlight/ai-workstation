@@ -1,0 +1,16 @@
+---
+- name: Verify official rootless Podman and pinned NemoClaw CLI
+  hosts: localhost
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../../config/versions.json
+  tasks:
+    - name: Verify Podman user runtime
+      ansible.builtin.include_role:
+        name: nemoclaw_podman
+        tasks_from: verify
+    - name: Verify pinned NemoClaw Hermes CLI
+      ansible.builtin.include_role:
+        name: nemoclaw_host
+        tasks_from: verify

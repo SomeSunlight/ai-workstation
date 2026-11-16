@@ -1,0 +1,10 @@
+---
+- name: Install isolated NemoClaw Hermes host using Ubuntu rootless Podman
+  hosts: localhost
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../../config/versions.json
+  roles:
+    - role: nemoclaw_podman
+    - role: nemoclaw_host

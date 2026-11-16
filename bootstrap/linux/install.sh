@@ -17,11 +17,12 @@ BECOME_PASSWORD_FILE=""
 
 ACTION="install"
 ASSUME_YES="false"
+INSTALL_PROFILE="legacy"
 
 usage() {
     cat <<'EOF'
 Usage:
-  ./install.sh [install|status|verify] [--yes]
+  ./install.sh [install|status|verify] [--yes] [--profile legacy|nemoclaw-podman]
 
 Commands:
   install  Bootstrap dependencies and configure the host.
@@ -35,6 +36,10 @@ parse_arguments() {
         case "$1" in
             install|status|verify) ACTION="$1" ;;
             --yes|-y) ASSUME_YES="true" ;;
+            --profile)
+                [[ $# -gt 1 ]] || fail "--profile needs legacy or nemoclaw-podman."
+                case "$2" in legacy|nemoclaw-podman) INSTALL_PROFILE="$2" ;; *) fail "Invalid installation profile." ;; esac
+                shift ;;
             --help|-h) usage; exit 0 ;;
             *) printf 'Unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
         esac
@@ -106,8 +111,14 @@ preflight() {
     source /etc/os-release
 
     [[ "${ID:-}" == "ubuntu" ]] || fail "Ubuntu is required; found ${ID:-unknown}."
-    [[ "${VERSION_ID:-}" == "$(json_value versions.ubuntu.release)" ]] || \
-        fail "Ubuntu $(json_value versions.ubuntu.release) is required; found ${VERSION_ID:-unknown}."
+    local expected_release
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        expected_release="$(json_value versions.nemoclaw_podman.ubuntu.release)"
+    else
+        expected_release="$(json_value versions.ubuntu.release)"
+    fi
+    [[ "${VERSION_ID:-}" == "$expected_release" ]] || \
+        fail "Ubuntu $expected_release is required for $INSTALL_PROFILE; found ${VERSION_ID:-unknown}."
     [[ "$(ps -p 1 -o comm= | xargs)" == "systemd" ]] || fail "systemd must run as PID 1."
     [[ -f "${ROOT}/pyproject.toml" ]] || fail "pyproject.toml is missing."
     if find "$ROOT" -maxdepth 0 -perm -0002 -print -quit | grep -q .; then
@@ -125,7 +136,11 @@ preflight() {
 
 show_status() {
     preflight
-    "${ROOT}/bin/aiw" status
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        "${ROOT}/bin/aiw-nemo" status
+    else
+        "${ROOT}/bin/aiw" status
+    fi
 }
 
 confirm_install() {
@@ -165,12 +180,44 @@ prepare_become_password() {
 
 install_base_packages() {
     section 'Install bootstrap packages'
+    local packages=(ca-certificates curl git python3 python3-apt python3-venv)
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        # Ubuntu 26.04 defaults to sudo-rs. Our locked Ansible 2.21.1
+        # cannot reliably parse the sudo-rs password prompt (LP #2122414).
+        # Install the coexisting, Ubuntu-supported classic sudo.ws package,
+        # WITHOUT changing the system-wide sudo alternative.
+        packages+=(sudo)
+    fi
     sudo apt-get update
-    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        ca-certificates curl git python3 python3-apt python3-venv
-    [[ "$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" == \
-       "$(json_value versions.ubuntu.python)" ]] || fail "Unexpected Python version."
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${packages[@]}"
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        python3 -c 'import sys; assert sys.version_info >= (3, 12), "Python 3.12+ required"'
+    else
+        [[ "$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" == \
+           "$(json_value versions.ubuntu.python)" ]] || fail "Unexpected Python version."
+    fi
     ok "Bootstrap packages are installed."
+}
+
+configure_podman_ansible_sudo() {
+    [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]] || return 0
+
+    section 'Check Ansible privilege escalation (Ubuntu 26.04)'
+    # Only override the executable used by Ansible. Do not change system-wide
+    # /usr/bin/sudo, update-alternatives or sudoers/policy. No password is
+    # placed into an environment variable, playbook or command arguments.
+    [[ -x /usr/bin/sudo.ws ]] || fail \
+        "Classic sudo.ws is missing from Ubuntu. The signed sudo APT package must be installed."
+    [[ -n "${AIW_BECOME_PASSWORD_FILE:-}" && -r "$AIW_BECOME_PASSWORD_FILE" ]] || \
+        fail "Linux sudo password handoff is missing; refusing Ansible privilege escalation."
+
+    export ANSIBLE_SUDO_EXE=/usr/bin/sudo.ws
+    # The existing Ansible CLI wrapper passes --become-password-file. The
+    # test checks that the real Ansible become plugin can read and use that
+    # password with this executable. A bare sudo -v would NOT prove this.
+    info 'Using Ubuntu classic sudo.ws for Ansible only (system sudo-rs stays unchanged).'
+    "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw-become-preflight.yml
+    ok 'Ansible root escalation succeeded; proceeding to the Podman installer.'
 }
 
 installed_uv_version() {
@@ -212,8 +259,17 @@ sync_automation_runtime() {
         "uv.lock is missing. Copy the tested lockfile before publishing or installing. See docs/repository-setup.md."
 
     cd "$ROOT"
-    "$UV_BIN" lock --check --python /usr/bin/python3
-    "$UV_BIN" sync --frozen --python /usr/bin/python3
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        # Ubuntu 26.04 uses Python 3.14, while the existing locked Ansible
+        # automation project intentionally targets Python 3.12. Do not
+        # re-resolve its lockfile or downgrade system Python.
+        "$UV_BIN" python install 3.12
+        "$UV_BIN" lock --check --python 3.12
+        "$UV_BIN" sync --frozen --python 3.12
+    else
+        "$UV_BIN" lock --check --python /usr/bin/python3
+        "$UV_BIN" sync --frozen --python /usr/bin/python3
+    fi
     ok "The repository-local Python environment is synchronized."
 }
 
@@ -247,8 +303,13 @@ bootstrap_verify() {
     [[ -x "${ROOT}/.venv/bin/ansible-playbook" ]] || fail "Ansible environment is missing."
 
     cd "$ROOT"
-    "$UV_BIN" lock --check --python /usr/bin/python3
-    "$UV_BIN" sync --check --frozen --python /usr/bin/python3
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        "$UV_BIN" lock --check --python 3.12
+        "$UV_BIN" sync --check --frozen --python 3.12
+    else
+        "$UV_BIN" lock --check --python /usr/bin/python3
+        "$UV_BIN" sync --check --frozen --python /usr/bin/python3
+    fi
 
     export ANSIBLE_CONFIG="${ROOT}/ansible/ansible.cfg"
     export ANSIBLE_INVENTORY="${ROOT}/ansible/inventory/localhost.yml"
@@ -259,7 +320,11 @@ bootstrap_verify() {
     export AIW_HOME="$HOME"
     export AIW_PRIMARY_GROUP="$(id -gn)"
 
-    "$UV_BIN" run --frozen ansible-playbook "${ROOT}/ansible/playbooks/bootstrap-verify.yml"
+    if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+        "$UV_BIN" run --frozen ansible-playbook "${ROOT}/ansible/playbooks/nemoclaw-bootstrap-verify.yml"
+    else
+        "$UV_BIN" run --frozen ansible-playbook "${ROOT}/ansible/playbooks/bootstrap-verify.yml"
+    fi
     "$UV_BIN" run --frozen ansible-lint --config-file "${ROOT}/ansible/.ansible-lint" \
         "${ROOT}/ansible/playbooks"
     ok "Automation bootstrap is valid."
@@ -271,6 +336,7 @@ main() {
 
     section 'AI Workstation installer'
     info "Action : $ACTION"
+    info "Profile: $INSTALL_PROFILE"
     info "Log    : $LOG_FILE"
 
     case "$ACTION" in
@@ -286,13 +352,25 @@ main() {
             sync_automation_runtime
             install_collections
             bootstrap_verify
-            "${ROOT}/bin/aiw" install
+            if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+                configure_podman_ansible_sudo
+                "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw.yml
+                "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw-verify.yml
+                ok "NemoClaw host configured; Hermes sandbox/provider onboarding remains upstream."
+            else
+                "${ROOT}/bin/aiw" install
+            fi
             ;;
         verify)
             preflight
             bootstrap_verify
             prepare_become_password
-            "${ROOT}/bin/aiw" verify
+            if [[ "$INSTALL_PROFILE" == "nemoclaw-podman" ]]; then
+                configure_podman_ansible_sudo
+                "${ROOT}/bin/aiw" playbook ansible/playbooks/nemoclaw-verify.yml
+            else
+                "${ROOT}/bin/aiw" verify
+            fi
             ;;
     esac
 }

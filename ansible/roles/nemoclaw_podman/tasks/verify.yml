@@ -1,0 +1,80 @@
+---
+- name: Verify Ubuntu 26.04 systemd and pinned Podman runtime
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == "Ubuntu"
+      - ansible_facts.distribution_version == versions.nemoclaw_podman.ubuntu.release
+      - ansible_facts.service_mgr == "systemd"
+    quiet: true
+
+- name: Read installed Podman package versions
+  ansible.builtin.package_facts:
+    manager: apt
+
+- name: Confirm Ubuntu-signed pinned Podman is installed
+  ansible.builtin.assert:
+    that:
+      - "'podman' in ansible_facts.packages"
+      - "ansible_facts.packages['podman'][0].version == versions.nemoclaw_podman.podman.apt_package_version"
+    fail_msg: "Wrong Podman package version or repository; no silent upgrades/downgrades."
+    quiet: true
+
+- name: Read dedicated user UID
+  ansible.builtin.command:
+    argv: [id, -u, "{{ ai_workstation_user }}"]
+  register: nemoclaw_podman_uid
+  changed_when: false
+
+- name: Verify rootless Podman socket exists
+  ansible.builtin.stat:
+    path: "/run/user/{{ nemoclaw_podman_uid.stdout }}/podman/podman.sock"
+  register: nemoclaw_podman_socket
+
+- name: Refuse a missing or untrusted Podman socket
+  ansible.builtin.assert:
+    that:
+      - nemoclaw_podman_socket.stat.exists
+      - nemoclaw_podman_socket.stat.issock
+      - nemoclaw_podman_socket.stat.pw_name == ai_workstation_user
+      - nemoclaw_podman_socket.stat.mode == "0660"
+    fail_msg: "Podman current-user socket missing or unsafe; refusing NemoClaw onboarding."
+    quiet: true
+
+- name: Confirm current-user Podman API is reachable and rootless
+  ansible.builtin.command:
+    argv:
+      - podman
+      - --remote
+      - --url
+      - "unix:///run/user/{{ nemoclaw_podman_uid.stdout }}/podman/podman.sock"
+      - info
+      - --format
+      - json
+  register: nemoclaw_podman_info
+  become: true
+  become_user: "{{ ai_workstation_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ nemoclaw_podman_uid.stdout }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ nemoclaw_podman_uid.stdout }}/bus"
+  changed_when: false
+
+- name: Require rootless cgroups v2 and Netavark before NemoClaw
+  ansible.builtin.assert:
+    that:
+      - (nemoclaw_podman_info.stdout | from_json).host.security.rootless | bool
+      - (nemoclaw_podman_info.stdout | from_json).host.cgroupVersion == "v2"
+      - (nemoclaw_podman_info.stdout | from_json).host.networkBackend == "netavark"
+    fail_msg: "Podman socket exists but rootless/cgroups-v2/netavark not qualified."
+    quiet: true
+
+- name: Verify lsof is on the host for NemoClaw gateway listener checks
+  ansible.builtin.stat:
+    path: /usr/bin/lsof
+  register: nemoclaw_podman_lsof
+
+- name: Reject hosts without gateway listener diagnostics
+  ansible.builtin.assert:
+    that:
+      - nemoclaw_podman_lsof.stat.exists
+      - nemoclaw_podman_lsof.stat.executable
+    quiet: true

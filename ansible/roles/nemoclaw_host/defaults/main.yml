@@ -1,0 +1,6 @@
+---
+nemoclaw_host_source_url: "{{ versions.nemoclaw_podman.nemoclaw.repository }}"
+nemoclaw_host_source_commit: "{{ versions.nemoclaw_podman.nemoclaw.commit }}"
+nemoclaw_host_source_dir: "{{ ai_workstation_home }}/.local/share/aiw-nemoclaw/source"
+nemoclaw_host_binary: "{{ ai_workstation_home }}/.local/bin/nemohermes"
+nemoclaw_host_ref_receipt: "{{ ai_workstation_home }}/.config/ai-workstation/nemoclaw-installer-ref"

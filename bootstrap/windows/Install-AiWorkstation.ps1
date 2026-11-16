@@ -14,6 +14,9 @@ param(
     [ValidateSet('Install', 'Status', 'Verify', 'Shortcuts')]
     [string]$Action = 'Install',
 
+    [ValidateSet('Legacy', 'NemoPodman')]
+    [string]$Profile = 'Legacy',
+
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')]
     [string]$DistroName = 'Ubuntu-24.04',
     [string]$InstallLocation = 'C:\WSL\Ubuntu-24.04',
@@ -30,6 +33,7 @@ param(
 
     [switch]$NoAutomaticRestart,
     [switch]$SkipLinuxInstall,
+    [switch]$SkipOnboarding,
     [switch]$ResumeAfterReboot
 )
 
@@ -110,6 +114,9 @@ function Stop-Log {
 }
 
 . (Join-Path $PSScriptRoot 'Filesystem.ps1')
+. (Join-Path $PSScriptRoot 'Observe-WslImport.ps1')
+. (Join-Path $PSScriptRoot 'WslUserIdentity.ps1')
+. (Join-Path $PSScriptRoot 'NemoWslVersion.ps1')
 
 function Stage-Installer {
     $sourceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -150,6 +157,8 @@ function Get-InvocationArguments {
         ('"{0}"' -f $script:StagedEntryPoint)
         '-Action'
         $Action
+        '-Profile'
+        $Profile
         '-DistroName'
         ('"{0}"' -f $DistroName)
         '-InstallLocation'
@@ -176,6 +185,9 @@ function Get-InvocationArguments {
     }
     if ($SkipLinuxInstall) {
         $arguments += '-SkipLinuxInstall'
+    }
+    if ($SkipOnboarding) {
+        $arguments += '-SkipOnboarding'
     }
     if ($ForResume) {
         $arguments += '-ResumeAfterReboot'
@@ -288,6 +300,23 @@ function Register-ResumeAndRestart {
 function Ensure-WslPlatform {
     if (Test-WslPlatform) {
         Write-Step 'WSL platform is available.' Ok
+        if ($Profile -eq 'NemoPodman') {
+            # Upstream WSL 2.7.x still shares systemd user cgroups between
+            # distros. This causes user@1000.service (and rootless Podman)
+            # to fail with Device or resource busy. Microsoft released
+            # per-distro cgroup isolation in 2.9.8 and a follow-up in 2.9.13.
+            # Never update global WSL automatically from this profile.
+            $versionText = @(& wsl.exe --version)
+            if ($LASTEXITCODE -ne 0) {
+                throw 'Could not read the installed WSL engine version. No WSL update was performed.'
+            }
+            $engineVersion = Get-AiwNemoWslEngineVersion -VersionOutput ([string[]]$versionText)
+            Write-Step "WSL engine version: $engineVersion"
+            Assert-AiwNemoWslEngineReady -InstalledVersion $engineVersion
+            Write-Step 'WSL cgroup isolation release requirement satisfied (>= 2.9.13).' Ok
+            Write-Step 'Existing WSL version preserved; no global WSL update in NemoClaw profile.' Ok
+            return
+        }
         Write-Step 'Checking for WSL updates. This can take several minutes and may produce little output.'
         Invoke-Wsl -Arguments @('--update')
         Write-Step 'WSL update check completed.' Ok
@@ -334,8 +363,14 @@ function Get-DistroBasePath {
 
 function Ensure-UbuntuImage {
     $configuration = Get-VersionConfiguration
-    $url = [string]$configuration.versions.ubuntu.wsl_image_url
-    $expectedHash = ([string]$configuration.versions.ubuntu.wsl_image_sha256).ToLowerInvariant()
+    $ubuntu = if ($Profile -eq 'NemoPodman') {
+        $configuration.versions.nemoclaw_podman.ubuntu
+    }
+    else {
+        $configuration.versions.ubuntu
+    }
+    $url = [string]$ubuntu.wsl_image_url
+    $expectedHash = ([string]$ubuntu.wsl_image_sha256).ToLowerInvariant()
 
     if ([string]::IsNullOrWhiteSpace($url) -or [string]::IsNullOrWhiteSpace($expectedHash)) {
         throw 'Ubuntu WSL image URL or checksum is missing from config\versions.json.'
@@ -386,6 +421,14 @@ function Ensure-Distro {
             }
         }
 
+        if ($Profile -eq 'NemoPodman') {
+            $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script @'
+test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw-podman"
+'@
+            if ($profileCode -ne 0) {
+                throw "Existing WSL distribution '$DistroName' is not marked as the NemoClaw profile; refusing adoption."
+            }
+        }
         Write-Step "Distribution '$DistroName' already exists." Ok
         return
     }
@@ -409,25 +452,31 @@ function Ensure-Distro {
 
     $imagePath = Ensure-UbuntuImage
 
+    # Start-Process joins ArgumentList, so quote the two Windows file paths.
+    # Names and paths are never evaluated as shell commands.
     $arguments = @(
         '--install'
         '--from-file'
-        $imagePath
+        ('"{0}"' -f $imagePath)
         '--name'
         $DistroName
         '--location'
-        $InstallLocation
+        ('"{0}"' -f $InstallLocation)
         '--no-launch'
     )
 
     Write-Step "Installing the pinned Ubuntu image as '$DistroName' in $InstallLocation."
-    Invoke-Wsl -Arguments $arguments | Out-Null
+    Write-Step 'This WSL operation may take time; AIW will print a heartbeat every 15 seconds.'
+    Invoke-AiwObservedWslImport -Executable (Join-Path $env:WINDIR 'System32\wsl.exe') -Arguments $arguments -InstallLocation $InstallLocation -LogDirectory $script:LogRoot
 
     $registeredDistros = @(Get-Distros)
     if ($DistroName -notin $registeredDistros) {
         throw "Distribution '$DistroName' was not registered."
     }
 
+    if ($Profile -eq 'NemoPodman') {
+        Invoke-Bash -User 'root' -Script "printf '%s' nemoclaw-podman > /etc/aiw-install-profile && chmod 0644 /etc/aiw-install-profile"
+    }
     Write-Step "Distribution '$DistroName' is installed." Ok
 }
 
@@ -557,31 +606,73 @@ with path.open('w', encoding='utf-8') as handle:
 PY
 "@
 
-    Invoke-Bash -Script $configuration
-    Invoke-Wsl -Arguments @('--terminate', $DistroName) | Out-Null
-    Start-Sleep -Seconds 2
-
-    $actualOutput = @(
-        & wsl.exe --distribution $DistroName --user $LinuxUser -- sh -lc 'id -un' 2>&1 |
-            Select-Object -First 1
-    )
-    $actualCode = $LASTEXITCODE
-    $actual = ($actualOutput | ForEach-Object { [string]$_ }) -join "`n"
-    $actual = $actual.Trim()
-
-    if ($actualCode -ne 0) {
-        throw "Failed to read Linux user from '$DistroName' as '$LinuxUser': $actual"
+    # Avoid restarting a live NemoClaw gateway or Hermes sandbox on every
+    # idempotent install. Rewriting /etc/wsl.conf would otherwise force the
+    # legacy unconditional "wsl --terminate" even for a correct configuration.
+    $wslConfigReady = $false
+    if ($Profile -eq 'NemoPodman') {
+        $probe = @"
+set -e
+python3 - <<'PY'
+from configparser import ConfigParser
+from pathlib import Path
+import sys
+config = ConfigParser()
+config.read('/etc/wsl.conf')
+try:
+    configured = config.getboolean('boot', 'systemd') and config.get('user', 'default') == '$LinuxUser'
+except (ValueError, Exception):
+    configured = False
+sys.exit(0 if configured else 1)
+PY
+"@
+        $wslConfigReady = (Invoke-Bash -Script $probe -User 'root' -AllowFailure) -eq 0
+    }
+    if ($wslConfigReady) {
+        Write-Step 'NemoClaw WSL user/systemd configuration already correct; preserving running Linux processes.' Ok
+    }
+    else {
+        if ($Profile -eq 'NemoPodman') {
+            Write-Step 'NemoClaw WSL configuration needs an initial update; this distribution alone will restart.' Warning
+        }
+        Invoke-Bash -Script $configuration
+        Invoke-Wsl -Arguments @('--terminate', $DistroName) | Out-Null
+        Start-Sleep -Seconds 2
     }
 
-    if (-not $actual) {
-        throw "Failed to read Linux user from '$DistroName' as '$LinuxUser': command returned no output."
+    # Check the configured *default* user (no explicit --user override).
+    # WSL can print a separate "Failed to start the systemd user session"
+    # diagnostic to stderr while /usr/bin/id -un successfully returns the
+    # correct user on stdout. Never merge 2>&1 or select the first line:
+    # that previously misidentified the warning as the user name.
+    $stderrPath = Join-Path $script:LogRoot "wsl-default-user-$($script:RunId).stderr.log"
+    $nativePreference = $PSNativeCommandUseErrorActionPreference
+    try {
+        $PSNativeCommandUseErrorActionPreference = $false
+        $actualOutput = @(
+            & wsl.exe --distribution $DistroName --exec /usr/bin/id -un 2> $stderrPath
+        )
+        $actualCode = $LASTEXITCODE
+    }
+    finally {
+        $PSNativeCommandUseErrorActionPreference = $nativePreference
     }
 
-    if ($actual -ne $LinuxUser) {
-        throw "Expected default Linux user '$LinuxUser', found '$actual'."
-    }
+    # Fail on an incorrect identity or a native command failure; a WSL
+    # systemd user-session diagnostic is evaluated separately below.
+    Assert-AiwWslDefaultUserIdentity -StandardOutput ([string[]]$actualOutput) `
+        -ExpectedUser $LinuxUser -DistroName $DistroName -ExitCode $actualCode
+    Write-Step "Configured default Linux user is '$LinuxUser'." Ok
 
-    Write-Step "Default Linux user is '$LinuxUser'." Ok
+    $stderrMessage = Get-AiwWslStderrText -Path $stderrPath
+    if ($stderrMessage -match 'Failed to start the systemd user session') {
+        Write-Step "WSL reported a SYSTEMD USER SESSION problem (not a wrong username)." Warning
+        Write-Step 'The rootless Podman installation will configure and validate the user systemd manager and socket.' Warning
+        Write-Step "If Podman fails, inspect WSL user-session diagnostics: $stderrPath" Warning
+    }
+    elseif ($stderrMessage) {
+        Write-Step "WSL produced additional diagnostics (not a user-identity mismatch): $stderrPath" Warning
+    }
 }
 
 function Merge-WslConfig {
@@ -654,6 +745,9 @@ function Get-LinuxRepositoryPath {
 }
 
 function Get-ShortcutDisplayName {
+    if ($Profile -eq 'NemoPodman') {
+        return "$ShortcutName ($DistroName)"
+    }
     if ($DistroName -eq 'Ubuntu-24.04') {
         return $ShortcutName
     }
@@ -672,6 +766,13 @@ function Get-TerminalShortcutDisplayName {
 function Ensure-WindowsShortcuts {
     if ($NoShortcuts) {
         Write-Step 'Windows shortcuts were skipped by request.' Warning
+        return
+    }
+
+    if ($Profile -eq 'NemoPodman') {
+        & (Join-Path $PSScriptRoot 'Create-NemoClawShortcut.ps1') -DistroName $DistroName -LinuxUser $LinuxUser
+        if (-not $?) { throw 'Creating NemoClaw launcher failed.' }
+        Write-Step "NemoClaw Hermes ($DistroName) shortcut created (one per Desktop/Start)." Ok
         return
     }
 
@@ -715,6 +816,7 @@ else
   git clone --branch $refLiteral --single-branch $urlLiteral $repositoryLiteral
 fi
 chmod +x $repositoryLiteral/install.sh $repositoryLiteral/bin/aiw $repositoryLiteral/bootstrap/linux/install.sh
+if [ -f $repositoryLiteral/bin/aiw-nemo ]; then chmod +x $repositoryLiteral/bin/aiw-nemo; fi
 "@
 
     Write-Step "Linux repository is available at $repositoryPath." Ok
@@ -735,7 +837,7 @@ function Invoke-LinuxInstall {
         '--'
         'bash'
         '-lc'
-        'cd ~/ai-workstation && ./install.sh install --yes'
+        $(if ($Profile -eq 'NemoPodman') { 'cd ~/ai-workstation && ./install.sh install --yes --profile nemoclaw-podman' } else { 'cd ~/ai-workstation && ./install.sh install --yes' })
     )
     Write-Step 'Linux host installation completed.' Ok
 }
@@ -760,6 +862,24 @@ function Show-Status {
         }
     }
 
+    if ($Profile -eq 'NemoPodman') {
+        $displayName = Get-ShortcutDisplayName
+        $desktopLink = Join-Path ([Environment]::GetFolderPath('Desktop')) "$displayName.lnk"
+        $startLink = Join-Path (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs') "$displayName.lnk"
+        Write-Step "NemoClaw Desktop shortcut: $(if (Test-Path -LiteralPath $desktopLink) { 'present' } else { 'missing' })"
+        Write-Step "NemoClaw Start Menu shortcut: $(if (Test-Path -LiteralPath $startLink) { 'present' } else { 'missing' })"
+        if ($DistroName -in $distros) {
+            $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script 'test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw-podman"'
+            if ($profileCode -ne 0) {
+                Write-Step "The selected WSL distro is NOT an AIW NemoClaw profile; no runtime was accessed." Warning
+                return
+            }
+            $code = Invoke-Wsl -AllowFailure -Arguments @('--distribution', $DistroName, '--user', $LinuxUser, '--', 'bash', '-lc', 'cd ~/ai-workstation && bash ./bin/aiw-nemo status')
+            if ($code -ne 0) { Write-Step "NemoClaw status probe returned $code." Warning }
+        }
+        return
+    }
+
     $displayName = Get-ShortcutDisplayName
     $terminalDisplayName = Get-TerminalShortcutDisplayName
     $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) "$displayName.lnk"
@@ -778,7 +898,7 @@ function Show-Status {
             '--'
             'bash'
             '-lc'
-            'if [ -x ~/ai-workstation/bin/aiw ]; then ~/ai-workstation/bin/aiw status; else echo "Linux repository not installed"; fi'
+            $(if ($Profile -eq 'NemoPodman') { 'if [ -f ~/ai-workstation/bin/aiw-nemo ]; then bash ~/ai-workstation/bin/aiw-nemo status; else echo "Nemo profile repository not installed"; fi' } else { 'if [ -x ~/ai-workstation/bin/aiw ]; then ~/ai-workstation/bin/aiw status; else echo "Linux repository not installed"; fi' })
         )
         if ($linuxStatusExitCode -ne 0) {
             Write-Step "Linux status unavailable. WSL returned exit code $linuxStatusExitCode." Warning
@@ -799,7 +919,12 @@ function Verify-All {
         throw "Distribution '$DistroName' is missing."
     }
 
-    # Ubuntu release, systemd, Python, uv, Ansible and Docker are verified by
+    if ($Profile -eq 'NemoPodman') {
+        $profileCode = Invoke-Bash -User 'root' -AllowFailure -Script 'test "$(cat /etc/aiw-install-profile 2>/dev/null)" = "nemoclaw-podman"'
+        if ($profileCode -ne 0) { throw "Refusing to verify non-NemoClaw WSL distribution '$DistroName'." }
+    }
+
+    # Ubuntu release, systemd, Python, uv, Ansible and Podman are verified by
     # the Linux verifier below. Keeping that logic in one place avoids fragile
     # Windows-side parsing of scalar native-command output from WSL.
 
@@ -811,13 +936,48 @@ function Verify-All {
         '--'
         'bash'
         '-lc'
-        'cd ~/ai-workstation && ./install.sh verify'
+        $(if ($Profile -eq 'NemoPodman') { 'cd ~/ai-workstation && ./install.sh verify --profile nemoclaw-podman' } else { 'cd ~/ai-workstation && ./install.sh verify' })
     )
 
     Write-Step 'Windows and Linux verification completed successfully.' Ok
 }
 
+function Invoke-NemoOnboarding {
+    if ($SkipOnboarding -or $SkipLinuxInstall) {
+        Write-Step 'Official NemoClaw onboarding deferred; use the new penguin shortcut.' Warning
+        return
+    }
+    Write-Host ''
+    Write-Host 'NemoClaw CLI installed. Hermes/OpenShell and OpenRouter are configured by the upstream wizard.'
+    Write-Host 'Remote-model test: NVIDIA GPU passthrough is disabled (--no-gpu).'
+    Write-Host 'It will ask for a provider and credentials. AIW never receives or stores your key.'
+    $answer = Read-Host 'Hermes setup: [Y] new, [R] resume interrupted setup, [N/Enter] later'
+    if ($answer -notin @('y', 'Y', 'r', 'R')) {
+        Write-Step 'Open the NemoClaw penguin shortcut and select setup or resume later.' Ok
+        return
+    }
+    $linuxOnboard = if ($answer -in @('r', 'R')) {
+        'cd ~/ai-workstation && bash ./bin/aiw-nemo onboard --resume'
+    }
+    else {
+        'cd ~/ai-workstation && bash ./bin/aiw-nemo onboard'
+    }
+
+    # Provider/API-key prompts belong exclusively to the official upstream wizard.
+    # Stop the Windows transcription before invoking an interactive secret prompt.
+    Stop-Log
+    $script:TranscriptStarted = $false
+    Invoke-Wsl -Arguments @(
+        '--distribution', $DistroName, '--user', $LinuxUser, '--',
+        'bash', '-lc', $linuxOnboard
+    )
+    Write-Step 'NemoClaw guided setup completed; credential interactions were not transcribed.' Ok
+}
+
 try {
+    if ($Profile -eq 'NemoPodman' -and $DistroName -in @('Ubuntu-24.04','Ubuntu-26.04')) {
+        throw 'Choose a dedicated NemoClaw distro name, not the existing default AIW Ubuntu.'
+    }
     if ($Action -eq 'Install' -and -not (Test-Administrator)) {
         Restart-Elevated
     }
@@ -825,6 +985,7 @@ try {
     Start-Log
     Write-Section 'AI Workstation Windows installer'
     Write-Step "Action: $Action"
+    Write-Step "Profile: $Profile"
     Write-Step "Distribution: $DistroName"
     Write-Step "Location: $InstallLocation"
 
@@ -841,13 +1002,18 @@ try {
         }
         'Install' {
             Ensure-WslPlatform
-            Merge-WslConfig
+            if ($Profile -eq 'Legacy') {
+                Merge-WslConfig
+            } else {
+                Write-Step 'Preserving global .wslconfig and other WSL distributions.' Ok
+            }
             Ensure-Distro
             Ensure-LinuxPrerequisites
             Ensure-LinuxUser
             Ensure-LinuxRepository
             Ensure-WindowsShortcuts
             Invoke-LinuxInstall
+            if ($Profile -eq 'NemoPodman') { Invoke-NemoOnboarding }
             Write-Step 'AI Workstation installation completed successfully.' Ok
             Write-Step 'Run ".\install.ps1 -Action Status" to show the current installation state.'
         }
