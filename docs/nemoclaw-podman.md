@@ -42,6 +42,14 @@ Das eigentliche Linux-Profil ist `./install.sh install --yes --profile nemoclaw-
 
 Ausdrücklich nicht unterstützt ist ein automatisches In-place-Upgrade bestehender Ubuntu-24.04-Distributionen. Solange die Plattform noch erprobt wird, ist eine neue separate WSL-Distribution leichter zu prüfen und risikofrei wieder zu verwerfen.
 
+### WSL-Startmeldung über die systemd-Benutzersitzung
+
+Beim ersten Ubuntu-26.04-Import und Benutzerwechsel kann WSL die Meldung `Failed to start the systemd user session for 'moresunlight'` ausgeben, obwohl der Linux-Befehl zur Benutzerabfrage erfolgreich ist. Der ursprüngliche Windows-Installer mischte Standardausgabe und Fehlermeldung (`2>&1`) und prüfte nur die erste Zeile; deshalb wurde die WSL-Meldung fälschlich als angeblicher Benutzername ausgegeben. Der Installer liest nun die **tatsächliche Standardbenutzeridentität** über `wsl.exe --exec /usr/bin/id -un` von **stdout**, hält stderr separat in einem Diagnoseprotokoll fest und meldet eine systemd-Benutzersitzungswarnung ausdrücklich als **anderes Problem**.
+
+Das ist keine allgemeine Entwarnung: **rootless Podman braucht einen funktionsfähigen systemd-Benutzermanager und dessen Socket**. Unsere Ansible-Rolle aktiviert `linger`, startet den Benutzermanager und prüft die rootless Podman-API. Misslingt das, muss die konkrete WSL/systemd-Konstellation diagnostiziert werden, statt Benutzer neu anzulegen, WSL global herunterzufahren oder Podman mit sudo zu starten. Microsoft dokumentiert ähnliche WSL-Fehler mit mehreren Distributionen, z. B. in [microsoft/WSL #40593](https://github.com/microsoft/WSL/issues/40593) und [#13826](https://github.com/microsoft/WSL/issues/13826). Die tatsächliche Ursache beim einzelnen Host ist noch **nicht bestätigt**.
+
+Die normale Wiederaufnahme nach dem behobenen Benutzerprüffehler ist ein **erneuter Aufruf von `install-nemoclaw.ps1`** im aktualisierten Branch: die bereits angelegte Ubuntu-Distribution und der Benutzer bleiben erhalten. Keine Neuinstallation und keine Löschung notwendig.
+
 ## Diagnose und Nachweise
 
 Die **GitHub-Actions-Tests** prüfen Bash-Syntax, Python-Verträge, Ansible-Lint/-Syntax, Windows-PowerShell-Parsen/Installationslogik und alte Regressionen, verändern aber keinen Besitzerrechner. Die eigentliche Abnahme ist zunächst ein Durchstich: Podman-Rootless-Socket erreichbar, NemoClaw-Preflight akzeptiert WSL, Hermes-Sandbox erstellt, OpenRouter antwortet, ein Markdown-/Git-Projekt ist bearbeitbar. Das Ergebnis wird mit kurzer, datenschutzbereinigter Fehlerbeschreibung in [Issue #77](https://github.com/SomeSunlight/ai-workstation/issues/77) festgehalten.
