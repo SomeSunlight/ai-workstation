@@ -2,6 +2,8 @@
 
 **Entscheidung:** zwei Repositories mit eigener Verantwortung und unabhängigem Release-Takt. Nicht nur zwei Verzeichnisse, die weiterhin jede Änderung gemeinsam testen müssen.
 
+**Praxisstand (16. November 2026):** Der erste **NemoClaw + Hermes + OpenShell + rootless-Podman-Durchstich** unter `AIW-Nemo` ist **erfolgreich installiert und per Inferenz-Smoke-Test verifiziert**: Sandbox `testsandbox01`, Hermes-Gateway, OpenRouter und Tavily. Damit ist die Voraussetzung für eine **konkrete Extraktion des Linux-Teils** grundsätzlich erfüllt. Ein frei formulierter Agenten-/Datei-Test, die Migration zum bestehenden Dispatcher ([Issue #80](https://github.com/SomeSunlight/ai-workstation/issues/80)) und die zweite Hardware-Installation fehlen noch. Der Status von Nvidia Ubuntu-26.04-Hostqualifikation bleibt experimentell. Nachweise: [Hermes-Operator-Guide](nemoclaw-operator.md) und [Issue #77](https://github.com/SomeSunlight/ai-workstation/issues/77).
+
 ## Verantwortungsgrenze
 
 | Repository | Aufgabe | Betrieb |
@@ -15,7 +17,7 @@
 
 Der Test für [Issue #77](https://github.com/SomeSunlight/ai-workstation/issues/77) ist absichtlich ein **unabhängiger Branch von `main`**. Er verwendet den vorhandenen Windows-Bootstrap und ein neues Ansible-Profil, ohne die Docker-Experiment-Historie aus [PR #76](https://github.com/SomeSunlight/ai-workstation/pull/76) zu übernehmen.
 
-1. Den Podman-/Hermes-Durchstich durchführen, ohne vorher eine neue GitHub-Repo-Berechtigungsstruktur vorauszusetzen.
+1. **Erreicht:** Podman-/Hermes-/OpenShell-Installation mit echter OpenRouter-Inferenz erfolgreich durchgeführt, ohne zuvor neue GitHub-Repo-Berechtigungen vorauszusetzen. Der konkrete Agenten-Tool-Test bleibt ein separater kurzer Betriebsnachweis.
 2. Nach Erfolg legt der Benutzer das neue **öffentliche oder private Repository** `ai-workstation-linux` selbst an. Die Wahl der Sichtbarkeit und Zugriffsrechte bleibt seine Entscheidung.
 3. Linux-Teile einschliesslich ihrer eigenen `uv.lock`-, Python-/Ansible-Pins, GitHub-Actions und Dokumentation als eigenständig installierbares Projekt extrahieren. Kein Git-Submodul, kein automatischer Statusabgleich mit dem Windows-Branch.
 4. Windows-Bootstrap auf einen expliziten Linux-Git-Commit umstellen und lediglich den Vertrag `install/verify/status` prüfen. Die Linux-CI testet NemoClaw/Podman; die Windows-CI testet WSL/DPAPI/Windows. Beide Projekte benötigen keine gemeinsamen CI-Jobs.
