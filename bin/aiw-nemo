@@ -46,7 +46,7 @@ status() {
     else
         printf 'NemoClaw Hermes CLI not yet installed. Choose option 2 after installation.\n'
     fi
-    printf 'Guide: %s/docs/nemoclaw-reference.md\n' "$ROOT"
+    printf 'Guide: %s/docs/nemoclaw-operator.md\n' "$ROOT"
 }
 onboard() {
     command -v nemohermes >/dev/null 2>&1 || {
