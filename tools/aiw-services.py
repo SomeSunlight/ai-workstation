@@ -71,6 +71,18 @@ class ConfigError(Exception):
     pass
 
 
+def safe_error_kind(exc: Exception) -> str:
+    """Report an error category/code, never paths or secret-bearing exception text."""
+    kind = type(exc).__name__
+    if isinstance(exc, OSError):
+        winerror = getattr(exc, "winerror", None)
+        if winerror is not None:
+            return f"{kind}, WinError {winerror}"
+        if exc.errno is not None:
+            return f"{kind}, errno {exc.errno}"
+    return kind
+
+
 def default_dir() -> Path:
     custom = os.environ.get("AIW_SERVICES_DIR")
     if custom:
@@ -98,7 +110,17 @@ def private_write(path: Path, value: bytes, *, replace: bool = True) -> None:
             os.fchmod(fd, 0o600)
         with os.fdopen(fd, "wb") as out:
             out.write(value)
-        os.replace(name, path)
+        # Windows AV/indexers and editors can briefly deny replacement of an
+        # existing file. Retry boundedly; persistent access errors still fail.
+        for attempt in range(4):
+            try:
+                os.replace(name, path)
+                break
+            except OSError as exc:
+                if (os.name != "nt" or getattr(exc, "winerror", None) not in {5, 32, 33}
+                        or attempt == 3):
+                    raise
+                time.sleep(0.15)
     finally:
         if os.path.exists(name):
             os.unlink(name)
@@ -136,8 +158,17 @@ def read_settings(folder: Path) -> dict:
 
 
 def save_settings(folder: Path, doc: dict) -> None:
-    private_write(settings_path(folder),
-                  yaml.safe_dump(doc, sort_keys=False, allow_unicode=True).encode("utf-8"))
+    try:
+        data = yaml.safe_dump(doc, sort_keys=False, allow_unicode=True).encode("utf-8")
+    except (yaml.YAMLError, TypeError, ValueError, UnicodeError) as exc:
+        raise ConfigError("Cannot serialize services.yaml (" + safe_error_kind(exc) + ").") from None
+    try:
+        private_write(settings_path(folder), data)
+    except OSError as exc:
+        raise ConfigError(
+            "Cannot update services.yaml (" + safe_error_kind(exc) + "). "
+            "Check permissions and whether another Windows process has the file open."
+        ) from None
 
 
 def project_path(folder: Path, doc: dict) -> Path:
@@ -232,9 +263,44 @@ def client_add(folder: Path, name: str, policy: str) -> None:
     doc = read_settings(folder)
     if name in doc["clients"]:
         raise ConfigError("Client exists already; no credential changed.")
-    write_secret(folder, name)
+    credential = secret_file(folder, name)
+    if credential.exists() or credential.is_symlink():
+        raise ConfigError(
+            "An unregistered credential already exists for " + name +
+            ". No key was changed; archive or inspect the orphaned credential before retrying."
+        )
     doc["clients"][name] = {"policy": policy, "origin": "generated"}
-    save_settings(folder, doc)
+    write_secret(folder, name)
+    try:
+        save_settings(folder, doc)
+    except (ConfigError, OSError, ValueError, yaml.YAMLError) as exc:
+        cause = str(exc) if isinstance(exc, ConfigError) else safe_error_kind(exc)
+        # If writing finished but reporting failed, never discard a live key.
+        # If the manifest cannot be read, also preserve the key for recovery.
+        try:
+            actual = read_settings(folder)
+        except (ConfigError, OSError, ValueError, yaml.YAMLError):
+            raise ConfigError(
+                "Client registration failed for " + name + ": " + cause +
+                ". Cannot verify services.yaml; credential preserved for recovery."
+            ) from None
+        if name in actual["clients"]:
+            raise ConfigError(
+                "Client registration may already be present for " + name + ": " + cause +
+                ". Credential preserved; inspect the client list before retrying."
+            ) from None
+        try:
+            credential.unlink()
+        except OSError as cleanup:
+            raise ConfigError(
+                "Client registration failed for " + name + ": " + cause +
+                ". Credential rollback failed (" + safe_error_kind(cleanup) +
+                "); orphan retained for manual recovery."
+            ) from None
+        raise ConfigError(
+            "Client registration failed for " + name + ": " + cause +
+            ". New credential rolled back; safe to retry."
+        ) from None
     print("Created client:", name, "| policy:", policy)
     print("A unique original API key was generated automatically; it was NOT displayed.")
     print("Stored under Windows DPAPI/Linux private files:", secret_file(folder, name))
