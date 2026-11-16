@@ -1,0 +1,20 @@
+---
+- name: Prove privilege escalation before installing rootless Podman
+  hosts: localhost
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Query effective UID through the actual Ansible sudo plugin
+      ansible.builtin.command:
+        argv: [id, -u]
+      register: nemoclaw_become_root_uid
+      changed_when: false
+
+    - name: Refuse any unexpected identity
+      ansible.builtin.assert:
+        that:
+          - nemoclaw_become_root_uid.stdout | trim == "0"
+        fail_msg: >-
+          Ansible did not obtain root using Ubuntu's classic sudo.ws;
+          do not start the container-runtime installation.
+        quiet: true
