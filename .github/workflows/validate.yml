@@ -95,6 +95,7 @@ jobs:
           uv run --frozen ansible-playbook ansible/playbooks/nemoclaw.yml --syntax-check
           uv run --frozen ansible-playbook ansible/playbooks/nemoclaw-verify.yml --syntax-check
           uv run --frozen ansible-playbook ansible/playbooks/nemoclaw-bootstrap-verify.yml --syntax-check
+          uv run --frozen ansible-playbook ansible/playbooks/nemoclaw-become-preflight.yml --syntax-check
 
   sandbox-docker:
     runs-on: ubuntu-24.04
