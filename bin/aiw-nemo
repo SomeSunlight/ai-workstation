@@ -30,43 +30,6 @@ check_runtime() {
     fi
 }
 
-# NemoClaw 0.0.144's upstream WSL runtime admission fails CLOSED on a
-# native WSL Docker daemon even with --no-gpu. Do not give the operator the
-# same misleading "install NVIDIA Container Toolkit" instructions again.
-# Refuse early and preserve the existing workspace until an approved supported
-# runtime (Docker Desktop or qualified rootless Podman >=5) is configured.
-unsupported_wsl_native_docker() {
-    local wsl_detected=0
-    if [[ -n "${WSL_DISTRO_NAME:-}" ]]; then
-        wsl_detected=1
-    elif [[ -r /proc/sys/kernel/osrelease ]] && grep -qiE 'microsoft|wsl' /proc/sys/kernel/osrelease; then
-        wsl_detected=1
-    fi
-    [[ "$wsl_detected" == 1 ]] || return 1
-    [[ "${NEMOCLAW_GATEWAY_RUNTIME:-docker}" == podman ]] && return 1
-
-    local engine_os
-    engine_os="$(docker info --format '{{.OperatingSystem}}' 2>/dev/null || true)"
-    # An inaccessible Docker Engine is also NOT proven to be Docker Desktop.
-    [[ "$engine_os" != *"Docker Desktop"* ]]
-}
-check_onboarding_runtime() {
-    if unsupported_wsl_native_docker; then
-        cat >&2 <<'EOF'
-[BLOCKED] NemoClaw does not qualify native Docker Engine inside WSL2.
-          The previous '--no-gpu' correction was applied; NVIDIA Container
-          Toolkit is NOT the solution for this platform-admission failure.
-          Do not rerun installation or overwrite existing AIW-Nemo resources.
-          Supported WSL provider options: Docker Desktop WSL backend, or a
-          qualified rootless Podman >= 5.0 with explicit NemoClaw selection.
-          Ubuntu 24.04's official Podman 4.9 is too old.
-          Candidate OSS reference: Ubuntu 26.04 LTS + rootless Podman 5.7.
-          Implementation/approval: https://github.com/SomeSunlight/ai-workstation/issues/77
-EOF
-        return 76
-    fi
-}
-
 status() {
     printf '\nNemoClaw / Hermes (separate Ubuntu environment)\n'
     printf 'User: %s | WSL: %s\n' "$(id -un)" "${WSL_DISTRO_NAME:-native Linux}"
@@ -83,10 +46,6 @@ status() {
     else
         printf 'NemoClaw Hermes CLI not yet installed. Choose option 2 after installation.\n'
     fi
-    if unsupported_wsl_native_docker; then
-        printf '[!] Upstream runtime is blocked: native Docker in WSL2 is unqualified.\n'
-        printf '[!] See issue #77; do not install NVIDIA Container Toolkit for OpenRouter.\n'
-    fi
     printf 'Guide: %s/docs/nemoclaw-reference.md\n' "$ROOT"
 }
 onboard() {
@@ -94,7 +53,6 @@ onboard() {
         printf 'First install the host with the NemoClaw installer.\n' >&2
         return 1
     }
-    check_onboarding_runtime || return $?
     check_runtime
     printf 'Official NemoClaw Hermes onboarding. Select OpenRouter as first provider.\n'
     printf 'GPU passthrough: DISABLED (--no-gpu). OpenRouter needs no NVIDIA CUDA/CDI.\n'
@@ -132,7 +90,7 @@ menu() {
             2) onboard ;;
             3) command -v nemohermes >/dev/null && nemohermes --help || printf 'Install NemoClaw first.\n' ;;
             4) read -r -p 'Hermes sandbox name: ' title; connect "$title" ;;
-            5) "$ROOT/install.sh" verify --profile nemoclaw ;;
+            5) "$ROOT/install.sh" verify --profile nemoclaw-podman ;;
             6) onboard --resume ;;
             q|Q) return ;;
             *) printf 'Select a displayed option.\n' ;;
@@ -145,6 +103,6 @@ case "${1:-menu}" in
     status) status ;;
     onboard) shift; onboard "$@" ;;
     connect) shift; [[ $# -eq 1 ]] || exit 2; connect "$1" ;;
-    verify) "$ROOT/install.sh" verify --profile nemoclaw ;;
+    verify) "$ROOT/install.sh" verify --profile nemoclaw-podman ;;
     *) printf 'Usage: aiw-nemo [menu|status|onboard|connect NAME|verify]\n' >&2; exit 2 ;;
 esac
