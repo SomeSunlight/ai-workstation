@@ -3,9 +3,10 @@
 .SYNOPSIS
     Install or verify one isolated NemoClaw + Hermes Ubuntu WSL distribution.
 .DESCRIPTION
-    Uses AIW's hash-pinned Ubuntu image and idempotent Ansible Docker Engine
-    setup. NemoClaw installs/manages OpenShell and Hermes on first onboarding.
-    Never reconfigures existing WSL distributions or Docker Desktop.
+    Uses AIW's hash-pinned Ubuntu 26.04 image and idempotent Ansible setup
+    for rootless Podman. The upstream NemoClaw wizard manages OpenShell,
+    the Hermes sandbox and providers. Requires the WSL 2.9.13+ cgroup fix;
+    never installs Docker Desktop or modifies other WSL distributions.
 #>
 [CmdletBinding()]
 param(
