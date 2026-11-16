@@ -3,7 +3,7 @@
   ansible.builtin.assert:
     that:
       - ansible_facts.distribution == "Ubuntu"
-      - ansible_facts.distribution_version == versions.ubuntu.release
+      - ansible_facts.distribution_version == versions.nemoclaw_podman.ubuntu.release
       - ansible_facts.service_mgr == "systemd"
       - ai_workstation_user | length > 0
       - nemoclaw_host_source_commit is match('^[a-f0-9]{40}$')
@@ -146,6 +146,7 @@
     NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE: "1"
     NEMOCLAW_DISABLE_TELEMETRY: "1"
     NEMOCLAW_NO_EXPRESS: "1"
+    NEMOCLAW_GATEWAY_RUNTIME: podman
     NEMOCLAW_PROVIDER: build
   when: not nemoclaw_host_cli_stat.stat.exists
   changed_when: true
