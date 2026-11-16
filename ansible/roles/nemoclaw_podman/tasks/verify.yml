@@ -67,8 +67,14 @@
     fail_msg: "Podman socket exists but rootless/cgroups-v2/netavark not qualified."
     quiet: true
 
-- name: Check Podman listening-port diagnostics are available
-  ansible.builtin.command:
-    argv: [command, -v, lsof]
+- name: Verify lsof is on the host for NemoClaw gateway listener checks
+  ansible.builtin.stat:
+    path: /usr/bin/lsof
   register: nemoclaw_podman_lsof
-  changed_when: false
+
+- name: Reject hosts without gateway listener diagnostics
+  ansible.builtin.assert:
+    that:
+      - nemoclaw_podman_lsof.stat.exists
+      - nemoclaw_podman_lsof.stat.executable
+    quiet: true
