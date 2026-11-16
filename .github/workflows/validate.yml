@@ -95,6 +95,7 @@ jobs:
           uv run --frozen ansible-playbook ansible/playbooks/verify.yml --syntax-check
           uv run --frozen ansible-playbook ansible/playbooks/nemoclaw.yml --syntax-check
           uv run --frozen ansible-playbook ansible/playbooks/nemoclaw-verify.yml --syntax-check
+          uv run --frozen ansible-playbook ansible/playbooks/nemoclaw-bootstrap-verify.yml --syntax-check
 
   sandbox-docker:
     runs-on: ubuntu-24.04
@@ -149,7 +150,7 @@ jobs:
       - name: Parse native Windows Process Compose and DPAPI helper
         shell: pwsh
         run: |
-          foreach ($path in @('bootstrap/windows/Observe-WslImport.ps1', 'tests/windows/nemoclaw-import.ps1', 'bootstrap/windows/Launch-NemoClaw.ps1', 'bootstrap/windows/Create-NemoClawShortcut.ps1', 'bootstrap/windows/Install-AiWorkstation.ps1', 'install-nemoclaw.ps1', 'tests/windows/nemoclaw-profile.ps1', 'bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1', 'tools/aiw-native-child.ps1', 'tools/aiw-native-health.ps1', 'tools/aiw-native-integrity.ps1', 'tests/windows/native-integrity.ps1', 'bootstrap/windows/Register-AiwCommand.ps1', 'tests/windows/native-host.ps1', 'tests/windows/native-aiw-command.ps1', 'tests/windows/s02-three-clients.ps1')) {
+          foreach ($path in @('bootstrap/windows/Remove-OldNemoWsl.ps1', 'bootstrap/windows/Observe-WslImport.ps1', 'tests/windows/nemoclaw-import.ps1', 'bootstrap/windows/Launch-NemoClaw.ps1', 'bootstrap/windows/Create-NemoClawShortcut.ps1', 'bootstrap/windows/Install-AiWorkstation.ps1', 'install-nemoclaw.ps1', 'tests/windows/nemoclaw-profile.ps1', 'bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1', 'tools/aiw-native-child.ps1', 'tools/aiw-native-health.ps1', 'tools/aiw-native-integrity.ps1', 'tests/windows/native-integrity.ps1', 'bootstrap/windows/Register-AiwCommand.ps1', 'tests/windows/native-host.ps1', 'tests/windows/native-aiw-command.ps1', 'tests/windows/s02-three-clients.ps1')) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
