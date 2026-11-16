@@ -1,0 +1,38 @@
+---
+- name: Read NemoClaw CLI receipt
+  ansible.builtin.slurp:
+    src: "{{ nemoclaw_host_ref_receipt }}"
+  register: nemoclaw_host_verify_receipt
+
+- name: Confirm approved NemoClaw source revision
+  ansible.builtin.assert:
+    that:
+      - (nemoclaw_host_verify_receipt.content | b64decode | trim) == nemoclaw_host_source_commit
+    quiet: true
+
+- name: Confirm reviewed checkout identity
+  ansible.builtin.command:
+    argv: [git, -C, "{{ nemoclaw_host_source_dir }}", rev-parse, HEAD]
+  register: nemoclaw_host_verify_checkout
+  changed_when: false
+
+- name: Refuse unexpected checkout revision
+  ansible.builtin.assert:
+    that:
+      - nemoclaw_host_verify_checkout.stdout == nemoclaw_host_source_commit
+    quiet: true
+
+- name: Verify NemoClaw Hermes CLI without modifying OpenShell
+  ansible.builtin.command:
+    argv: ["{{ nemoclaw_host_binary }}", --version]
+  register: nemoclaw_host_verify_cli
+  become: true
+  become_user: "{{ ai_workstation_user }}"
+  environment:
+    HOME: "{{ ai_workstation_home }}"
+    NEMOCLAW_DISABLE_TELEMETRY: "1"
+  changed_when: false
+
+- name: Report installed NemoClaw version
+  ansible.builtin.debug:
+    msg: "Verified NemoClaw Hermes: {{ nemoclaw_host_verify_cli.stdout }} ({{ nemoclaw_host_verify_checkout.stdout }})"
