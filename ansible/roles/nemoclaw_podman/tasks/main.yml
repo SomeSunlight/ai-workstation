@@ -73,10 +73,58 @@
   when: nemoclaw_podman_linger.stdout | trim != "yes"
   changed_when: true
 
-- name: Ensure user systemd manager exists
-  ansible.builtin.systemd_service:
-    name: "user@{{ nemoclaw_podman_uid.stdout }}.service"
-    state: started
+- name: Ensure the user systemd manager exists, or collect failure evidence
+  block:
+    - name: Start NemoClaw user's systemd manager
+      ansible.builtin.systemd_service:
+        name: "user@{{ nemoclaw_podman_uid.stdout }}.service"
+        state: started
+  rescue:
+    - name: Read failed user manager state for WSL diagnosis
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - show
+          - "user@{{ nemoclaw_podman_uid.stdout }}.service"
+          - --property=ActiveState,SubState,Result
+      register: nemoclaw_podman_systemd_state
+      changed_when: false
+      failed_when: false
+
+    - name: Read bounded systemd journal for failed user manager
+      ansible.builtin.command:
+        argv:
+          - journalctl
+          - --boot
+          - --unit
+          - "user@{{ nemoclaw_podman_uid.stdout }}.service"
+          - --no-pager
+          - --lines=30
+          - --output=short
+      register: nemoclaw_podman_systemd_journal
+      changed_when: false
+      failed_when: false
+
+    - name: Display precise systemd state and last journal lines
+      ansible.builtin.debug:
+        msg:
+          - "systemctl show: {{ nemoclaw_podman_systemd_state.stdout }}"
+          - "journalctl user manager: {{ nemoclaw_podman_systemd_journal.stdout_lines }}"
+          - >-
+            If journalctl says 'Device or resource busy' or
+            'Failed to attach to cgroup', a Microsoft WSL multi-distro
+            cgroup collision is likely (microsoft/WSL#40593).
+            WSL 2.9.8 introduced isolation, with a 2.9.13 follow-up.
+            Confirm WSL version before changing Linux user IDs.
+
+    - name: Abort if rootless Podman cannot use the systemd user manager
+      ansible.builtin.fail:
+        msg: >-
+          Failed to start user@{{ nemoclaw_podman_uid.stdout }}.service.
+          The preceding journal and systemctl output show the underlying
+          Linux failure. Do not disable cgroups, run rootful Podman, change
+          UIDs or terminate other WSL distributions automatically.
+          See docs/nemoclaw-podman.md and issue #77.
 
 - name: Start current-user Podman API socket, systemd-managed
   ansible.builtin.systemd_service:
