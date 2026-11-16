@@ -116,6 +116,7 @@ function Stop-Log {
 . (Join-Path $PSScriptRoot 'Filesystem.ps1')
 . (Join-Path $PSScriptRoot 'Observe-WslImport.ps1')
 . (Join-Path $PSScriptRoot 'WslUserIdentity.ps1')
+. (Join-Path $PSScriptRoot 'NemoWslVersion.ps1')
 
 function Stage-Installer {
     $sourceRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -300,6 +301,19 @@ function Ensure-WslPlatform {
     if (Test-WslPlatform) {
         Write-Step 'WSL platform is available.' Ok
         if ($Profile -eq 'NemoPodman') {
+            # Upstream WSL 2.7.x still shares systemd user cgroups between
+            # distros. This causes user@1000.service (and rootless Podman)
+            # to fail with Device or resource busy. Microsoft released
+            # per-distro cgroup isolation in 2.9.8 and a follow-up in 2.9.13.
+            # Never update global WSL automatically from this profile.
+            $versionText = @(& wsl.exe --version)
+            if ($LASTEXITCODE -ne 0) {
+                throw 'Could not read the installed WSL engine version. No WSL update was performed.'
+            }
+            $engineVersion = Get-AiwNemoWslEngineVersion -VersionOutput ([string[]]$versionText)
+            Write-Step "WSL engine version: $engineVersion"
+            Assert-AiwNemoWslEngineReady -InstalledVersion $engineVersion
+            Write-Step 'WSL cgroup isolation release requirement satisfied (>= 2.9.13).' Ok
             Write-Step 'Existing WSL version preserved; no global WSL update in NemoClaw profile.' Ok
             return
         }
