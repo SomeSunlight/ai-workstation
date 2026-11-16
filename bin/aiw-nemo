@@ -5,6 +5,30 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 export PATH="$HOME/.local/bin:$PATH"
 export NEMOCLAW_DISABLE_TELEMETRY=1
 export NEMOCLAW_NO_EXPRESS=1
+# This selection is essential. Without it, NemoClaw defaults to Docker and
+# rejects native Docker on WSL even when Podman is installed.
+export NEMOCLAW_GATEWAY_RUNTIME=podman
+
+check_runtime() {
+    if [[ -n "${DOCKER_HOST:-}" || -n "${DOCKER_CONTEXT:-}" || -n "${CONTAINER_HOST:-}" ]]; then
+        printf '[BLOCKED] Untrusted redirected container socket environment.\n' >&2
+        printf 'Use the dedicated Nemo WSL shortcut with the normal user context.\n' >&2
+        return 1
+    fi
+    command -v podman >/dev/null 2>&1 || {
+        printf '[BLOCKED] Podman is missing. Install through AIW Ansible first.\n' >&2
+        return 1
+    }
+    if [[ ! -S "/run/user/$(id -u)/podman/podman.sock" ]]; then
+        printf '[BLOCKED] Rootless current-user podman.socket is not active.\n' >&2
+        printf 'Rerun the idempotent AIW installer; never use sudo podman.\n' >&2
+        return 1
+    fi
+    if ! systemctl --user is-active --quiet podman.socket; then
+        printf '[BLOCKED] Current-user Podman socket unit is not active.\n' >&2
+        return 1
+    fi
+}
 
 # NemoClaw 0.0.144's upstream WSL runtime admission fails CLOSED on a
 # native WSL Docker daemon even with --no-gpu. Do not give the operator the
@@ -46,10 +70,12 @@ EOF
 status() {
     printf '\nNemoClaw / Hermes (separate Ubuntu environment)\n'
     printf 'User: %s | WSL: %s\n' "$(id -un)" "${WSL_DISTRO_NAME:-native Linux}"
-    if command -v docker >/dev/null 2>&1; then
-        docker info --format 'Docker Engine: {{.ServerVersion}}' || true
+    printf 'NemoClaw runtime: rootless Podman (official Ubuntu packages; NOT Docker Desktop)\n'
+    if command -v podman >/dev/null 2>&1; then
+        podman --version || true
+        printf 'Podman socket: %s\n' "$(if [[ -S "/run/user/$(id -u)/podman/podman.sock" ]]; then echo active; else echo missing; fi)"
     else
-        printf 'Docker Engine is not installed.\n'
+        printf 'Podman is not installed.\n'
     fi
     if command -v nemohermes >/dev/null 2>&1; then
         nemohermes --version || true
@@ -69,10 +95,11 @@ onboard() {
         return 1
     }
     check_onboarding_runtime || return $?
+    check_runtime
     printf 'Official NemoClaw Hermes onboarding. Select OpenRouter as first provider.\n'
     printf 'GPU passthrough: DISABLED (--no-gpu). OpenRouter needs no NVIDIA CUDA/CDI.\n'
     printf 'Enter credentials ONLY in the official wizard, never in AIW or Git.\n'
-    printf 'NVIDIA Express (managed Windows Ollama) is disabled for this native Docker setup.\n'
+    printf 'Managed Windows Ollama and NVIDIA GPU passthrough are disabled.\n'
     # The CPU/remote-inference profile must skip NVIDIA CDI checks even when
     # Docker advertises generic CDISpecDirs without nvidia.com/gpu devices.
     # Preserve the choice on --resume; any future GPU enablement is an
@@ -92,11 +119,11 @@ menu() {
     local choice title
     while true; do
         printf '\n🐧  NemoClaw + Hermes  🦞\n'
-        printf ' 1) Show local installation status\n'
+        printf ' 1) Show Ubuntu/Podman/NemoClaw status\n'
         printf ' 2) Set up Hermes / choose model provider (NemoClaw wizard)\n'
         printf ' 3) Open official NemoClaw management CLI\n'
         printf ' 4) Connect to my Hermes sandbox\n'
-        printf ' 5) Verify AIW-managed Linux host and Docker Engine\n'
+        printf ' 5) Verify Ubuntu 26, rootless Podman and NemoClaw\n'
         printf ' 6) Resume interrupted NemoClaw onboarding\n'
         printf ' q) Exit to terminal\n'
         read -r -p 'Selection: ' choice || return
