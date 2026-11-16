@@ -33,7 +33,7 @@ if ($RepositoryRef -notmatch '^[A-Za-z0-9._/-]+$' -or $RepositoryRef.Contains('.
 $entry = Join-Path $PSScriptRoot 'bootstrap\windows\Install-AiWorkstation.ps1'
 $params = @{
     Action = $Action
-    Profile = 'NemoClaw'
+    Profile = 'NemoPodman'
     DistroName = $DistroName
     InstallLocation = $InstallLocation
     LinuxUser = $LinuxUser
