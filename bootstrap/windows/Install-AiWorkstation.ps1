@@ -664,9 +664,7 @@ PY
         -ExpectedUser $LinuxUser -DistroName $DistroName -ExitCode $actualCode
     Write-Step "Configured default Linux user is '$LinuxUser'." Ok
 
-    $stderrMessage = if (Test-Path -LiteralPath $stderrPath) {
-        (Get-Content -LiteralPath $stderrPath -Raw).Trim()
-    } else { '' }
+    $stderrMessage = Get-AiwWslStderrText -Path $stderrPath
     if ($stderrMessage -match 'Failed to start the systemd user session') {
         Write-Step "WSL reported a SYSTEMD USER SESSION problem (not a wrong username)." Warning
         Write-Step 'The rootless Podman installation will configure and validate the user systemd manager and socket.' Warning
