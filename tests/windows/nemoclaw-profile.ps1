@@ -61,7 +61,9 @@ try {
     Assert-True ($markerCheck.Contains('nemoclaw-podman')) 'Launcher does not validate the Podman WSL profile'
     $cleanup = Get-Content (Join-Path $root 'bootstrap/windows/Remove-OldNemoWsl.ps1') -Raw
     Assert-True ($cleanup.Contains('DELETE AIW-Nemo')) 'Dangerous old distribution cleanup is not confirmed'
-    Assert-True ($cleanup.Contains("VERSION_ID")) 'Cleanup is not constrained to the original 24.04 test'
+    $releaseHelper = Get-Content (Join-Path $root 'bootstrap/windows/NemoWslRelease.ps1') -Raw
+    Assert-True ($cleanup.Contains('Get-AiwNemoUbuntuVersion')) 'Cleanup does not check Ubuntu identity'
+    Assert-True ($releaseHelper.Contains('VERSION_ID')) 'Cleanup is not constrained to Ubuntu release'
     Assert-True ((Get-Content (Join-Path $root 'config/versions.json') -Raw).Contains('ubuntu-26.04.1-wsl-amd64.wsl')) 'New WSL image pin missing'
 
     # A preexisting, manually customized shortcut must be rejected.
