@@ -48,12 +48,12 @@ class NativeDockerWslGuard(unittest.TestCase):
     def test_docker_desktop_does_not_trigger_native_gate(self):
         result = self.exercise("Docker Desktop")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("MOCK_NEMO_ONBOARD --no-gpu --resume", result.stdout)
+        self.assertIn("MOCK_NEMO_ONBOARD onboard --no-gpu --resume", result.stdout)
 
     def test_explicit_podman_selection_yields_to_upstream_admission(self):
         result = self.exercise("Ubuntu 24.04.4 LTS", gateway_runtime="podman")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("MOCK_NEMO_ONBOARD --no-gpu --resume", result.stdout)
+        self.assertIn("MOCK_NEMO_ONBOARD onboard --no-gpu --resume", result.stdout)
 
 
 if __name__ == "__main__":
