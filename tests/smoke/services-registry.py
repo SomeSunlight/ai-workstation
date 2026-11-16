@@ -63,6 +63,69 @@ class TestNativeServices(unittest.TestCase):
                          "webui-speedy")
         self.assertEqual(module.read_secret(self.folder, "goose-laptop"), token)
 
+    def test_failed_manifest_write_rolls_back_new_key_without_touching_others(self):
+        module.client_add(self.folder, "existing-client", "default")
+        existing = module.read_secret(self.folder, "existing-client")
+        module.client_render(self.folder, self.folder / "clients.json")
+        original_manifest = module.settings_path(self.folder).read_bytes()
+        original_hashes = (self.folder / "clients.json").read_bytes()
+        fault = PermissionError(13, "PRIVATE PATH MUST NOT LEAK")
+        fault.winerror = 32  # Simulate a native Windows sharing violation.
+
+        real_write = module.private_write
+
+        def deny_manifest(path, value, *, replace=True):
+            if path == module.settings_path(self.folder):
+                raise fault
+            return real_write(path, value, replace=replace)
+
+        with mock.patch.object(module, "private_write", side_effect=deny_manifest):
+            with self.assertRaises(module.ConfigError) as error:
+                module.client_add(self.folder, "laptop-wsl-hermes", "passthrough")
+        message = str(error.exception)
+        self.assertIn("services.yaml", message)
+        self.assertIn("WinError 32", message)
+        self.assertIn("rolled back", message)
+        self.assertNotIn("PRIVATE PATH", message)
+        self.assertEqual(module.settings_path(self.folder).read_bytes(), original_manifest)
+        self.assertEqual((self.folder / "clients.json").read_bytes(), original_hashes)
+        self.assertFalse(module.secret_file(self.folder, "laptop-wsl-hermes").exists())
+        self.assertEqual(module.read_secret(self.folder, "existing-client"), existing)
+
+        # A corrected environment can retry the exact name successfully.
+        module.client_add(self.folder, "laptop-wsl-hermes", "passthrough")
+        self.assertIn("laptop-wsl-hermes", module.read_settings(self.folder)["clients"])
+
+    def test_orphan_credential_requires_explicit_operator_recovery(self):
+        module.write_secret(self.folder, "unregistered")
+        path = module.secret_file(self.folder, "unregistered")
+        original = path.read_bytes()
+        with self.assertRaisesRegex(module.ConfigError, "unregistered credential"):
+            module.client_add(self.folder, "unregistered", "passthrough")
+        self.assertEqual(path.read_bytes(), original)
+        self.assertNotIn("unregistered", module.read_settings(self.folder)["clients"])
+
+    def test_failed_rollback_leaves_credential_and_explains_recovery(self):
+        with (mock.patch.object(module, "save_settings", side_effect=PermissionError(13, "private")),
+              mock.patch.object(module.Path, "unlink", side_effect=PermissionError(13, "private"))):
+            with self.assertRaises(module.ConfigError) as error:
+                module.client_add(self.folder, "rollback-denied", "default")
+        self.assertIn("rollback failed", str(error.exception))
+        self.assertIn("orphan retained", str(error.exception))
+        self.assertNotIn("private", str(error.exception))
+        self.assertTrue(module.secret_file(self.folder, "rollback-denied").is_file())
+        self.assertNotIn("rollback-denied", module.read_settings(self.folder)["clients"])
+
+    def test_unreadable_manifest_after_write_error_preserves_credential(self):
+        existing = module.read_settings(self.folder)
+        with (mock.patch.object(module, "save_settings", side_effect=PermissionError(13, "private")),
+              mock.patch.object(module, "read_settings",
+                                side_effect=[existing, module.ConfigError("unreadable")])):
+            with self.assertRaises(module.ConfigError) as error:
+                module.client_add(self.folder, "ambiguous-state", "default")
+        self.assertIn("Cannot verify services.yaml", str(error.exception))
+        self.assertTrue(module.secret_file(self.folder, "ambiguous-state").is_file())
+
     def test_rename_preserves_secret_and_rejects_collisions(self):
         module.client_add(self.folder, "goose-laptop", "passthrough")
         module.client_add(self.folder, "webui-private", "default")
