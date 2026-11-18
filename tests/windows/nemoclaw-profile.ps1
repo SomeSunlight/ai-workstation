@@ -45,6 +45,13 @@ try {
     }
     Assert-True (Test-Path $legacy) 'Legacy shortcut was touched'
     Assert-True (Test-Path (Join-Path $launchers 'nemoclaw-hermes.ico')) 'Mascot binary was not installed'
+    # A file existing on disk is not enough: Windows must decode the icon.
+    $mascot = [System.Drawing.Icon]::new((Join-Path $launchers 'nemoclaw-hermes.ico'))
+    try {
+        Assert-True ($mascot.Width -eq 64 -and $mascot.Height -eq 64) 'Invalid Windows penguin ICO'
+    }
+    finally { $mascot.Dispose() }
+
     $installed = $shell.CreateShortcut($legacy)
     Assert-True ($installed.Description -eq 'Original AIW penguin') 'Legacy shortcut changed'
 
