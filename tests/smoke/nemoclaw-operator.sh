@@ -10,6 +10,10 @@ cat > "$tmp/.local/bin/nemohermes" <<'MOCK'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 [[ "${NEMOCLAW_GATEWAY_RUNTIME:-}" == podman ]] || exit 96
+if [[ "${1:-}" == list ]]; then
+  printf 'testhermes01 (Hermes)\n'
+  exit 0
+fi
 printf '%s\n' "$*" >> "$FAKE_NEMO_TRACE"
 MOCK
 chmod +x "$tmp/.local/bin/nemohermes"
