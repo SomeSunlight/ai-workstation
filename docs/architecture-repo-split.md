@@ -26,3 +26,13 @@ Der Test für [Issue #77](https://github.com/SomeSunlight/ai-workstation/issues/
 **Nicht tun:** Den bestehenden Windows-Dispatcher durch NemoClaw ersetzen, Docker Desktop als Abkürzung installieren, privat/geschäftlich synchronisieren, oder das gesamte Linux-Repository als Git-Submodul im Windows-Repo verstecken. Das würde die gerade zu beseitigende Kopplung wiederherstellen.
 
 Nach diesem Split muss eine Änderung an einer Linux-Agentenpolicy **nicht** die Windows-Hostdienste und ihre Benutzerführung neu qualifizieren.
+
+## Umsetzung freigegeben – 18. November 2026
+
+Der Benutzer hat die eigentliche Auftrennung von Windows-AIW und Linux-AIW jetzt freigegeben. Eine erneute Hermes-Installation ist als **optionale, erst nach verifiziertem Backup** auszuführende Migration zulässig; es besteht keine Freigabe für sofortiges `destroy`, `rebuild`, WSL-Neuimport oder Änderungen am Dispatcher auf Speedy. Das live getestete `testhermes01` bleibt zunächst erhalten.
+
+**Konkreter Migrationsvertrag:** [Linux repository handoff](linux-repository-handoff.md). Dort sind Eigentümerschaft, unabhängige Release-Versionen, das immutable Git-Pin zwischen beiden Projekten, der native-Ubuntu-Vertrag, die Dateiabgrenzung und die nachweisorientierten Migrationsstufen festgelegt.
+
+**Beobachteter Defekt im Altzustand:** Ein `git pull` im Windows-Checkout aktualisiert nicht `/home/<linux-user>/ai-workstation` innerhalb von `AIW-Nemo`. Die Windows-Verknüpfung ruft den separaten Linux-Checkout auf. Dadurch zeigte der aktualisierte Shortcut am 18. November noch ein altes Menü. Das ist keine NemoClaw-Störung, sondern eine fehlende Versions-/Release-Grenze. Nach dem Split vergleichen wir nicht länger Windows- und Linux-Branches, sondern zeigen ihre **unabhängigen Git-Identitäten** an; Windows pinnt einen geprüften Linux-Commit.
+
+Der neue Eigentümer-Repo-Name bleibt `SomeSunlight/ai-workstation-linux`. Erst wenn dieses vom Benutzer angelegt ist, erfolgt die echte Extraktion auf dessen eigenem Branch; nicht durch Kopieren des gesamten Monorepos oder durch einen weiteren Linux-Daemon innerhalb des Windows-Repos. Draft PR #84 bleibt der abgeschlossene, separate Hermes-Operator-Fix und wird nicht automatisch gemergt.
