@@ -19,6 +19,26 @@ if ($LASTEXITCODE -ne 0 -or ($marker -join '').Trim() -cne 'nemoclaw-podman') {
     throw "WSL '$DistroName' is missing or is not an AIW NemoClaw installation. No command was started."
 }
 $workdir = "/home/$LinuxUser/ai-workstation"
+# Report the *Linux* checkout actually being executed, not the Windows source
+# revision used to refresh the shortcut. The two projects will split (#78).
+# Purely local Git reads: no fetch, pull, installer or sandbox mutation.
+$linuxIdentity = @(& $WslExecutable --distribution $DistroName --user $LinuxUser --cd $workdir --exec /bin/bash -lc @'
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  sha="$(git rev-parse --short=7 HEAD)"
+  ref="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || printf detached)"
+  dirty=''
+  if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then dirty=', dirty'; fi
+  printf '%s@%s%s\n' "$ref" "$sha" "$dirty"
+else
+  printf 'unknown (no Git checkout)\n'
+fi
+'@ 2>&1)
+if ($LASTEXITCODE -eq 0 -and $linuxIdentity.Count -gt 0) {
+    Write-Host "Linux workbench code: $(($linuxIdentity -join ' ').Trim())"
+}
+else {
+    Write-Warning 'Linux workbench Git identity could not be read; proceeding without updates.'
+}
 & $WslExecutable --distribution $DistroName --user $LinuxUser --cd $workdir --exec /bin/bash -lc 'bash ./bin/aiw-nemo'
 if ($LASTEXITCODE -ne 0) {
     throw "NemoClaw menu exited with error $LASTEXITCODE. Inspect the messages above."
