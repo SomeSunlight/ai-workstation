@@ -97,7 +97,11 @@ hermes_action() {
 
 hermes_menu() {
     local sandbox choice action
-    read -r -p 'Registered Hermes sandbox name (e.g. testhermes01): ' sandbox || return
+    if command -v nemohermes >/dev/null 2>&1; then
+        printf '\nRegistered sandboxes (NemoClaw):\n'
+        nemohermes list || printf 'Sandbox list is unavailable; see docs/nemoclaw-recovery.md.\n' >&2
+    fi
+    read -r -p 'Hermes sandbox name (from list): ' sandbox || return
     [[ "$sandbox" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$ ]] || {
         printf 'Invalid sandbox name; no action taken.\n' >&2
         return 2
@@ -144,7 +148,7 @@ menu() {
             4) read -r -p 'Hermes sandbox name: ' title; connect "$title" ;;
             5) "$ROOT/install.sh" verify --profile nemoclaw-podman ;;
             6) onboard --resume ;;
-            7) hermes_menu ;;
+            7) hermes_menu || true ;;
             q|Q) return ;;
             *) printf 'Select a displayed option.\n' ;;
         esac
