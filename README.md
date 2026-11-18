@@ -1,5 +1,16 @@
 # AI Workstation
 
+> **Repository separation in progress — Issue #78.** This repository is becoming
+> the **Windows host** of AI Workstation: native inference services and Dispatcher,
+> DPAPI-managed secrets, Windows process supervision, WSL bootstrap and launchers.
+> The independently versioned Linux agent workstation lives at
+> [SomeSunlight/ai-workstation-linux](https://github.com/SomeSunlight/ai-workstation-linux)
+> and owns Ubuntu/rootless Podman/NemoClaw/OpenShell/Hermes.
+> During the staged migration, the existing monolithic Linux code remains here
+> for rollback; the live WSL and all existing sandboxes remain untouched.
+> The eventual Windows handoff uses an explicit, reviewed **Linux Git commit pin**,
+> never a synchronised Windows branch. See [the migration contract](docs/linux-repository-handoff.md).
+
 **Reproducible infrastructure. Controlled agent autonomy.** AI Workstation began as a repeatable installer and operator for an AI-capable computer. It also provides **isolated, productive workstations for autonomous agents**: agents should have as much useful freedom as possible *inside* their own working environment, while AI Workstation enforces the boundaries around original projects, host installation and durable state. Prefer capable tools and externally enforced isolation over long instructions explaining restrictions to the agent. One agent-neutral project/session/environment workflow should serve Goose, Hermes and future agents through small runtime adapters.
 
 **Current implementation:** AIW keeps durable configuration and originals under operator control; agent experiments belong in explicit disposable sandboxes, with reviewed promotion or file acceptance. The first **opt-in Goose sandbox preview** is documented in [Agent sandboxes](docs/agent-sandboxes.md). It provides ordinary Docker isolation, **not** a guarantee against hostile code, secrets exposure or network exfiltration; stronger profiles belong to [issue #59](https://github.com/SomeSunlight/ai-workstation/issues/59). Existing Goose sessions remain available unchanged.
