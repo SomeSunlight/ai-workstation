@@ -73,6 +73,57 @@ connect() {
     }
     nemohermes "$title" connect
 }
+# Delegate to the official NemoClaw CLI, without parallel AIW state.
+# Never rebuild, destroy or onboard as a side effect of a normal launch.
+hermes_action() {
+    local action="$1" sandbox="$2"
+    [[ "$sandbox" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$ ]] || {
+        printf 'Choose an existing sandbox name (letters, digits, - or _).\n' >&2
+        return 2
+    }
+    command -v nemohermes >/dev/null 2>&1 || {
+        printf '[BLOCKED] nemohermes not installed; see docs/nemoclaw-recovery.md.\n' >&2
+        return 1
+    }
+    case "$action" in
+        launch)  nemohermes launch "$sandbox" ;;
+        start)   nemohermes "$sandbox" start ;;
+        stop)    nemohermes "$sandbox" stop ;;
+        status)  nemohermes "$sandbox" status ;;
+        recover) nemohermes "$sandbox" recover ;;
+        *) printf 'Usage: aiw-nemo hermes [launch|start|stop|status|recover] NAME\n' >&2; return 2 ;;
+    esac
+}
+
+hermes_menu() {
+    local sandbox choice action
+    read -r -p 'Registered Hermes sandbox name (e.g. testhermes01): ' sandbox || return
+    [[ "$sandbox" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$ ]] || {
+        printf 'Invalid sandbox name; no action taken.\n' >&2
+        return 2
+    }
+    printf ' 1) Launch interactive Hermes (upstream preflight)\n'
+    printf ' 2) Start a stopped sandbox\n'
+    printf ' 3) Stop this sandbox and keep its data\n'
+    printf ' 4) Show sandbox status\n'
+    printf ' 5) Recover gateway/port forwards (only when needed)\n'
+    printf ' 0) Cancel\n'
+    read -r -p 'Action: ' choice || return
+    case "$choice" in
+        1) action=launch ;;
+        2) action=start ;;
+        3) action=stop ;;
+        4) action=status ;;
+        5) action=recover ;;
+        0) return ;;
+        *) printf 'Unknown action; no change.\n' >&2; return 2 ;;
+    esac
+    if ! hermes_action "$action" "$sandbox"; then
+        printf 'Hermes action failed. Inspect the output; see docs/nemoclaw-recovery.md.\n' >&2
+        return 1
+    fi
+}
+
 menu() {
     local choice title
     while true; do
@@ -83,6 +134,7 @@ menu() {
         printf ' 4) Connect to my Hermes sandbox\n'
         printf ' 5) Verify Ubuntu 26, rootless Podman and NemoClaw\n'
         printf ' 6) Resume interrupted NemoClaw onboarding\n'
+        printf ' 7) Hermes: launch / stop / start / recover (existing sandbox)\n'
         printf ' q) Exit to terminal\n'
         read -r -p 'Selection: ' choice || return
         case "$choice" in
@@ -92,6 +144,7 @@ menu() {
             4) read -r -p 'Hermes sandbox name: ' title; connect "$title" ;;
             5) "$ROOT/install.sh" verify --profile nemoclaw-podman ;;
             6) onboard --resume ;;
+            7) hermes_menu ;;
             q|Q) return ;;
             *) printf 'Select a displayed option.\n' ;;
         esac
@@ -104,5 +157,6 @@ case "${1:-menu}" in
     onboard) shift; onboard "$@" ;;
     connect) shift; [[ $# -eq 1 ]] || exit 2; connect "$1" ;;
     verify) "$ROOT/install.sh" verify --profile nemoclaw-podman ;;
-    *) printf 'Usage: aiw-nemo [menu|status|onboard|connect NAME|verify]\n' >&2; exit 2 ;;
+    hermes) shift; [[ $# -eq 2 ]] || { printf 'Usage: aiw-nemo hermes [launch|start|stop|status|recover] NAME\n' >&2; exit 2; }; hermes_action "$1" "$2" ;;
+    *) printf 'Usage: aiw-nemo [menu|status|onboard|connect NAME|verify|hermes ACTION NAME]\n' >&2; exit 2 ;;
 esac
