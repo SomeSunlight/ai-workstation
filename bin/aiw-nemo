@@ -54,7 +54,7 @@ onboard() {
         return 1
     }
     check_runtime
-    printf 'Official NemoClaw Hermes onboarding. Select OpenRouter as first provider.\n'
+    printf 'Official NemoClaw onboarding: use only for a deliberate provider/setup change, not normal restart.\n'
     printf 'GPU passthrough: DISABLED (--no-gpu). OpenRouter needs no NVIDIA CUDA/CDI.\n'
     printf 'Enter credentials ONLY in the official wizard, never in AIW or Git.\n'
     printf 'Managed Windows Ollama and NVIDIA GPU passthrough are disabled.\n'
@@ -73,6 +73,76 @@ connect() {
     }
     nemohermes "$title" connect
 }
+# Read the upstream registry, not a second AIW sandbox inventory.
+# Selection stays in this shell only; Enter/0 always cancels safely.
+select_registered_sandbox() {
+    local inventory entries entry name provider model index choice
+    local -a sandboxes=()
+    SELECTED_SANDBOX=''
+    command -v nemohermes >/dev/null 2>&1 || {
+        printf 'NemoClaw CLI is missing; no sandbox action taken.\n' >&2
+        return 1
+    }
+    command -v python3 >/dev/null 2>&1 || {
+        printf 'python3 is missing; cannot safely parse the sandbox inventory.\n' >&2
+        return 1
+    }
+    if ! inventory="$(nemohermes list --json)"; then
+        printf 'Sandbox registry is unavailable. No action taken; see docs/nemoclaw-recovery.md.\n' >&2
+        return 1
+    fi
+    if ! entries="$(printf '%s\n' "$inventory" | python3 -c '
+import json, re, sys
+try:
+    data = json.load(sys.stdin)
+    rows = data["sandboxes"]
+    if isinstance(rows, dict):
+        rows = [dict(name=k, **v) for k, v in rows.items() if isinstance(v, dict)]
+    if not isinstance(rows, list):
+        raise ValueError("sandboxes is not an array")
+    seen = set()
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not isinstance(name, str) or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}", name) or name in seen:
+            continue
+        seen.add(name)
+        def safe(value):
+            return str(value).replace("\t", " ").replace("\n", " ")[:72] if value is not None else "-"
+        print("\t".join((name, safe(item.get("provider")), safe(item.get("model")))))
+except (ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+    print("Cannot parse upstream sandbox registry: " + str(exc), file=sys.stderr)
+    sys.exit(1)
+')"; then
+        printf 'No sandbox selected; use official NemoClaw CLI for diagnostics.\n' >&2
+        return 1
+    fi
+    if [[ -z "$entries" ]]; then
+        printf 'No registered sandbox was found. No action taken.\n'
+        return 1
+    fi
+    printf '\nRegistered NemoClaw sandboxes:\n'
+    while IFS= read -r entry; do
+        IFS=$'\t' read -r name provider model <<< "$entry"
+        sandboxes+=("$name")
+        printf ' %2d) %-22s  %s / %s\n' "${#sandboxes[@]}" "$name" "$provider" "$model"
+    done <<< "$entries"
+    printf '  0) Cancel\n'
+    read -r -p 'Select sandbox number (Enter cancels): ' choice || return 1
+    [[ -n "$choice" && "$choice" != 0 ]] || return 1
+    if [[ ! "$choice" =~ ^[1-9][0-9]*$ || "${#choice}" -gt 6 ]]; then
+        printf 'Invalid sandbox number. No action taken.\n' >&2
+        return 1
+    fi
+    index=$((10#$choice))
+    if (( index < 1 || index > ${#sandboxes[@]} )); then
+        printf 'Sandbox number is not registered. No action taken.\n' >&2
+        return 1
+    fi
+    SELECTED_SANDBOX="${sandboxes[index-1]}"
+}
+
 # Delegate to the official NemoClaw CLI, without parallel AIW state.
 # Never rebuild, destroy or onboard as a side effect of a normal launch.
 hermes_action() {
@@ -96,35 +166,27 @@ hermes_action() {
 }
 
 hermes_menu() {
-    local sandbox choice action
-    if command -v nemohermes >/dev/null 2>&1; then
-        printf '\nRegistered sandboxes (NemoClaw):\n'
-        nemohermes list || printf 'Sandbox list is unavailable; see docs/nemoclaw-recovery.md.\n' >&2
-    fi
-    read -r -p 'Hermes sandbox name (from list): ' sandbox || return
-    [[ "$sandbox" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,62}$ ]] || {
-        printf 'Invalid sandbox name; no action taken.\n' >&2
-        return 2
-    }
-    printf ' 1) Launch interactive Hermes (upstream preflight)\n'
+    local choice action
+    select_registered_sandbox || return 0
+    printf '\nSelected sandbox: %s\n' "$SELECTED_SANDBOX"
+    printf ' 1) Launch interactive Hermes (new terminal attachment)\n'
     printf ' 2) Start a stopped sandbox\n'
     printf ' 3) Stop this sandbox and keep its data\n'
     printf ' 4) Show sandbox status\n'
     printf ' 5) Recover gateway/port forwards (only when needed)\n'
     printf ' 0) Cancel\n'
-    read -r -p 'Action: ' choice || return
+    read -r -p 'Action (Enter cancels): ' choice || return 0
     case "$choice" in
         1) action=launch ;;
         2) action=start ;;
         3) action=stop ;;
         4) action=status ;;
         5) action=recover ;;
-        0) return ;;
-        *) printf 'Unknown action; no change.\n' >&2; return 2 ;;
+        ''|0) return 0 ;;
+        *) printf 'Unknown action; no change.\n' >&2; return 0 ;;
     esac
-    if ! hermes_action "$action" "$sandbox"; then
-        printf 'Hermes action failed. Inspect the output; see docs/nemoclaw-recovery.md.\n' >&2
-        return 1
+    if ! hermes_action "$action" "$SELECTED_SANDBOX"; then
+        printf 'Hermes action failed. Inspect output; see docs/nemoclaw-recovery.md.\n' >&2
     fi
 }
 
@@ -135,7 +197,7 @@ menu() {
         printf ' 1) Show Ubuntu/Podman/NemoClaw status\n'
         printf ' 2) Set up Hermes / choose model provider (NemoClaw wizard)\n'
         printf ' 3) Open official NemoClaw management CLI\n'
-        printf ' 4) Connect to my Hermes sandbox\n'
+        printf ' 4) Open a separate shell inside an existing sandbox\n'
         printf ' 5) Verify Ubuntu 26, rootless Podman and NemoClaw\n'
         printf ' 6) Resume interrupted NemoClaw onboarding\n'
         printf ' 7) Hermes: launch / stop / start / recover (existing sandbox)\n'
@@ -143,12 +205,15 @@ menu() {
         read -r -p 'Selection: ' choice || return
         case "$choice" in
             1) status ;;
-            2) onboard ;;
+            2) onboard || printf "Onboarding returned an error; see docs/nemoclaw-recovery.md.\n" >&2 ;;
             3) command -v nemohermes >/dev/null && nemohermes --help || printf 'Install NemoClaw first.\n' ;;
-            4) read -r -p 'Hermes sandbox name: ' title; connect "$title" ;;
-            5) "$ROOT/install.sh" verify --profile nemoclaw-podman ;;
-            6) onboard --resume ;;
-            7) hermes_menu || true ;;
+            4) if select_registered_sandbox; then
+                   printf 'Opening a separate shell in %s (not the other terminal session).\n' "$SELECTED_SANDBOX"
+                   connect "$SELECTED_SANDBOX" || printf 'Connect failed; check sandbox status/recovery.\n' >&2
+               fi ;;
+            5) "$ROOT/install.sh" verify --profile nemoclaw-podman || printf "Verification failed; inspect output.\n" >&2 ;;
+            6) onboard --resume || printf "Onboarding resume returned an error; inspect output.\n" >&2 ;;
+            7) hermes_menu ;;
             q|Q) return ;;
             *) printf 'Select a displayed option.\n' ;;
         esac
