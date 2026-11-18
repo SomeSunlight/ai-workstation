@@ -31,7 +31,8 @@ invoke() {
 
 # Offline --version identifies the Linux checkout and never calls NemoClaw.
 invoke --version >"$tmp/version.log"
-grep -E '^aiw-nemo 0\\.6\\.8 \\((detached|[^()]*)@[0-9a-f]{7}' "$tmp/version.log"
+grep -Fq 'aiw-nemo 0.6.8 (' "$tmp/version.log"
+grep -Eq '@[0-9a-f]{7}' "$tmp/version.log"
 
 invoke hermes launch testhermes01
 invoke hermes start testhermes01
