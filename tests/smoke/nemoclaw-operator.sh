@@ -11,9 +11,14 @@ cat > "$tmp/.local/bin/nemohermes" <<'MOCK'
 set -Eeuo pipefail
 [[ "${NEMOCLAW_GATEWAY_RUNTIME:-}" == podman ]] || exit 96
 if [[ "${1:-}" == list ]]; then
-  printf 'testhermes01 (Hermes)\n'
+  if [[ "${FAKE_NEMO_BAD_LIST:-}" == yes ]]; then
+    printf 'malformed upstream JSON\n'
+  else
+    printf '%s\n' '{"schemaVersion":1,"defaultSandbox":"testhermes01","sandboxes":[{"name":"testhermes01","provider":"compatible-endpoint","model":"sparringpartner"},{"name":"other-hermes","provider":"openrouter-api","model":"other-model"}]}'
+  fi
   exit 0
 fi
+if [[ "${FAKE_NEMO_FAIL:-}" == yes ]]; then exit 93; fi
 printf '%s\n' "$*" >> "$FAKE_NEMO_TRACE"
 MOCK
 chmod +x "$tmp/.local/bin/nemohermes"
@@ -50,13 +55,35 @@ if invoke hermes launch >"$tmp/fail.log" 2>&1; then
 fi
 diff -u "$tmp/expected" "$trace"
 
-# Menu is one extra entry; existing selections 1–6 retain their meaning.
-printf '7\ntesthermes01\n1\nq\n' | invoke menu >"$tmp/menu.log"
+# Menu adds one entry; existing selections 1-6 retain their meaning.
+# The user always chooses a NUMBER from the live registry, never types a name.
+printf '7\n1\n1\nq\n' | invoke menu >"$tmp/menu.log"
 grep -q 'Hermes: launch / stop / start / recover' "$tmp/menu.log"
+grep -q '1) testhermes01' "$tmp/menu.log"
+grep -q '2) other-hermes' "$tmp/menu.log"
 printf 'launch testhermes01\n' >> "$tmp/expected"
 diff -u "$tmp/expected" "$trace"
-printf '7\ntesthermes01\n3\nq\n' | invoke menu >"$tmp/menu.log"
-printf 'testhermes01 stop\n' >> "$tmp/expected"
+
+printf '7\n2\n3\nq\n' | invoke menu >"$tmp/menu.log"
+printf 'other-hermes stop\n' >> "$tmp/expected"
 diff -u "$tmp/expected" "$trace"
 
-echo '[OK] NemoClaw Hermes lifecycle: exact upstream dispatch; no destructive fallback.'
+# The shell-connect option also uses the registry selector.
+printf '4\n1\nq\n' | invoke menu >"$tmp/menu.log"
+printf 'testhermes01 connect\n' >> "$tmp/expected"
+diff -u "$tmp/expected" "$trace"
+
+# Enter, 0, invalid numbers and bad registry JSON must not abort the menu,
+# cause an implicit start/stop, or invoke destructive upstream commands.
+for input in $'4\n\nq\n' $'4\n0\nq\n' $'4\n99\nq\n' $'7\n\nq\n' $'7\n1\n\nq\n' $'7\n1\n0\nq\n' $'7\n1\n99\nq\n'; do
+    printf '%s' "$input" | invoke menu >"$tmp/menu.log" 2>&1
+    diff -u "$tmp/expected" "$trace"
+done
+printf '7\n1\n4\nq\n' | FAKE_NEMO_FAIL=yes invoke menu >"$tmp/menu.log" 2>&1
+grep -q 'Hermes action failed' "$tmp/menu.log"
+diff -u "$tmp/expected" "$trace"
+printf '7\nq\n' | FAKE_NEMO_BAD_LIST=yes invoke menu >"$tmp/menu.log" 2>&1
+grep -q 'Cannot parse upstream sandbox registry' "$tmp/menu.log"
+diff -u "$tmp/expected" "$trace"
+
+echo '[OK] NemoClaw lifecycle, numbered registry selection and safe menu cancellation.'
