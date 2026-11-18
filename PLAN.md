@@ -3,11 +3,11 @@
 **Scope:** operator-reported Hermes incident documentation + minimal existing AIW-Nemo menu convenience and shortcut-only repair. Owner-controlled Windows/WSL, NemoClaw, OpenShell, Podman, Hermes, Caddy/Dispatcher and all existing data **untouched**. No automatic rebuild/destroy/reinstall/provider migration, new agent supervisor or repository split. Based on current main. Operator approves Draft PR before squash merge.
 
 - [x] Read #77/#79/#80, existing AIW-Nemo launcher/shortcut code, real owner incident findings and upstream pinned NemoClaw lifecycle reference.
-- [ ] Preserve all supported observed Hermes install/restart and Dispatcher incidents in a short, privacy-safe `docs/nemoclaw-recovery.md` with normal launch/stop and exceptional recovery, export, and what not to do.
-- [ ] Add minimal direct `nemohermes` launch/stop/status/recover operator entries in `bin/aiw-nemo`, with no state machine, no restart policy, and normal valid sandbox names; keep old menu entry numbers stable.
-- [ ] Make Windows `install-nemoclaw.ps1 -Action Shortcuts` work without a branch lookup/reinstallation; reuse existing desktop/start-menu mascot icon and refuse foreign shortcuts.
-- [ ] Add proportionate offline tests for CLI dispatch and shortcut-only scope; confirm no host-specific data in repo changes.
-- [ ] Open Draft PR; review diff and exact-head CI, leave host trial, final merge and cleanup to owner.
+- [x] Preserve all supported observed Hermes install/restart and Dispatcher incidents in a short, privacy-safe `docs/nemoclaw-recovery.md` with normal launch/stop and exceptional recovery, export, and what not to do.
+- [x] Add minimal direct `nemohermes` launch/stop/status/recover operator entries in `bin/aiw-nemo`, with no state machine, no restart policy, and normal valid sandbox names; keep old menu entry numbers stable.
+- [x] Make Windows `install-nemoclaw.ps1 -Action Shortcuts` work without a branch lookup/reinstallation; reuse existing desktop/start-menu mascot icon and refuse foreign shortcuts.
+- [x] Add proportionate offline tests for CLI dispatch and shortcut-only scope; confirm no host-specific data in repo changes.
+- [ ] Open Draft PR; review exact diff and CI; leave host trial, final merge and cleanup to owner.
 
 ---
 
