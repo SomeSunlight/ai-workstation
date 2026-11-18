@@ -1,0 +1,134 @@
+# Linux repository handoff — independent release boundary (#78)
+
+Status: **approved for extraction, not yet cut over** (2026-11-18).
+This is a migration contract, not a command to install or modify the live host.
+
+## Outcomes, not new abstractions
+
+- **Windows repository** `SomeSunlight/ai-workstation`: native Windows/Speedy services,
+  DPAPI, Windows Process Compose, optional WSL image import, Windows desktop shortcuts,
+  and **selection of one immutable Linux release**. It must not implement agent
+  sandbox lifecycle, NemoClaw policy manipulation, Linux Ansible internals or the
+  Hermes TUI.
+- **Linux repository** `SomeSunlight/ai-workstation-linux`: portable Ubuntu Linux
+  bootstrap, Ansible and rootless Podman, official NemoClaw/OpenShell/Hermes
+  orchestration delegated to upstream, and a small discoverable Linux CLI.
+  Must run on native Ubuntu without calling `wsl.exe`, PowerShell or the Windows
+  registry. No dependency on the Windows/Speedy repository.
+- **Operational runtime**: existing `AIW-Nemo` WSL distribution with the existing
+  `testhermes01` sandbox, not necessarily a clean install. The repository is
+  installation and operator code; the sandbox and secrets are independently
+  persisted runtime data.
+
+Keep both tools readable and debuggable; do not add a universal deployment
+manager, a second sandbox registry or a third cross-platform monorepo.
+
+## Stable, narrow handoff
+
+| Area | Windows role | Linux role |
+| --- | --- | --- |
+| Installation | Verify signed/pinned Ubuntu WSL image; select pinned Linux Git commit; invoke Linux `install` | `./install.sh install [--yes]` on Ubuntu |
+| Verification | Validate Linux entrypoint and expected contract without interpreting Podman internals | `./install.sh verify` |
+| Status | Display distro/revision and relay Linux command output | `./install.sh status` |
+| Version | Show own Windows source identity and **which Linux revision is selected** | `--version` reports own release + Git branch/commit/dirty, offline |
+| Update | Explicit owner-approved change of the **40-character Linux commit pin** and separate Linux rollout | No implicit pull/fetch during normal menu or status |
+| Runtime | Start the Linux operator entrypoint only | Delegate Hermes start/stop/status/recover to `nemohermes` |
+| Inference | Existing native Dispatcher/Caddy/Strata, separately managed | Existing operator-approved compatible endpoint, with vendor-managed credentials/policy |
+
+The Linux repository URL and commit SHA belong in Windows configuration, not
+hard-coded into its PowerShell entrypoint. The revision MUST be an immutable,
+verified commit, **not** an always-moving `main` or the matching Windows branch.
+Use one short, versioned CLI/exit-code contract and a narrow CI fixture that
+mocks the Linux side. Never run Linux-specific Ansible/Podman CI as part of
+ordinary Windows/Dispatcher changes.
+
+Linux's `--version` is **offline**; compare remote revisions only on an explicit
+read-only `version check` action, per ContextCanon Development Workflow
+CCW-014 and CCW-017. Release labels and Git provenance are different things.
+
+## Extraction inventory (ownership and dependency audit)
+
+Initial Linux candidates from the existing monorepo:
+
+- `bootstrap/linux/`, Linux-specific `ansible/` roles/playbooks/inventory,
+  `tools/host-platform.sh`, Linux `install.sh`, NemoClaw
+  `bin/aiw-nemo`, and their _Linux-only_ tests.
+- `uv.lock`, `pyproject.toml`, Linux Python pins, `config/versions.json`
+  split into new Linux-local pins (NemoClaw vendor commit, Ubuntu release,
+  Podman, uv/Ansible). New Linux repo has its own release version and CI.
+- `docs/nemoclaw-operator.md`, `docs/nemoclaw-recovery.md` and Linux-only
+  troubleshooting, audited and scrubbed of hostnames/secrets/private records.
+
+Review **each transitive dependency** before copying. The current
+`bootstrap/linux/install.sh` calls the monolithic `bin/aiw` and reads
+mixed Windows/Docker/Goose version config. Blindly copying its directory
+would produce a non-runnable 'independent' installer. Either replace the
+monolithic calls with a focused Linux CLI or migrate only required
+functions; then verify in a clean native Ubuntu/WSL environment.
+
+Remain **only** in the Windows repository: `bootstrap/windows/`,
+`install-nemoclaw.ps1`, `aiw.cmd`, native Dispatcher/DPAPI/
+Process Compose management, WSL imports, the Windows penguin shortcut,
+and the immutable Linux-project pin. Delete duplicate Linux code in
+Windows **only after** tested cutover, never in the initial extraction.
+
+ContextCanon: create an independent Linux `CONTEXT.src.md` with Linux scope,
+its own source pins and generated outputs. The current Windows context
+still pins Development Workflow `0.3.0-draft` whereas upstream is
+`0.3.9-draft`; use ContextCanon's official `source update/adopt/build`
+rather than hand-editing generated `.context` data. Updating a parent
+is a separate, reviewable generated-context change.
+
+## Protected migration sequence
+
+1. **Owner creates** the new empty GitHub repository
+   `SomeSunlight/ai-workstation-linux` and chooses its visibility.
+   This is an explicit ownership/permission action; do not silently
+   create another project or commit credentials to it.
+2. **Extract** Linux-owned files into the new repo on its own branch,
+   revise the monolithic `bin/aiw` / installer dependencies and create a
+   fully portable Linux-only `install / verify / status / --version`.
+   Run Linux tests there; no Windows checkout required.
+3. **Preserve the old live runtime**. Read-only record of sandbox and
+   provider identities (`nemohermes list --json`, `testhermes01 status`)
+   with sensitive output redacted; export user-owned artifacts and
+   validate a documented, restorable, owner-approved backup of workspace
+   and necessary credentials **without writing secrets into either repo**.
+4. **Side-by-side source trial:** clone the new repo to a *different*
+   Linux directory under the same `AIW-Nemo` distribution. Run
+   `--version`, `status`, `verify` first. They must not reinstall
+   NemoClaw or reset any active sandbox. Keep the old checkout untouched
+   for rollback. No simultaneous independent supervisors.
+5. **Only after owner acceptance**, point the Windows bootstrap/penguin
+   to the new immutable Linux commit and CLI. Test it in a clean
+   disposable Ubuntu native/WSL environment, then in the owner's WSL.
+   Windows and Linux each display their own independently changing
+   version identity.
+6. **Lifecycle acceptance:** `testhermes01` status / launch / exit /
+   stop / start / launch; confirm local Dispatcher inference, policy
+   boundaries, workspace persistence, forwards and error reporting.
+   Then separate WSL stop/start and controlled Windows reboot trials.
+   A forced crash exercise remains a distinct, explicitly scoped test.
+7. **Optional clean reinstall:** owner has explicitly said a new Hermes
+   install is acceptable if it materially improves architecture.
+   This is a fallback after verified export/backup, **not** permission
+   to rebuild/destroy the existing sandbox without a separate cutover
+   decision. Never replace `testhermes01` silently.
+8. **Retire old code only last:** merge the new Linux repo separately,
+   cut over Windows pin, stop referencing monolithic Linux installer,
+   then remove unused old files and stale CI from Windows in a reviewable
+   PR. Preserve old historical PRs and WSL data until owner signs off.
+
+## Explicit blockers and acceptance
+
+As of 2026-11-18 the destination repository has not been confirmed to
+exist. The GitHub connection in this session can change files and PRs,
+but **cannot create a repository**. No split can be called 'complete'
+until the owner creates the destination and we verify an independently
+runnable Linux release and a pinned Windows handoff.
+
+**Acceptance:** changing the NemoClaw policy or Linux launcher requires
+no Windows service CI; changing native Windows dispatcher requires no Linux
+Ansible/Podman CI. Native Linux works without Windows. The Windows Pinguin
+only invokes an explicitly selected Linux commit; does not silently update,
+reinstall, rebuild or destroy a sandbox. The old WSL test stays recoverable.
