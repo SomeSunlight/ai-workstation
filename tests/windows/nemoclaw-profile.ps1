@@ -57,6 +57,12 @@ try {
     Assert-True ($internal.Contains('install --yes --profile nemoclaw-podman')) 'Nemo Linux profile not routed'
     Assert-True ($internal.Contains('not marked as the NemoClaw profile')) 'Unrelated existing distro not protected'
 
+    # Shortcut-only repair must work even on a detached checkout and must not
+    # invoke Git branch discovery or the Linux installer.
+    $shortcutEntry = Get-Content (Join-Path $root 'install-nemoclaw.ps1') -Raw
+    Assert-True ($shortcutEntry.Contains("if (\u0024Action -eq 'Shortcuts')")) 'Shortcut-only branch bypass missing'
+    Assert-True ($shortcutEntry.Contains("\u0024RepositoryRef = 'main'")) 'Shortcut repair should not need a current Git branch'
+
     $markerCheck = Get-Content (Join-Path $root 'bootstrap/windows/Launch-NemoClaw.ps1') -Raw
     Assert-True ($markerCheck.Contains('nemoclaw-podman')) 'Launcher does not validate the Podman WSL profile'
     $cleanup = Get-Content (Join-Path $root 'bootstrap/windows/Remove-OldNemoWsl.ps1') -Raw
