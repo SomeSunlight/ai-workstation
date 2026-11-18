@@ -7,7 +7,8 @@
 - [x] Add minimal direct `nemohermes` launch/stop/status/recover operator entries in `bin/aiw-nemo`, with no state machine, no restart policy, and normal valid sandbox names; keep old menu entry numbers stable.
 - [x] Make Windows `install-nemoclaw.ps1 -Action Shortcuts` work without a branch lookup/reinstallation; reuse existing desktop/start-menu mascot icon and refuse foreign shortcuts.
 - [x] Add proportionate offline tests for CLI dispatch and shortcut-only scope; confirm no host-specific data in repo changes.
-- [ ] Open Draft PR; review exact diff and CI; leave host trial, final merge and cleanup to owner.
+- [x] Open [Draft PR #84](https://github.com/SomeSunlight/ai-workstation/pull/84), inspect scope (only operator docs + thin menu/shortcut changes); previous exact-head CI successful. All actual Windows/WSL trials, final approval/squash-merge and cleanup remain operator-controlled.
+- [ ] Confirm exact-head GitHub Actions after final documentation and plan checkpoint (do not assume in-progress = green).
 
 ---
 
