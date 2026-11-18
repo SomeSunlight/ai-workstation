@@ -29,6 +29,10 @@ invoke() {
     HOME="$tmp" FAKE_NEMO_TRACE="$trace" bash "$ROOT/bin/aiw-nemo" "$@"
 }
 
+# Offline --version identifies the Linux checkout and never calls NemoClaw.
+invoke --version >"$tmp/version.log"
+grep -E '^aiw-nemo 0\\.6\\.8 \\((detached|[^()]*)@[0-9a-f]{7}' "$tmp/version.log"
+
 invoke hermes launch testhermes01
 invoke hermes start testhermes01
 invoke hermes status testhermes01
