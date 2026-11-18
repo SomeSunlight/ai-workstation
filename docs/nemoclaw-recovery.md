@@ -19,6 +19,37 @@ From **Windows PowerShell 7.4+**, in a checked-out AI Workstation repository:
 
 The shortcut-only action must not import/reinstall Ubuntu, update Podman, invoke onboarding, reboot WSL or alter running sandboxes; it refreshes **only AIW-owned** shortcut files in the Desktop and Start Menu and its own launcher/icon copy under LocalAppData. If a shortcut has been customized or another app owns the same name, the script **refuses to overwrite it**. Desktop path may be redirected by OneDrive/corporate policy; use the reported `Ready:` paths and Windows Start search for **NemoClaw Hermes (AIW-Nemo)**. On a second run, no duplicate link should be created. **Real desktop presence must still be verified on the owner's Windows machine**; GitHub CI only checks isolated Windows shortcut fixtures.
 
+## Code revision: Windows shortcut and Linux workbench are distinct
+
+The shortcut repair updates Windows files only. The launcher runs the **separate checkout**
+at `/home/<linux-user>/ai-workstation` inside `AIW-Nemo`; a Windows `git pull`
+does **not** update this Linux working tree. The Nov 18 field test demonstrated
+exactly this drift: Windows at `a95487b` still displayed the six-option Linux
+menu. It was not caused by Hermes, NemoClaw, or a failed WSL launch.
+
+The Windows shortcut now prints the **actual Linux checkout branch, short commit,
+and dirty state**, using read-only local Git commands before starting the menu.
+The Linux `bin/aiw-nemo --version` also prints the local AIW project baseline and
+its own Git provenance. Neither command contacts GitHub or updates files.
+The Linux and Windows versions will become intentionally **independent**
+after the split in [#78](https://github.com/SomeSunlight/ai-workstation/issues/78).
+
+To inspect the old WSL checkout safely **without starting an installer** from
+Windows PowerShell (this reads state only):
+
+```powershell
+wsl -d AIW-Nemo --user moresunlight --cd /home/moresunlight/ai-workstation --exec git status --short --branch
+wsl -d AIW-Nemo --user moresunlight --cd /home/moresunlight/ai-workstation --exec git remote -v
+```
+
+Before changing a Linux checkout branch, inspect local uncommitted changes and
+the tracked upstream. A supported, **explicit** fast-forward may be performed
+in the Linux checkout **only after verifying a clean worktree and an intended
+branch**. Do not run `install-nemoclaw.ps1 -Action Install`, a sandbox
+rebuild/destroy, or `onboard` just to update a menu. In future, Windows
+will be pinned to a known-good Linux repo commit and display its identity,
+not silently synchronize to Windows' branch.
+
 ## Normal daily operation — no research, no reinstall
 
 Open **NemoClaw Hermes (AIW-Nemo)**. The menu exports `PATH` and **`NEMOCLAW_GATEWAY_RUNTIME=podman`**, so it does not silently fall back to Docker. Select **7) Hermes: launch / stop / start / recover**, choose the registered sandbox **by number** (e.g., `testhermes01`) and select **1) Launch**. The list comes directly from `nemohermes list --json` each time; AIW stores no second sandbox inventory. Enter or `0` cancels without an operation. The selection delegates to the *upstream* `nemohermes launch` command. This starts an interactive Hermes TUI in the selected sandbox, with upstream readiness checks and recovery logic. It does not install a new agent, create another sandbox, or reconfigure the Dispatcher.
