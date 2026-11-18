@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "project": "ai-workstation-linux",
+  "repository": "https://github.com/SomeSunlight/ai-workstation-linux.git",
+  "commit": "da4c1ccc36f1b5a8b90779ed9deb8776cf81b53e",
+  "contract": "linux-native-install-status-verify-v1",
+  "workdir": "ai-workstation-linux",
+  "note": "Draft candidate pin for split verification. Update to reviewed and merged Linux commit before production cutover."
+}
