@@ -21,6 +21,7 @@ bash ./tests/smoke/goose-maintenance.sh
 bash ./tests/smoke/goose-compose-config.sh
 python3 -B tests/smoke/openshell-preflight.py
 bash tests/smoke/nemoclaw-operator.sh
+python3 -B tests/smoke/nemoclaw-icon.py
 if [[ -x "${ROOT}/.venv/bin/python" ]]; then
   "${ROOT}/.venv/bin/python" tests/smoke/services-registry.py
   "${ROOT}/.venv/bin/python" tests/smoke/native-operation-diagnostics.py
