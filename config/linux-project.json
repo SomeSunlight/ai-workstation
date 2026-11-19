@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "project": "ai-workstation-linux",
   "repository": "https://github.com/SomeSunlight/ai-workstation-linux.git",
-  "commit": "84e8dd636405fddcf052af78dbdec5de547975aa",
+  "commit": "c744b4fea4a1fffb2b420daf1a8d85ee23aea2c6",
   "contract": "linux-native-install-status-verify-v1",
   "workdir": "ai-workstation-linux",
-  "note": "Review candidate: Linux PR #1 exact-head CI #38. Update to the accepted merged Linux commit before production Windows cutover; never auto-follow a branch."
+  "note": "Review candidate for Linux PR #1, including live Hermes menu acceptance checkpoint. Update to the accepted merged Linux commit before production Windows cutover; never auto-follow a branch."
 }
