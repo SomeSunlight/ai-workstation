@@ -31,16 +31,24 @@ try {
         Assert-True ($?) 'Shortcut creator failed'
     }
     $label = 'NemoClaw Hermes (AIW-Nemo)'
+    $homeLabel = 'NemoClaw Linux Home (AIW-Nemo)'
     foreach ($folder in @($desktop, $start)) {
-        $path = Join-Path $folder "$label.lnk"
-        Assert-True (Test-Path -LiteralPath $path) "Missing NemoClaw shortcut: $path"
-        $link = $shell.CreateShortcut($path)
-        Assert-True ($link.Description -eq 'AIW NemoClaw profile: AIW-Nemo') 'Wrong shortcut ownership'
-        Assert-True ($link.TargetPath -ieq (Join-Path $PSHOME 'pwsh.exe')) 'Not PowerShell launcher'
-        Assert-True ($link.Arguments.Contains('Launchers\NemoClaw-AIW-Nemo.ps1')) 'Wrong launcher'
-        Assert-True ($link.Arguments.Contains('-DistroName "AIW-Nemo"')) 'Wrong WSL target'
-        Assert-True ($link.IconLocation.Contains('nemoclaw-hermes.ico')) 'Missing own mascot icon'
-        $expected = if ($folder -eq $desktop) { 2 } else { 1 }
+        foreach ($entry in @(
+            @{ Name = $label; Mode = 'Workbench'; Owner = 'AIW NemoClaw profile: AIW-Nemo' },
+            @{ Name = $homeLabel; Mode = 'Home'; Owner = 'AIW NemoClaw home profile: AIW-Nemo' }
+        )) {
+            $path = Join-Path $folder "$($entry.Name).lnk"
+            Assert-True (Test-Path -LiteralPath $path) "Missing NemoClaw shortcut: $path"
+            $link = $shell.CreateShortcut($path)
+            Assert-True ($link.Description -eq $entry.Owner) 'Wrong shortcut ownership'
+            Assert-True ($link.TargetPath -ieq (Join-Path $PSHOME 'pwsh.exe')) 'Not PowerShell launcher'
+            Assert-True ($link.Arguments.Contains('Launchers\NemoClaw-AIW-Nemo.ps1')) 'Wrong launcher'
+            Assert-True ($link.Arguments.Contains('-DistroName "AIW-Nemo"')) 'Wrong WSL target'
+            Assert-True ($link.Arguments.Contains("-Mode `"$($entry.Mode)`"")) 'Wrong Linux shell mode'
+            Assert-True (-not $link.Arguments.Contains('-NoExit')) 'Shortcut must not expose a PowerShell shell'
+            Assert-True ($link.IconLocation.Contains('nemoclaw-hermes.ico')) 'Missing own mascot icon'
+        }
+        $expected = if ($folder -eq $desktop) { 3 } else { 2 }
         Assert-True ((@(Get-ChildItem $folder -Filter '*.lnk')).Count -eq $expected) 'Duplicate/unrelated shortcut created'
     }
     Assert-True (Test-Path $legacy) 'Legacy shortcut was touched'
@@ -73,6 +81,8 @@ try {
     $markerCheck = Get-Content (Join-Path $root 'bootstrap/windows/Launch-NemoClaw.ps1') -Raw
     Assert-True ($markerCheck.Contains('nemoclaw-podman')) 'Launcher does not validate the Podman WSL profile'
     Assert-True ($markerCheck.Contains('Linux workbench code:')) 'Launcher does not show executing Linux Git identity'
+    Assert-True ($markerCheck.Contains('--exec /bin/bash -il')) 'Penguins must open an actual interactive Linux shell'
+    Assert-True (-not $markerCheck.Contains('bash ./bin/aiw-nemo')) 'Penguin must not auto-start AIW menu'
     Assert-True ($markerCheck.Contains('git status --porcelain')) 'Launcher does not report dirty Linux checkouts'
     Assert-True (-not $markerCheck.Contains('git fetch')) 'Shortcut launcher must not fetch repository automatically'
     Assert-True (-not $markerCheck.Contains('git pull')) 'Shortcut launcher must not silently update Linux'
@@ -92,7 +102,7 @@ try {
     try { & $creator @arguments }
     catch { $refused = $true }
     Assert-True $refused 'Unowned shortcut was overwritten'
-    Write-Host '[OK] NemoClaw one-penguin launcher idempotence and WSL profile contracts.'
+    Write-Host '[OK] Two NemoClaw penguins: workbench/home shell, idempotence, ownership and WSL identity.'
 }
 finally {
     Remove-Item -LiteralPath $fixture -Recurse -Force -ErrorAction SilentlyContinue
