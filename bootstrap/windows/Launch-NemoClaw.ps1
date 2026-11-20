@@ -52,6 +52,6 @@ Write-Host 'To leave the Linux shell, type: exit (the window then closes).'
 & $WslExecutable --distribution $DistroName --user $LinuxUser --cd $workdir --exec /bin/bash -il
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "Linux session failed with exit code $LASTEXITCODE. No sandbox was modified."
-    Write-Host "Manual start: wsl -d $DistroName -u $LinuxUser --cd ~"
+    Write-Host "Manual start: wsl -d $DistroName -u $LinuxUser --cd /home/$LinuxUser"
     Read-Host 'Press Enter to close this window' | Out-Null
 }
