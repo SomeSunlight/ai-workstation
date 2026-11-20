@@ -1,5 +1,5 @@
 #requires -Version 7.4
-# A single NemoClaw penguin per explicit WSL distro. Never touch legacy links.
+# Two named NemoClaw penguins per explicit WSL distro. Never touch legacy links.
 [CmdletBinding()]
 param(
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')][string]$DistroName = 'AIW-Nemo',
