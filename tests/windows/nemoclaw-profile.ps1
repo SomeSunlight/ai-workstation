@@ -82,6 +82,8 @@ try {
     Assert-True ($markerCheck.Contains('nemoclaw-podman')) 'Launcher does not validate the Podman WSL profile'
     Assert-True ($markerCheck.Contains('Linux workbench code:')) 'Launcher does not show executing Linux Git identity'
     Assert-True ($markerCheck.Contains('--exec /bin/bash -il')) 'Penguins must open an actual interactive Linux shell'
+    Assert-True ($markerCheck.Contains('--cd /home/$LinuxUser')) 'WSL fallback must use absolute Linux home, never tilde'
+    Assert-True (-not $markerCheck.Contains('Manual start: wsl -d $DistroName -u $LinuxUser --cd ~')) 'WSL tilde fallback reintroduced'
     Assert-True (-not $markerCheck.Contains('bash ./bin/aiw-nemo')) 'Penguin must not auto-start AIW menu'
     Assert-True ($markerCheck.Contains('git status --porcelain')) 'Launcher does not report dirty Linux checkouts'
     Assert-True (-not $markerCheck.Contains('git fetch')) 'Shortcut launcher must not fetch repository automatically'
