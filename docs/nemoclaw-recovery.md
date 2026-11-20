@@ -6,9 +6,86 @@ This runbook concerns the **separate WSL distribution `AIW-Nemo` with Ubuntu 26.
 
 **Source of truth:** NemoClaw/OpenShell own sandbox, policies, credentials, forwarding and lifecycle; AIW only opens the existing Linux workbench and delegates selected commands. **Do not reinstall, `rebuild`, `destroy`, mutate Podman resources manually, delete WSL or rotate credentials as an ordinary restart.** No production host operation has been executed by this documentation change. More capable commands and flags can change upstream; consult the pinned CLI before a version upgrade.
 
+## November 20 restart and launcher UX incident — two independent faults
+
+**Owner observation, not yet recovered:** after an unexpected Windows
+restart, the existing `testhermes01` is **Stopped**, and the first
+`nemohermes testhermes01 start` failed:
+`OpenShell sandbox entered error while waiting for readiness after start`.
+NemoClaw reaches OpenShell and waits for sandbox readiness but does
+not surface the underlying container/gateway error. **No automatic
+recover/rebuild/onboard**, no evidence of Hermes data loss. Preserve
+the original sandbox while reading authoritative diagnostics.
+
+Safe manual Windows entry uses a **full Linux home directory path**:
+
+```powershell
+wsl -d AIW-Nemo -u moresunlight --cd /home/moresunlight
+```
+
+The shortcut owner confirmed `--cd ~` unexpectedly left WSL in the
+Windows current directory on their machine, so **never use `~` as a
+Windows-side WSL directory argument**.
+
+From the **Linux host shell**, not a Hermes sandbox shell, read:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+export NEMOCLAW_GATEWAY_RUNTIME=podman
+systemctl --user is-active podman.socket
+nemohermes testhermes01 status
+nemohermes testhermes01 doctor --json
+openshell sandbox list
+openshell logs testhermes01 -n 60 --source all
+```
+
+Doctor `--json` is read-only; do not add `--fix`. Do not publish
+raw full JSON/logs: they can contain internal routes and private
+data. Report only the failing diagnostic group/label/status and
+redacted OpenShell startup error lines. The OpenShell log command
+above uses the native read-only log query, rather than a mutating
+audit-log enablement wrapper.
+
+### Candidate operator experience (not yet installed on the owner host)
+
+The Nov 20 **old Windows penguin** still automatically started the
+historical six-option `aiw-nemo` menu, including the free-text
+case-sensitive sandbox-name prompt. Pressing Enter returned exit code
+1 through PowerShell and ended the WSL process. Pressing `q` also
+ended the WSL process, because the menu *was* the shell's foreground
+command, not an interactive shell. This is the **source/launcher
+handoff problem**, not a NemoClaw data failure.
+
+The changed **Draft Windows PR #84** now creates two **AIW-owned**
+desktop/start-menu penguins, both opening the actual `AIW-Nemo`
+Linux login shell and **never auto-launching the menu**:
+
+- **NemoClaw Hermes (AIW-Nemo)**: starts in
+  `/home/<linux-user>/ai-workstation-linux` (new project checkout).
+- **NemoClaw Linux Home (AIW-Nemo)**: starts in
+  `/home/<linux-user>`.
+
+A Linux `aiw` command launches the menu **only when the user types
+it**. `q` leaves the menu and returns to the same Linux shell;
+only `exit` ends that shell. The new `aiw` command comes from
+`ai-workstation-linux` Draft PR #1, via
+`./install.sh register-cli` as the local user, refusing to overwrite
+any unrelated executable. This CLI registration does not need sudo
+and never touches sandbox services.
+
+The Linux menu now obtains registered names from the official
+`nemohermes list --json` and offers numbered selection, known
+phase metadata, followed by an **actual selected-sandbox status
+check**. It never demands the operator remember `testhermes01`.
+Missing status is reported as unverified; Enter/0 cancels safely.
+
+**No owner production shortcut or installed Linux checkout is
+changed by these Draft PRs.** Release and the separate Windows
+Linux-project handoff (#85) remain operator-approval gates.
+
 ## One-click Windows penguin — repair, never reinstall
 
-The source already provides the **`NemoClaw Hermes (AIW-Nemo)`** Desktop/Start Menu shortcut and bundled `nemoclaw-hermes.ico`, implemented in `bootstrap/windows/Create-NemoClawShortcut.ps1`. The linked PowerShell launcher checks that the selected WSL distro carries the Nemo profile marker, then invokes the existing Linux `bin/aiw-nemo` menu. **Observed on Nov 18:** the created shortcut opened the Linux menu but Windows displayed a blank-page icon. The packaged ICO was found to have **three extraneous bytes inside its indexed PNG payload**, an invalid transparency-chunk CRC and a total size inconsistent with its ICO directory entry. PR #84 repairs that exact existing penguin asset (the artwork is unchanged), adds a PNG/ICO integrity test and a Windows icon-decoding fixture. The repaired icon must still be refreshed through the shortcut-only action and visually confirmed on the owner’s desktop; the shell menu working alone does not prove the icon is healthy.
+The source already provides the **`NemoClaw Hermes (AIW-Nemo)`** Desktop/Start Menu shortcut and bundled `nemoclaw-hermes.ico`, implemented in `bootstrap/windows/Create-NemoClawShortcut.ps1`. The historical linked PowerShell launcher checks that the selected WSL distro carries the Nemo profile marker, then invoked the **old** Linux `bin/aiw-nemo` menu directly. The new Draft PR #84 instead opens an interactive Linux shell; see the November 20 incident above. **Observed on Nov 18:** the created shortcut opened the Linux menu but Windows displayed a blank-page icon. The packaged ICO was found to have **three extraneous bytes inside its indexed PNG payload**, an invalid transparency-chunk CRC and a total size inconsistent with its ICO directory entry. PR #84 repairs that exact existing penguin asset (the artwork is unchanged), adds a PNG/ICO integrity test and a Windows icon-decoding fixture. The repaired icon must still be refreshed through the shortcut-only action and visually confirmed on the owner’s desktop; the shell menu working alone does not prove the icon is healthy.
 
 From **Windows PowerShell 7.4+**, in a checked-out AI Workstation repository:
 
