@@ -309,3 +309,56 @@ gateway/sandbox restart persistence under Ubuntu 26.04 + rootless
 Podman require live owner validation. The prior missing loopback alias
 `169.254.2.2/32` after Windows restart is a separate unresolved
 lifecycle/network issue; this preflight fix makes no claim to solve it.
+
+
+## 2026-11-23 — Live Windows reboot acceptance and safe shell-penguin handoff
+
+The separate `AIW-Nemo-New` distro now runs official NemoClaw v0.0.145,
+rootless Podman/OpenShell and Hermes sandbox `testhermes04`. After the
+first install-only verifications passed, the optional onboarding exposed
+a missing `--no-gpu` argument in our Windows wrapper. The fix delegates
+to Linux-owned `aiw-nemo onboard` instead. Because upstream onboarding
+aborted before naming its first sandbox, the **owner** completed the
+special case with `./bin/aiw-nemo onboard --resume --name testhermes04`.
+Do not add a general Windows resume-name recovery engine for this
+already finished initial setup.
+
+The owner rebooted Windows while that sandbox was running, without
+stopping it first. The same named sandbox was still present with phase
+`Stopped` and preserved workspace, the user-systemd gateway and Podman
+socket active, and vendor-required `169.254.2.2/32` missing from `lo`
+again. The existing Linux operator only offered a vendor-equivalent
+repair **with explicit approval**, checked the host address, and
+delegated sandbox start. Owner reports the *same* Hermes sandbox in
+operation afterwards, including a new model answer. This is a real
+full Windows reboot recovery **with manual preparation**, not evidence
+that NemoClaw automatically fixes the route on boot or that crashed
+databases and historical OpenShell Error sandboxes were recovered.
+Vendor follow-up: [Linux issue #3](https://github.com/SomeSunlight/ai-workstation-linux/issues/3).
+
+The last Windows shortcut defect: `AIW-Nemo-New` originally launched
+from `~/ai-workstation` instead of the independent checkout
+`~/ai-workstation-linux`; the owner used a direct `wsl.exe` launch
+to bypass it. The branch must not resurrect the obsolete one-penguin
+auto-menu while merging `main`: merged Windows PR #84 defines **two
+genuine interactive WSL Linux shell penguins** for workbench and home.
+Windows PR #85 now supplies the workbench dir from the immutable
+Linux manifest, preserves the existing home-mode and old WSL shortcuts,
+and exposes a `Shortcuts`-only repair. From the Windows PR checkout:
+
+```powershell
+./install-linux-workstation.ps1 -Action Shortcuts
+```
+
+This action only regenerates owned Windows links / launcher copies. It
+does **not** reinstall Linux packages, update source or NemoClaw,
+re-onboard Hermes, destroy sandboxes, or start old distributions. Start
+the workbench penguin and type `aiw` in its real Linux shell.
+The final two-penguin behavior requires owner acceptance after PR CI.
+
+**Release train:** first owner squash-merge Linux PR #7. Replace the
+Windows manifest's Linux candidate SHA with that **new Linux main
+squash commit**, rerun Windows CI, and only then owner squash-merges
+Windows PR #85. Preserve old distributions until explicit separate
+cleanup authorization; do not combine with the separate NVIDIA
+upstream bug task.
