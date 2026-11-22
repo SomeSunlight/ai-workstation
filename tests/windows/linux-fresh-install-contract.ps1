@@ -11,7 +11,7 @@ $pin = Get-Content -LiteralPath (Join-Path $root 'config/linux-project.json') -R
 function Require([bool]$ok, [string]$message) {
     if (-not $ok) { throw $message }
 }
-Require ($pin.commit -ceq 'd6265f696e21f3c39fa442adcab1dc630e938cd9') 'Candidate must be corrected Linux Draft PR #7 commit'
+Require ($pin.commit -ceq '7c858a6daac83af01bed727c6c4c437f5f5d81f5') 'Candidate must be corrected Linux Draft PR #7 commit'
 Require ($pin.resumeFromCommit -ceq '6dc45a81d8f5a305ec9f159584db3e181df83985') 'Only the exact prior installer candidate can resume'
 Require ($entry.Contains("DistroName = 'AIW-Nemo-New'")) 'Fresh distro default missing'
 Require ($entry.Contains('-IndependentLinuxProject')) 'New entrypoint does not select pinned Linux'
