@@ -36,7 +36,7 @@ Require ($engine.Contains('$operatorPath = "/home/$LinuxUser/$($settings.workdir
 Require ($engine.Contains('$operatorLiteral = ConvertTo-BashLiteral -Value $operatorPath')) 'Linux onboarding path must be Bash-escaped'
 Require ($engine.Contains('"exec /bin/bash $operatorLiteral onboard$suffix"')) 'New and resumed onboarding must delegate to reviewed Linux operator'
 Require (-not $engine.Contains('exec ~/.local/bin/nemohermes onboard')) 'Do not bypass Linux-owned CPU-only Podman onboarding policy'
-Require ($engine.Contains("if ($answer -in @('r', 'R')) { ' --resume' } else { '' }")) 'Resumed upstream onboarding must still be possible'
+Require ($engine.Contains('$suffix = if ($answer -in @(''r'', ''R'')) { '' --resume'' } else { '''' }')) 'Resumed upstream onboarding must still be possible'
 Require ($engine.Contains('Remote-model test: NVIDIA GPU passthrough is disabled (--no-gpu).')) 'CPU-only promise must be visible to the operator'
 Require ($engine.Contains("Invoke-LinuxWorkstation.ps1') -Action Verify")) 'Linux read-only verifier not called after installation'
 Require ($engine.Contains('if (-not $IndependentLinuxProject) { Ensure-WindowsShortcuts }')) 'Shortcut order must preserve original legacy path'
