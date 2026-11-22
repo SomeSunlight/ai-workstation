@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "project": "ai-workstation-linux",
   "repository": "https://github.com/SomeSunlight/ai-workstation-linux.git",
-  "commit": "c744b4fea4a1fffb2b420daf1a8d85ee23aea2c6",
+  "commit": "6dc45a81d8f5a305ec9f159584db3e181df83985",
   "contract": "linux-native-install-status-verify-v1",
   "workdir": "ai-workstation-linux",
-  "note": "Review candidate for Linux PR #1, including live Hermes menu acceptance checkpoint. Update to the accepted merged Linux commit before production Windows cutover; never auto-follow a branch."
+  "note": "Linux Draft PR #7 NemoClaw v0.0.145 source pin, for isolated test only. Repin to the accepted merged Linux commit before live Windows cutover; never auto-follow a branch."
 }
