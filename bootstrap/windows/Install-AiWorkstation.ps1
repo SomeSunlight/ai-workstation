@@ -34,6 +34,7 @@ param(
     [switch]$NoAutomaticRestart,
     [switch]$SkipLinuxInstall,
     [switch]$SkipOnboarding,
+    [switch]$IndependentLinuxProject,
     [switch]$ResumeAfterReboot
 )
 
@@ -189,6 +190,9 @@ function Get-InvocationArguments {
     if ($SkipOnboarding) {
         $arguments += '-SkipOnboarding'
     }
+    if ($IndependentLinuxProject) {
+        $arguments += '-IndependentLinuxProject'
+    }
     if ($ForResume) {
         $arguments += '-ResumeAfterReboot'
     }
@@ -341,6 +345,52 @@ function Get-VersionConfiguration {
     }
 
     return Get-Content -LiteralPath $script:VersionsPath -Raw | ConvertFrom-Json
+}
+
+# Independent Linux handoff. Windows owns only the WSL host; the Linux
+# installer owns Podman/NemoClaw. Never adopt an arbitrary old WSL by name.
+function Get-IndependentLinuxSettings {
+    $path = Join-Path $script:RepositoryRoot 'config/linux-project.json'
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Missing immutable Linux handoff manifest: $path"
+    }
+    $settings = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+    if ($settings.schemaVersion -ne 1 -or
+        $settings.contract -cne 'linux-native-install-status-verify-v1' -or
+        $settings.project -cne 'ai-workstation-linux' -or
+        $settings.repository -cne 'https://github.com/SomeSunlight/ai-workstation-linux.git' -or
+        [string]$settings.commit -cnotmatch '^[a-f0-9]{40}$' -or
+        [string]$settings.workdir -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$') {
+        throw 'Invalid or unreviewed immutable Linux source manifest.'
+    }
+    return $settings
+}
+
+function Assert-IndependentLinuxTarget {
+    if ($Profile -ne 'NemoPodman') {
+        throw 'Independent Linux installation requires the NemoPodman profile.'
+    }
+    if ($DistroName -in @('Ubuntu-24.04','Ubuntu-26.04','AIW-Nemo')) {
+        throw "Refusing to install into protected WSL distribution '$DistroName'. Choose a new name."
+    }
+    $null = Get-IndependentLinuxSettings
+    if ($DistroName -in @(Get-Distros)) {
+        $identity = @(& wsl.exe --distribution $DistroName --user root --exec /bin/cat /etc/aiw-linux-project-install 2>$null)
+        if ($LASTEXITCODE -ne 0 -or ($identity -join '').Trim() -cne 'ai-workstation-linux-v1') {
+            throw "Existing WSL '$DistroName' is not an explicitly created independent AIW Linux deployment. No adoption performed."
+        }
+    }
+}
+
+function Assert-IndependentLinuxGuestRelease {
+    $lines = @(& wsl.exe --distribution $DistroName --user root --exec /bin/cat /etc/os-release 2>$null)
+    if ($LASTEXITCODE -ne 0) { throw "Could not read actual guest OS in '$DistroName'." }
+    $releaseText = (($lines | ForEach-Object { ([string]$_ -replace [char]0, '').Trim() }) -join "`n")
+    if ($releaseText -cnotmatch '(?m)^ID=ubuntu$' -or
+        $releaseText -cnotmatch '(?m)^VERSION_ID=["'']?26[.]04["'']?$') {
+        throw "WSL '$DistroName' is not Ubuntu 26.04; the registered name does not prove OS identity."
+    }
+    Write-Step "Verified real Ubuntu 26.04 guest in '$DistroName'." Ok
 }
 
 function Get-DistroBasePath {
@@ -789,6 +839,33 @@ function Ensure-WindowsShortcuts {
 }
 
 function Ensure-LinuxRepository {
+    if ($IndependentLinuxProject) {
+        $settings = Get-IndependentLinuxSettings
+        $repoPath = "/home/$LinuxUser/$($settings.workdir)"
+        $pathLiteral = ConvertTo-BashLiteral -Value $repoPath
+        $urlLiteral = ConvertTo-BashLiteral -Value ([string]$settings.repository)
+        $shaLiteral = ConvertTo-BashLiteral -Value ([string]$settings.commit)
+        $scriptText = @'
+set -euo pipefail
+path=__AIW_PATH__
+url=__AIW_URL__
+commit=__AIW_SHA__
+if [[ -d "$path/.git" ]]; then
+    [[ "$(git -C "$path" remote get-url origin)" == "$url" ]] || { echo 'Existing Linux checkout has wrong origin' >&2; exit 1; }
+elif [[ -e "$path" ]]; then
+    echo 'Linux checkout path is occupied by non-Git content' >&2; exit 1
+else
+    git clone "$url" "$path"
+    git -C "$path" checkout --detach "$commit"
+fi
+[[ "$(git -C "$path" rev-parse HEAD)" == "$commit" ]] || { echo 'Linux source revision differs from immutable pin' >&2; exit 1; }
+[[ -z "$(git -C "$path" status --porcelain --untracked-files=normal)" ]] || { echo 'Linux checkout is dirty' >&2; exit 1; }
+'@
+        $scriptText = $scriptText.Replace('__AIW_PATH__', $pathLiteral).Replace('__AIW_URL__', $urlLiteral).Replace('__AIW_SHA__', $shaLiteral)
+        Invoke-Bash -User $LinuxUser -Script $scriptText
+        Write-Step "Pinned Linux checkout ready: $repoPath ($($settings.commit))." Ok
+        return
+    }
     $repositoryPath = Get-LinuxRepositoryPath
     $repositoryLiteral = ConvertTo-BashLiteral -Value $repositoryPath
     $urlLiteral = ConvertTo-BashLiteral -Value $RepositoryUrl
@@ -829,6 +906,19 @@ function Invoke-LinuxInstall {
     }
 
     Write-Section 'Linux host installation'
+    if ($IndependentLinuxProject) {
+        $settings = Get-IndependentLinuxSettings
+        $workdir = "/home/$LinuxUser/$($settings.workdir)"
+        Write-Step "Invoking separate Linux installer at pinned commit $($settings.commit)."
+        Invoke-Wsl -Arguments @(
+            '--distribution', $DistroName, '--user', $LinuxUser,
+            '--cd', $workdir, '--exec', '/bin/bash', './install.sh', 'install'
+        )
+        & (Join-Path $PSScriptRoot 'Invoke-LinuxWorkstation.ps1') -Action Verify -DistroName $DistroName -LinuxUser $LinuxUser
+        if (-not $?) { throw 'Pinned Linux verification failed after install.' }
+        Write-Step 'Independent Linux install and read-only verification complete.' Ok
+        return
+    }
     Invoke-Wsl -Arguments @(
         '--distribution'
         $DistroName
@@ -843,6 +933,18 @@ function Invoke-LinuxInstall {
 }
 
 function Show-Status {
+    if ($IndependentLinuxProject) {
+        Write-Section 'Independent AI Workstation Linux'
+        Write-Step "Target WSL: $DistroName"
+        if ($DistroName -notin @(Get-Distros)) {
+            Write-Step 'New distro not yet installed; no existing distro has been modified.' Warning
+            return
+        }
+        Assert-IndependentLinuxGuestRelease
+        & (Join-Path $PSScriptRoot 'Invoke-LinuxWorkstation.ps1') -Action Status -DistroName $DistroName -LinuxUser $LinuxUser
+        if (-not $?) { throw 'Linux status failed.' }
+        return
+    }
     Write-Section 'AI Workstation Windows status'
     Write-Step "PowerShell: $($PSVersionTable.PSVersion)"
     Write-Step "WSL platform: $(if (Test-WslPlatform) { 'available' } else { 'missing' })"
@@ -910,6 +1012,12 @@ function Show-Status {
 }
 
 function Verify-All {
+    if ($IndependentLinuxProject) {
+        Assert-IndependentLinuxGuestRelease
+        & (Join-Path $PSScriptRoot 'Invoke-LinuxWorkstation.ps1') -Action Verify -DistroName $DistroName -LinuxUser $LinuxUser
+        if (-not $?) { throw 'Pinned Linux verify failed.' }
+        return
+    }
     if (-not (Test-WslPlatform)) {
         throw 'WSL platform is missing.'
     }
@@ -956,7 +1064,11 @@ function Invoke-NemoOnboarding {
         Write-Step 'Open the NemoClaw penguin shortcut and select setup or resume later.' Ok
         return
     }
-    $linuxOnboard = if ($answer -in @('r', 'R')) {
+    $linuxOnboard = if ($IndependentLinuxProject) {
+        $suffix = if ($answer -in @('r', 'R')) { ' --resume' } else { '' }
+        "export NEMOCLAW_GATEWAY_RUNTIME=podman NEMOCLAW_DISABLE_TELEMETRY=1; exec ~/.local/bin/nemohermes onboard$suffix"
+    }
+    elseif ($answer -in @('r', 'R')) {
         'cd ~/ai-workstation && bash ./bin/aiw-nemo onboard --resume'
     }
     else {
@@ -975,6 +1087,9 @@ function Invoke-NemoOnboarding {
 }
 
 try {
+    if ($IndependentLinuxProject -and $Action -eq 'Install') {
+        Assert-IndependentLinuxTarget
+    }
     if ($Profile -eq 'NemoPodman' -and $DistroName -in @('Ubuntu-24.04','Ubuntu-26.04')) {
         throw 'Choose a dedicated NemoClaw distro name, not the existing default AIW Ubuntu.'
     }
@@ -1008,11 +1123,16 @@ try {
                 Write-Step 'Preserving global .wslconfig and other WSL distributions.' Ok
             }
             Ensure-Distro
+            if ($IndependentLinuxProject) {
+                Assert-IndependentLinuxGuestRelease
+                Invoke-Bash -User 'root' -Script "printf '%s' ai-workstation-linux-v1 > /etc/aiw-linux-project-install && chmod 0644 /etc/aiw-linux-project-install"
+            }
             Ensure-LinuxPrerequisites
             Ensure-LinuxUser
             Ensure-LinuxRepository
-            Ensure-WindowsShortcuts
+            if (-not $IndependentLinuxProject) { Ensure-WindowsShortcuts }
             Invoke-LinuxInstall
+            if ($IndependentLinuxProject) { Ensure-WindowsShortcuts }
             if ($Profile -eq 'NemoPodman') { Invoke-NemoOnboarding }
             Write-Step 'AI Workstation installation completed successfully.' Ok
             Write-Step 'Run ".\install.ps1 -Action Status" to show the current installation state.'
