@@ -25,6 +25,7 @@ param(
     [switch]$NoAutomaticRestart,
     [switch]$SkipLinuxInstall,
     [switch]$SkipOnboarding,
+    [switch]$IndependentLinuxProject,
     [switch]$ResumeAfterReboot
 )
 

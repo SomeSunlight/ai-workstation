@@ -18,12 +18,13 @@ param(
     [switch]$NoShortcuts,
     [switch]$SkipLinuxInstall,
     [switch]$SkipOnboarding,
+    [switch]$IndependentLinuxProject,
     [switch]$NoAutomaticRestart
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($RepositoryRef)) {
-    if ($Action -eq 'Shortcuts') {
+    if ($Action -eq 'Shortcuts' -or $IndependentLinuxProject) {
         # Launcher repair only: the delegated action never installs from a ref.
         # Do not require Git, a current branch, or a reboot for a Desktop icon.
         $RepositoryRef = 'main'
@@ -51,6 +52,7 @@ $params = @{
     SkipLinuxInstall = $SkipLinuxInstall
     SkipOnboarding = $SkipOnboarding
     NoAutomaticRestart = $NoAutomaticRestart
+    IndependentLinuxProject = $IndependentLinuxProject
 }
 & $entry @params
 if (-not $?) { exit 1 }

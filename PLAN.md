@@ -1,3 +1,62 @@
+## 2026-11-23 — Windows AIW -> independent Linux v0.0.145: owner acceptance / squash-merge order
+
+**Owner LIVE accepted.** Independent Windows `./install-linux-workstation.ps1 -Action Install`
+created only `AIW-Nemo-New` (verified Ubuntu 26.04) and installed
+official rootless Podman + NemoClaw v0.0.145 from the independently pinned
+[Linux PR #7](https://github.com/SomeSunlight/ai-workstation-linux/pull/7).
+A native WSL registration timeout disappeared after a normal owner-chosen
+Windows restart; a subsequent Linux receipt path error in our verifier
+and mixed PowerShell stdout/exitcode handling were fixed with offline tests.
+No reinstallation of a verified vendor receipt was needed.
+
+**Actual Hermes:** Windows onboarding initially bypassed `--no-gpu`;
+it now calls the existing Linux-owned `aiw-nemo onboard`, preserving
+rootless Podman, CPU-only Hermes and the official secret entry wizard.
+The owner manually resumed NVIDIA's early-aborted onboarding as
+`testhermes04` using an explicit `--name`, because the upstream session
+had no recorded identity. Hermes became operational and generated model
+responses through the configured OpenRouter route.
+
+**Real full Windows reboot with sandbox left running:** `testhermes04`
+remained registered, workspace preserved, phase `Stopped`; gateway and
+Podman socket came back active. Vendor-required loopback
+`169.254.2.2/32` vanished again. Following AIW's explicit operator
+approval and exact-address restoration, owner returned *the same*
+`testhermes04` sandbox to working Hermes, including a new model-based
+reply. This qualifies normal Windows-reboot recovery **with interactive
+repair** but neither automatic NVIDIA host preparation, abrupt WSL crash
+recovery, nor old `Error` sandbox restoration. Linux
+[Issue #3](https://github.com/SomeSunlight/ai-workstation-linux/issues/3)
+holds the sanitized vendor bug evidence.
+
+**Windows launcher regression and final resolution:** Windows PR #85
+initially wrote the old `~/ai-workstation` path for the *new* WSL.
+The branch must preserve the **already merged PR #84** two authentic
+Linux-shell penguins, not restore an obsolete one-penguin auto-menu.
+The independent workbench path must come from
+`config/linux-project.json`, with `-Action Shortcuts` as an offline,
+shortcut-only repair (no WSL installation, onboarding, gateway actions
+or change to old distros). Windows PR #85 must resolve its main-branch
+conflict and pass exact-head CI for both shell penguins.
+
+**Merge order:** owner squash-merges Linux PR #7 first; then Windows
+PR #85 repins `config/linux-project.json` to **that Linux main squash
+commit**, reruns CI, and only then is owner squash-merged.
+Keep productive `Ubuntu-24.04`, historical misnamed `Ubuntu-26.04`,
+and old `AIW-Nemo` untouched. No migration, cleanup, auto-repair
+daemon, or forced provider/credential refresh is authorized.
+
+**Next independent workflows:** short, technically supported English
+NVIDIA NemoClaw bug issue about post-Windows-reboot native Podman host
+alias, referencing Linux Issue #3 (check current upstream issues/patches
+first; do not publish without owner approval); actual agent tools/browser
+and intentionally allowlisted web access rather than dismantling
+OpenShell isolation ([Linux Issue #2](https://github.com/SomeSunlight/ai-workstation-linux/issues/2)).
+The new agent's CNN query showed expected outbound proxy denials
+for sampled websites while legitimate LLM communication succeeded.
+
+---
+
 ## Issue #83 — NemoClaw Hermes operator recovery / penguin (2026-11-18)
 
 **Scope:** operator-reported Hermes incident documentation + minimal existing AIW-Nemo menu convenience and shortcut-only repair. Owner-controlled Windows/WSL, NemoClaw, OpenShell, Podman, Hermes, Caddy/Dispatcher and all existing data **untouched**. No automatic rebuild/destroy/reinstall/provider migration, new agent supervisor or repository split. Based on current main. Operator approves Draft PR before squash merge.

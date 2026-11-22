@@ -75,7 +75,7 @@ try {
     # Shortcut-only repair must work even on a detached checkout and must not
     # invoke Git branch discovery or the Linux installer.
     $shortcutEntry = Get-Content (Join-Path $root 'install-nemoclaw.ps1') -Raw
-    Assert-True ($shortcutEntry.Contains('if ($Action -eq ''Shortcuts'')')) 'Shortcut-only branch bypass missing'
+    Assert-True ($shortcutEntry.Contains('if ($Action -eq ''Shortcuts'' -or $IndependentLinuxProject)')) 'Shortcut-only/independent branch bypass missing'
     Assert-True ($shortcutEntry.Contains('$RepositoryRef = ''main''')) 'Shortcut repair should not need a current Git branch'
 
     $markerCheck = Get-Content (Join-Path $root 'bootstrap/windows/Launch-NemoClaw.ps1') -Raw
@@ -104,6 +104,43 @@ try {
     try { & $creator @arguments }
     catch { $refused = $true }
     Assert-True $refused 'Unowned shortcut was overwritten'
+    # New independent WSL: both current main-branch shell penguins must be
+    # preserved, but their workbench path comes from the immutable Linux pin.
+    # No WSL process is started: only offline .lnk and copied .ps1 inspected.
+    $independent = $arguments.Clone()
+    $independent['DistroName'] = 'AIW-Nemo-New'
+    $independent['IndependentLinuxProject'] = $true
+    1..2 | ForEach-Object {
+        & $creator @independent
+        Assert-True ($?) 'Independent Linux penguin generation failed'
+    }
+    foreach ($folder in @($desktop, $start)) {
+        foreach ($pair in @(
+            @{ Name = 'NemoClaw Hermes (AIW-Nemo-New)'; Mode = 'Workbench' },
+            @{ Name = 'NemoClaw Linux Home (AIW-Nemo-New)'; Mode = 'Home' }
+        )) {
+            $link = $shell.CreateShortcut((Join-Path $folder "$($pair.Name).lnk"))
+            Assert-True ($link.Arguments.Contains('-LinuxWorkdir "ai-workstation-linux"')) 'Independent Linux workdir is stale'
+            Assert-True ($link.Arguments.Contains("-Mode `"$($pair.Mode)`"")) 'New penguin lost workbench/home semantics'
+            Assert-True ($link.Arguments.Contains('-DistroName "AIW-Nemo-New"')) 'New penguin chose an old distro'
+            Assert-True (-not $link.Arguments.Contains('-NoExit')) 'New penguin must not leave a stray PowerShell shell'
+        }
+    }
+    Assert-True ($markerCheck.Contains('$workdir = if ($Mode -eq ''Home'')')) 'Launcher must retain both interactive shell modes'
+    Assert-True ($markerCheck.Contains('else { "/home/$LinuxUser/$LinuxWorkdir" }')) 'Workbench launcher must use explicitly selected Linux workdir'
+    Assert-True ($markerCheck.Contains('--exec /bin/bash -il')) 'Independent WSL launcher must enter a real shell, not auto-run a menu'
+    Assert-True ((Test-Path -LiteralPath (Join-Path $launchers 'NemoClaw-AIW-Nemo.ps1'))) 'Legacy launcher was deleted'
+    $legacyPenguin = $shell.CreateShortcut((Join-Path $desktop 'NemoClaw Linux Home (AIW-Nemo).lnk'))
+    Assert-True ($legacyPenguin.Arguments.Contains('-DistroName "AIW-Nemo"')) 'Legacy WSL penguin was repointed'
+    $refusal = $false
+    try {
+        $protected = $independent.Clone()
+        $protected['DistroName'] = 'AIW-Nemo'
+        & $creator @protected
+    }
+    catch { $refusal = $true }
+    Assert-True $refusal 'Independent mode must reject adoption of historical AIW-Nemo'
+
     Write-Host '[OK] Two NemoClaw penguins: workbench/home shell, idempotence, ownership and WSL identity.'
 }
 finally {

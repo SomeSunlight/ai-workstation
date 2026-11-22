@@ -8,6 +8,8 @@ param(
     [string]$LinuxUser = 'moresunlight',
     [ValidateSet('Workbench','Home')]
     [string]$Mode = 'Workbench',
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$')]
+    [string]$LinuxWorkdir = 'ai-workstation-linux',
     [string]$WslExecutable = (Join-Path $env:WINDIR 'System32\wsl.exe')
 )
 Set-StrictMode -Version Latest
@@ -20,7 +22,7 @@ $marker = @(& $WslExecutable --distribution $DistroName --user root --exec /bin/
 if ($LASTEXITCODE -ne 0 -or ($marker -join '').Trim() -cne 'nemoclaw-podman') {
     throw "WSL '$DistroName' is missing or is not an AIW NemoClaw installation. No command was started."
 }
-$workdir = if ($Mode -eq 'Home') { "/home/$LinuxUser" } else { "/home/$LinuxUser/ai-workstation-linux" }
+$workdir = if ($Mode -eq 'Home') { "/home/$LinuxUser" } else { "/home/$LinuxUser/$LinuxWorkdir" }
 # Show the checkout identity only for the project shortcut. It is a separate
 # Linux working tree; refreshing a Windows icon does not update Linux code.
 if ($Mode -eq 'Workbench') {

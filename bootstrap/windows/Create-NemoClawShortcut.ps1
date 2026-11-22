@@ -4,12 +4,29 @@
 param(
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')][string]$DistroName = 'AIW-Nemo',
     [ValidatePattern('^[a-z_][a-z0-9_-]*$')][string]$LinuxUser = 'moresunlight',
+    [switch]$IndependentLinuxProject,
     [string]$DesktopDirectory = [Environment]::GetFolderPath('Desktop'),
     [string]$StartMenuDirectory = (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'),
     [string]$LauncherDirectory = (Join-Path $env:LOCALAPPDATA 'AiWorkstationBootstrap\launchers')
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$linuxWorkdir = 'ai-workstation-linux'
+if ($IndependentLinuxProject) {
+    # This selection only affects a new standalone WSL target, never old penguins.
+    if ($DistroName -in @('Ubuntu-24.04','Ubuntu-26.04','AIW-Nemo')) {
+        throw "Refusing independent Linux launcher for protected distro '$DistroName'."
+    }
+    $manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../../config/linux-project.json') -Raw | ConvertFrom-Json
+    if ($manifest.schemaVersion -ne 1 -or
+        $manifest.contract -cne 'linux-native-install-status-verify-v1' -or
+        $manifest.project -cne 'ai-workstation-linux' -or
+        $manifest.repository -cne 'https://github.com/SomeSunlight/ai-workstation-linux.git' -or
+        [string]$manifest.workdir -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$') {
+        throw 'Invalid independent Linux project manifest; shortcut not created.'
+    }
+    $linuxWorkdir = [string]$manifest.workdir
+}
 $wslExe = Join-Path $env:WINDIR 'System32\wsl.exe'
 $pwshExe = Join-Path $PSHOME 'pwsh.exe'
 $shell = New-Object -ComObject WScript.Shell
@@ -47,7 +64,7 @@ foreach ($directory in @($DesktopDirectory, $StartMenuDirectory)) {
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     foreach ($target in $targets) {
         $shortcutPath = Join-Path $directory "$($target.Label).lnk"
-        $expectedArgs = '-NoLogo -NoProfile -File "{0}" -DistroName "{1}" -LinuxUser "{2}" -Mode "{3}"' -f $launcher, $DistroName, $LinuxUser, $target.Mode
+        $expectedArgs = '-NoLogo -NoProfile -File "{0}" -DistroName "{1}" -LinuxUser "{2}" -Mode "{3}" -LinuxWorkdir "{4}"' -f $launcher, $DistroName, $LinuxUser, $target.Mode, $linuxWorkdir
         $shortcut = $shell.CreateShortcut($shortcutPath)
         $shortcut.TargetPath = $pwshExe
         $shortcut.Arguments = $expectedArgs
