@@ -232,3 +232,33 @@ Real-world completion of this resumed verification and first Hermes
 onboarding is still pending owner acceptance. The immutable candidate pin
 is for side-by-side test only; repin after the accepted Linux squash-merge,
 then separately review Windows production cutover.
+
+
+## Real interrupted-install resume log #04 — Windows output/exitcode separation
+
+After Linux PR #7's corrected NVIDIA identity-check pin was adopted, Windows
+AIW successfully advanced **only** the reviewed Linux checkout
+`6dc45a8` -> `7c858a6`, preserved the existing Ubuntu 26.04 user/systemd
+configuration and found the NemoClaw install receipt. The following read-only
+`verify` returned only a Node SQLite experimental warning in the Windows
+transcript, followed by a misleading failure message.
+
+A source-level review identified a PowerShell **output-channel bug**:
+`Invoke-Wsl -AllowFailure` forwarded native `wsl.exe` standard output to
+its PowerShell success stream **and also** returned the numeric exit code.
+The caller's `$verifyCode` therefore became an array when Linux printed
+normal status. PowerShell's array `-ne 0` comparison then yielded nonzero
+string elements even with a final native exit code of 0. This explains both
+the hidden Linux result and the reported error; the old log does not allow
+recovering the actual native exit code conclusively.
+
+In Windows Draft PR #85 the helper now streams native stdout to the
+operator/installer log with `Out-Host`, and returns only the native numeric
+code. An isolated mock regression executes that helper with Linux text plus
+both exit `0` and exit `17`, ensuring the two pathways cannot be confused.
+The synthetic test resets its own mocked `LASTEXITCODE` before exiting.
+No WSL service, Linux package, runtime or sandbox lifecycle action is
+performed by the offline regression. Re-run the **same** Windows AIW installer
+from the updated draft PR after CI; if the guest verifier actually returned a
+nonzero exit code, its diagnostic output will now be visible and AIW will
+still stop without automatic vendor reinstalls.
