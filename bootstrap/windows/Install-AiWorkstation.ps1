@@ -828,7 +828,7 @@ function Ensure-WindowsShortcuts {
     }
 
     if ($Profile -eq 'NemoPodman') {
-        & (Join-Path $PSScriptRoot 'Create-NemoClawShortcut.ps1') -DistroName $DistroName -LinuxUser $LinuxUser
+        & (Join-Path $PSScriptRoot 'Create-NemoClawShortcut.ps1') -DistroName $DistroName -LinuxUser $LinuxUser -IndependentLinuxProject:$IndependentLinuxProject
         if (-not $?) { throw 'Creating NemoClaw launcher failed.' }
         Write-Step "NemoClaw Hermes ($DistroName) shortcut created (one per Desktop/Start)." Ok
         return
