@@ -18,14 +18,22 @@ param(
     [switch]$NoShortcuts,
     [switch]$SkipLinuxInstall,
     [switch]$SkipOnboarding,
+    [switch]$IndependentLinuxProject,
     [switch]$NoAutomaticRestart
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($RepositoryRef)) {
-    $RepositoryRef = [string](& git -C $PSScriptRoot branch --show-current)
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($RepositoryRef)) {
-        throw 'The installer needs a checked-out AIW branch (or an explicit -RepositoryRef).'
+    if ($Action -eq 'Shortcuts' -or $IndependentLinuxProject) {
+        # Launcher repair only: the delegated action never installs from a ref.
+        # Do not require Git, a current branch, or a reboot for a Desktop icon.
+        $RepositoryRef = 'main'
+    }
+    else {
+        $RepositoryRef = [string](& git -C $PSScriptRoot branch --show-current)
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($RepositoryRef)) {
+            throw 'The installer needs a checked-out AIW branch (or an explicit -RepositoryRef).'
+        }
     }
 }
 if ($RepositoryRef -notmatch '^[A-Za-z0-9._/-]+$' -or $RepositoryRef.Contains('..')) {
@@ -44,6 +52,7 @@ $params = @{
     SkipLinuxInstall = $SkipLinuxInstall
     SkipOnboarding = $SkipOnboarding
     NoAutomaticRestart = $NoAutomaticRestart
+    IndependentLinuxProject = $IndependentLinuxProject
 }
 & $entry @params
 if (-not $?) { exit 1 }
