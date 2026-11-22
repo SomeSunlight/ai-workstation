@@ -6,10 +6,12 @@
   One operator command, reusing AIW's monitored SHA-256-pinned Ubuntu import
   and the official independent Linux project's installation contract.
   Existing WSL distributions are never reset, unregistered or adopted.
+  -Action Shortcuts repairs only the Windows launcher, without WSL actions or
+  rerunning Linux/NemoClaw installation.
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('Install', 'Status', 'Verify')][string]$Action = 'Install',
+    [ValidateSet('Install', 'Status', 'Verify', 'Shortcuts')][string]$Action = 'Install',
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')][string]$DistroName = 'AIW-Nemo-New',
     [string]$InstallLocation = 'C:\WSL\AIW-Nemo-New',
     [ValidatePattern('^[a-z_][a-z0-9_-]*$')][string]$LinuxUser = 'moresunlight',
