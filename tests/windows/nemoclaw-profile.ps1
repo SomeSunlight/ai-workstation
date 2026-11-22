@@ -31,20 +31,35 @@ try {
         Assert-True ($?) 'Shortcut creator failed'
     }
     $label = 'NemoClaw Hermes (AIW-Nemo)'
+    $homeLabel = 'NemoClaw Linux Home (AIW-Nemo)'
     foreach ($folder in @($desktop, $start)) {
-        $path = Join-Path $folder "$label.lnk"
-        Assert-True (Test-Path -LiteralPath $path) "Missing NemoClaw shortcut: $path"
-        $link = $shell.CreateShortcut($path)
-        Assert-True ($link.Description -eq 'AIW NemoClaw profile: AIW-Nemo') 'Wrong shortcut ownership'
-        Assert-True ($link.TargetPath -ieq (Join-Path $PSHOME 'pwsh.exe')) 'Not PowerShell launcher'
-        Assert-True ($link.Arguments.Contains('Launchers\NemoClaw-AIW-Nemo.ps1')) 'Wrong launcher'
-        Assert-True ($link.Arguments.Contains('-DistroName "AIW-Nemo"')) 'Wrong WSL target'
-        Assert-True ($link.IconLocation.Contains('nemoclaw-hermes.ico')) 'Missing own mascot icon'
-        $expected = if ($folder -eq $desktop) { 2 } else { 1 }
+        foreach ($entry in @(
+            @{ Name = $label; Mode = 'Workbench'; Owner = 'AIW NemoClaw profile: AIW-Nemo' },
+            @{ Name = $homeLabel; Mode = 'Home'; Owner = 'AIW NemoClaw home profile: AIW-Nemo' }
+        )) {
+            $path = Join-Path $folder "$($entry.Name).lnk"
+            Assert-True (Test-Path -LiteralPath $path) "Missing NemoClaw shortcut: $path"
+            $link = $shell.CreateShortcut($path)
+            Assert-True ($link.Description -eq $entry.Owner) 'Wrong shortcut ownership'
+            Assert-True ($link.TargetPath -ieq (Join-Path $PSHOME 'pwsh.exe')) 'Not PowerShell launcher'
+            Assert-True ($link.Arguments.Contains('Launchers\NemoClaw-AIW-Nemo.ps1')) 'Wrong launcher'
+            Assert-True ($link.Arguments.Contains('-DistroName "AIW-Nemo"')) 'Wrong WSL target'
+            Assert-True ($link.Arguments.Contains("-Mode `"$($entry.Mode)`"")) 'Wrong Linux shell mode'
+            Assert-True (-not $link.Arguments.Contains('-NoExit')) 'Shortcut must not expose a PowerShell shell'
+            Assert-True ($link.IconLocation.Contains('nemoclaw-hermes.ico')) 'Missing own mascot icon'
+        }
+        $expected = if ($folder -eq $desktop) { 3 } else { 2 }
         Assert-True ((@(Get-ChildItem $folder -Filter '*.lnk')).Count -eq $expected) 'Duplicate/unrelated shortcut created'
     }
     Assert-True (Test-Path $legacy) 'Legacy shortcut was touched'
     Assert-True (Test-Path (Join-Path $launchers 'nemoclaw-hermes.ico')) 'Mascot binary was not installed'
+    # A file existing on disk is not enough: Windows must decode the icon.
+    $mascot = [System.Drawing.Icon]::new((Join-Path $launchers 'nemoclaw-hermes.ico'))
+    try {
+        Assert-True ($mascot.Width -eq 64 -and $mascot.Height -eq 64) 'Invalid Windows penguin ICO'
+    }
+    finally { $mascot.Dispose() }
+
     $installed = $shell.CreateShortcut($legacy)
     Assert-True ($installed.Description -eq 'Original AIW penguin') 'Legacy shortcut changed'
 
@@ -57,8 +72,22 @@ try {
     Assert-True ($internal.Contains('install --yes --profile nemoclaw-podman')) 'Nemo Linux profile not routed'
     Assert-True ($internal.Contains('not marked as the NemoClaw profile')) 'Unrelated existing distro not protected'
 
+    # Shortcut-only repair must work even on a detached checkout and must not
+    # invoke Git branch discovery or the Linux installer.
+    $shortcutEntry = Get-Content (Join-Path $root 'install-nemoclaw.ps1') -Raw
+    Assert-True ($shortcutEntry.Contains('if ($Action -eq ''Shortcuts'')')) 'Shortcut-only branch bypass missing'
+    Assert-True ($shortcutEntry.Contains('$RepositoryRef = ''main''')) 'Shortcut repair should not need a current Git branch'
+
     $markerCheck = Get-Content (Join-Path $root 'bootstrap/windows/Launch-NemoClaw.ps1') -Raw
     Assert-True ($markerCheck.Contains('nemoclaw-podman')) 'Launcher does not validate the Podman WSL profile'
+    Assert-True ($markerCheck.Contains('Linux workbench code:')) 'Launcher does not show executing Linux Git identity'
+    Assert-True ($markerCheck.Contains('--exec /bin/bash -il')) 'Penguins must open an actual interactive Linux shell'
+    Assert-True ($markerCheck.Contains('--cd /home/$LinuxUser')) 'WSL fallback must use absolute Linux home, never tilde'
+    Assert-True (-not $markerCheck.Contains('Manual start: wsl -d $DistroName -u $LinuxUser --cd ~')) 'WSL tilde fallback reintroduced'
+    Assert-True (-not $markerCheck.Contains('bash ./bin/aiw-nemo')) 'Penguin must not auto-start AIW menu'
+    Assert-True ($markerCheck.Contains('git status --porcelain')) 'Launcher does not report dirty Linux checkouts'
+    Assert-True (-not $markerCheck.Contains('git fetch')) 'Shortcut launcher must not fetch repository automatically'
+    Assert-True (-not $markerCheck.Contains('git pull')) 'Shortcut launcher must not silently update Linux'
     $cleanup = Get-Content (Join-Path $root 'bootstrap/windows/Remove-OldNemoWsl.ps1') -Raw
     Assert-True ($cleanup.Contains('DELETE AIW-Nemo')) 'Dangerous old distribution cleanup is not confirmed'
     $releaseHelper = Get-Content (Join-Path $root 'bootstrap/windows/NemoWslRelease.ps1') -Raw
@@ -75,63 +104,44 @@ try {
     try { & $creator @arguments }
     catch { $refused = $true }
     Assert-True $refused 'Unowned shortcut was overwritten'
-    # Independent AIW Linux must use a separate checkout path while the
-    # existing AIW-Nemo link and any unrelated shortcut remain untouched.
-    $standalone = $arguments.Clone()
-    $standalone['DistroName'] = 'AIW-Nemo-New'
-    $standalone['IndependentLinuxProject'] = $true
+    # New independent WSL: both current main-branch shell penguins must be
+    # preserved, but their workbench path comes from the immutable Linux pin.
+    # No WSL process is started: only offline .lnk and copied .ps1 inspected.
+    $independent = $arguments.Clone()
+    $independent['DistroName'] = 'AIW-Nemo-New'
+    $independent['IndependentLinuxProject'] = $true
     1..2 | ForEach-Object {
-        & $creator @standalone
-        Assert-True ($?) 'Independent project shortcut generation failed'
+        & $creator @independent
+        Assert-True ($?) 'Independent Linux penguin generation failed'
     }
     foreach ($folder in @($desktop, $start)) {
-        $shortcutPath = Join-Path $folder 'NemoClaw Hermes (AIW-Nemo-New).lnk'
-        Assert-True (Test-Path -LiteralPath $shortcutPath) 'New NemoClaw shortcut missing'
-        $newLink = $shell.CreateShortcut($shortcutPath)
-        Assert-True ($newLink.Arguments.Contains('-DistroName "AIW-Nemo-New"')) 'New penguin targets wrong distro'
-        Assert-True ($newLink.Arguments.Contains('-LinuxWorkdir "ai-workstation-linux"')) 'New penguin uses stale legacy Linux checkout'
-        Assert-True ($newLink.Description -eq 'AIW NemoClaw profile: AIW-Nemo-New') 'New penguin ownership changed'
+        foreach ($pair in @(
+            @{ Name = 'NemoClaw Hermes (AIW-Nemo-New)'; Mode = 'Workbench' },
+            @{ Name = 'NemoClaw Linux Home (AIW-Nemo-New)'; Mode = 'Home' }
+        )) {
+            $link = $shell.CreateShortcut((Join-Path $folder "$($pair.Name).lnk"))
+            Assert-True ($link.Arguments.Contains('-LinuxWorkdir "ai-workstation-linux"')) 'Independent Linux workdir is stale'
+            Assert-True ($link.Arguments.Contains("-Mode `"$($pair.Mode)`"")) 'New penguin lost workbench/home semantics'
+            Assert-True ($link.Arguments.Contains('-DistroName "AIW-Nemo-New"')) 'New penguin chose an old distro'
+            Assert-True (-not $link.Arguments.Contains('-NoExit')) 'New penguin must not leave a stray PowerShell shell'
+        }
     }
-    $oldLink = $shell.CreateShortcut((Join-Path $desktop 'NemoClaw Hermes (AIW-Nemo).lnk'))
-    Assert-True (-not $oldLink.Arguments.Contains('-LinuxWorkdir "ai-workstation-linux"')) 'Legacy penguin was silently repointed'
-    Assert-True (Test-Path $legacy) 'Unrelated legacy penguin removed by independent shortcut'
-
-    # Actually execute the copied launcher with a Windows fake wsl.exe:
-    # it must invoke exactly the independent checkout, not ~/ai-workstation.
-    $fakeWsl = Join-Path $fixture 'fake-wsl.cmd'
-    Set-Content -LiteralPath $fakeWsl -Encoding Ascii -Value @'
-@echo off
-if defined FAKE_NEMO_WSL_TRACE >>"%FAKE_NEMO_WSL_TRACE%" echo %*
-if /I "%~4"=="root" echo nemoclaw-podman
-exit /b 0
-'@
-    $tracePath = Join-Path $fixture 'wsl-launch-args.txt'
-    $env:FAKE_NEMO_WSL_TRACE = $tracePath
+    Assert-True ($markerCheck.Contains('$workdir = if ($Mode -eq ''Home'')')) 'Launcher must retain both interactive shell modes'
+    Assert-True ($markerCheck.Contains('else { "/home/$LinuxUser/$LinuxWorkdir" }')) 'Workbench launcher must use explicitly selected Linux workdir'
+    Assert-True ($markerCheck.Contains('--exec /bin/bash -il')) 'Independent WSL launcher must enter a real shell, not auto-run a menu'
+    Assert-True ((Test-Path -LiteralPath (Join-Path $launchers 'NemoClaw-AIW-Nemo.ps1'))) 'Legacy launcher was deleted'
+    $legacyPenguin = $shell.CreateShortcut((Join-Path $desktop 'NemoClaw Linux Home (AIW-Nemo).lnk'))
+    Assert-True ($legacyPenguin.Arguments.Contains('-DistroName "AIW-Nemo"')) 'Legacy WSL penguin was repointed'
+    $refusal = $false
     try {
-        & (Join-Path $launchers 'NemoClaw-AIW-Nemo-New.ps1') -DistroName AIW-Nemo-New `
-            -LinuxUser moresunlight -LinuxWorkdir ai-workstation-linux -WslExecutable $fakeWsl
-        Assert-True ($?) 'New standalone launcher failed with mock WSL'
-        $calls = @(Get-Content -LiteralPath $tracePath)
-        Assert-True ($calls.Count -eq 2) 'Expected marker probe and exactly one Linux launcher call'
-        Assert-True ($calls[1].Contains('--cd /home/moresunlight/ai-workstation-linux')) 'Standalone Linux menu launched from old directory'
-        Assert-True ($calls[1].Contains('--exec /bin/bash')) 'Linux menu not invoked by bash'
-        Clear-Content -LiteralPath $tracePath
-        & (Join-Path $launchers 'NemoClaw-AIW-Nemo.ps1') -DistroName AIW-Nemo `
-            -LinuxUser moresunlight -WslExecutable $fakeWsl
-        Assert-True ($?) 'Legacy launcher failed with mock WSL'
-        $oldCalls = @(Get-Content -LiteralPath $tracePath)
-        Assert-True ($oldCalls.Count -eq 2) 'Legacy launcher should make only marker probe and menu call'
-        Assert-True ($oldCalls[1].Contains('--cd /home/moresunlight/ai-workstation ')) 'Legacy Linux menu path was changed'
+        $protected = $independent.Clone()
+        $protected['DistroName'] = 'AIW-Nemo'
+        & $creator @protected
     }
-    finally {
-        Remove-Item Env:FAKE_NEMO_WSL_TRACE -ErrorAction SilentlyContinue
-    }
-    $entry = Get-Content -LiteralPath (Join-Path $root 'install-linux-workstation.ps1') -Raw
-    Assert-True ($entry.Contains("'Install', 'Status', 'Verify', 'Shortcuts'")) 'Public standalone entrypoint cannot repair shortcuts without reinstall'
-    Assert-True ($internal.Contains('-IndependentLinuxProject:$IndependentLinuxProject')) 'Installer failed to forward independent workdir to penguin creator'
-    Write-Host '[OK] Standalone penguin: correct pinned workdir, real launcher invocation, legacy isolation.'
+    catch { $refusal = $true }
+    Assert-True $refusal 'Independent mode must reject adoption of historical AIW-Nemo'
 
-    Write-Host '[OK] NemoClaw one-penguin launcher idempotence and WSL profile contracts.'
+    Write-Host '[OK] Two NemoClaw penguins: workbench/home shell, idempotence, ownership and WSL identity.'
 }
 finally {
     Remove-Item -LiteralPath $fixture -Recurse -Force -ErrorAction SilentlyContinue
