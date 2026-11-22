@@ -363,6 +363,10 @@ function Get-IndependentLinuxSettings {
         [string]$settings.workdir -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$') {
         throw 'Invalid or unreviewed immutable Linux source manifest.'
     }
+    if ($null -ne $settings.PSObject.Properties['resumeFromCommit'] -and
+        [string]$settings.resumeFromCommit -cnotmatch '^[a-f0-9]{40}$') {
+        throw 'Invalid previous Linux candidate revision for interrupted-install resume.'
+    }
     return $settings
 }
 
@@ -845,13 +849,28 @@ function Ensure-LinuxRepository {
         $pathLiteral = ConvertTo-BashLiteral -Value $repoPath
         $urlLiteral = ConvertTo-BashLiteral -Value ([string]$settings.repository)
         $shaLiteral = ConvertTo-BashLiteral -Value ([string]$settings.commit)
+        $resumeLiteral = ConvertTo-BashLiteral -Value ([string]$settings.resumeFromCommit)
         $scriptText = @'
 set -euo pipefail
 path=__AIW_PATH__
 url=__AIW_URL__
 commit=__AIW_SHA__
+resume_from=__AIW_RESUME_FROM__
 if [[ -d "$path/.git" ]]; then
     [[ "$(git -C "$path" remote get-url origin)" == "$url" ]] || { echo 'Existing Linux checkout has wrong origin' >&2; exit 1; }
+    [[ -z "$(git -C "$path" status --porcelain --untracked-files=normal)" ]] || { echo 'Linux checkout is dirty; no update attempted' >&2; exit 1; }
+    current="$(git -C "$path" rev-parse HEAD)"
+    if [[ "$current" != "$commit" ]]; then
+        # Only the reviewed, explicitly recorded interrupted installer candidate
+        # may advance. Never auto-upgrade a working or unrelated checkout.
+        [[ -n "$resume_from" && "$current" == "$resume_from" ]] || {
+            echo 'Linux source revision differs from immutable pin; unreviewed upgrade refused' >&2
+            exit 1
+        }
+        printf 'Resuming interrupted AIW install: source %s -> %s (no NemoClaw runtime upgrade).\n' "$current" "$commit"
+        git -C "$path" fetch --no-tags origin "$commit"
+        git -C "$path" checkout --detach "$commit"
+    fi
 elif [[ -e "$path" ]]; then
     echo 'Linux checkout path is occupied by non-Git content' >&2; exit 1
 else
@@ -861,7 +880,7 @@ fi
 [[ "$(git -C "$path" rev-parse HEAD)" == "$commit" ]] || { echo 'Linux source revision differs from immutable pin' >&2; exit 1; }
 [[ -z "$(git -C "$path" status --porcelain --untracked-files=normal)" ]] || { echo 'Linux checkout is dirty' >&2; exit 1; }
 '@
-        $scriptText = $scriptText.Replace('__AIW_PATH__', $pathLiteral).Replace('__AIW_URL__', $urlLiteral).Replace('__AIW_SHA__', $shaLiteral)
+        $scriptText = $scriptText.Replace('__AIW_PATH__', $pathLiteral).Replace('__AIW_URL__', $urlLiteral).Replace('__AIW_SHA__', $shaLiteral).Replace('__AIW_RESUME_FROM__', $resumeLiteral)
         Invoke-Bash -User $LinuxUser -Script $scriptText
         Write-Step "Pinned Linux checkout ready: $repoPath ($($settings.commit))." Ok
         return
@@ -909,11 +928,36 @@ function Invoke-LinuxInstall {
     if ($IndependentLinuxProject) {
         $settings = Get-IndependentLinuxSettings
         $workdir = "/home/$LinuxUser/$($settings.workdir)"
-        Write-Step "Invoking separate Linux installer at pinned commit $($settings.commit)."
-        Invoke-Wsl -Arguments @(
+        # If a prior installer finished the vendor CLI but failed during
+        # independent read-only verification, do not repeat package installs.
+        # Resume only after the newly pinned verifier accepts the existing host.
+        $receiptPath = "/home/$LinuxUser/.config/ai-workstation/nemoclaw-installer-ref"
+        $receiptPresent = Invoke-Wsl -AllowFailure -Arguments @(
             '--distribution', $DistroName, '--user', $LinuxUser,
-            '--cd', $workdir, '--exec', '/bin/bash', './install.sh', 'install'
+            '--exec', '/usr/bin/test', '-f', $receiptPath
         )
+        if ($receiptPresent -eq 0) {
+            Write-Step 'Existing NemoClaw install receipt found; checking before any reinstallation.'
+            $verifyCode = Invoke-Wsl -AllowFailure -Arguments @(
+                '--distribution', $DistroName, '--user', $LinuxUser,
+                '--cd', $workdir, '--exec', '/bin/bash', './install.sh', 'verify'
+            )
+            if ($verifyCode -ne 0) {
+                throw 'Existing NemoClaw host did not pass pinned read-only verification. No automatic reinstall or upgrade performed; review diagnostics.'
+            }
+            Write-Step 'Existing Podman/NemoClaw installation verified; completing interrupted setup without reinstall.' Ok
+            Invoke-Wsl -Arguments @(
+                '--distribution', $DistroName, '--user', $LinuxUser,
+                '--cd', $workdir, '--exec', '/bin/bash', './install.sh', 'register-cli'
+            )
+        }
+        else {
+            Write-Step "Invoking separate Linux installer at pinned commit $($settings.commit)."
+            Invoke-Wsl -Arguments @(
+                '--distribution', $DistroName, '--user', $LinuxUser,
+                '--cd', $workdir, '--exec', '/bin/bash', './install.sh', 'install'
+            )
+        }
         & (Join-Path $PSScriptRoot 'Invoke-LinuxWorkstation.ps1') -Action Verify -DistroName $DistroName -LinuxUser $LinuxUser
         if (-not $?) { throw 'Pinned Linux verification failed after install.' }
         Write-Step 'Independent Linux install and read-only verification complete.' Ok
