@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "ai-workstation-linux",
   "repository": "https://github.com/SomeSunlight/ai-workstation-linux.git",
-  "commit": "d6265f696e21f3c39fa442adcab1dc630e938cd9",
+  "commit": "7c858a6daac83af01bed727c6c4c437f5f5d81f5",
   "contract": "linux-native-install-status-verify-v1",
   "workdir": "ai-workstation-linux",
   "note": "Linux Draft PR #7 corrected NVIDIA source-checkout build identity. One-time interrupted-install continuation from reviewed candidate 6dc45a8 to fixed candidate, no vendor upgrade. Update immutable pin to accepted Linux squash-merge commit before production cutover.",
