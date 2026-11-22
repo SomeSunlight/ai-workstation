@@ -186,3 +186,49 @@ draft Windows PR must not change the owner's active shortcuts or live
 old NemoClaw environment until separately accepted. Offline mocked
 CI proves source and refusal contracts; real Windows/WSL installation
 remains operator-driven.
+
+
+## Real first-run result and bounded resume (2026-11-22)
+
+The owner's first two AIW imports failed in the Microsoft WSL service with
+`RegisterDistro/WSAETIMEDOUT`. **An ordinary Windows restart cleared this
+condition.** On the next attempt the monitored Ubuntu 26.04.1 WSL import
+succeeded, the Linux user was created and the independent Linux checkout was
+pinned to `6dc45a8`. The separate Linux installer then completed all 35
+Ansible host tasks (`failed=0`), including **rootless Podman** and official
+**NemoClaw v0.0.145** CLI.
+
+The post-install read-only Ansible verification exposed an **AIW-side bug**:
+it expected the NVIDIA build identity at
+`~/.nemoclaw/source/dist/build-identity.json`, even though we explicitly
+install from a source checkout owned by this project at
+`~/.local/share/aiw-nemoclaw/source/dist/build-identity.json`.
+NVIDIA's `scripts/install.sh` v0.0.145 builds the CLI within the source
+checkout when invoked there. The corrected Linux
+[Draft PR #7](https://github.com/SomeSunlight/ai-workstation-linux/pull/7)
+uses this actual path in recovery and verification, and its offline
+regression tests both matching and mismatched build revisions.
+
+**The new WSL is valuable and must NOT be reinstalled.** With the refreshed
+Windows PR #85 code, the *same* entrypoint
+`./install-linux-workstation.ps1 -Action Install` continues the
+interrupted installation:
+
+- Allow **only** a clean, correct-origin existing AIW Linux checkout whose
+  HEAD is the explicitly reviewed prior candidate
+  `6dc45a81d8f5a305ec9f159584db3e181df83985`.
+- Fetch and detach to the immutable corrected Linux PR #7 Git commit
+  from `config/linux-project.json`; reject any unrelated or dirty HEAD.
+- If an AIW NemoClaw installation receipt exists, run the **read-only**
+  Linux verifier **first**. On success, preserve Podman and NVIDIA CLI,
+  register only the missing user-local `aiw` command, reverify via pinned
+  Windows handoff, and then create the new penguin shortcuts.
+- If the existing installation does **not** verify, **stop**. Never
+  automatically reinstall, rebuild, destroy, migrate or upgrade a
+  previously installed vendor runtime. A completely new host without
+  a vendor receipt still follows the existing explicit installation path.
+
+Real-world completion of this resumed verification and first Hermes
+onboarding is still pending owner acceptance. The immutable candidate pin
+is for side-by-side test only; repin after the accepted Linux squash-merge,
+then separately review Windows production cutover.
