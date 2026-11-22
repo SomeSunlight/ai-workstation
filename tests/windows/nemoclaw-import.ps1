@@ -46,7 +46,27 @@ exit 7
     Assert-True $rejected 'Nonzero WSL import exit code was accepted'
     Assert-True ((@(Get-ChildItem -LiteralPath $diag -Filter '*.stderr.log')).Count -eq 2) 'Missing retained WSL stderr logs'
     Assert-True ((@(Get-ChildItem -LiteralPath $diag -Filter '*empty-stdin.txt')).Count -eq 0) 'Temporary stdin file was not removed'
-    Write-Host '[OK] Observed WSL import: heartbeat, output logs, exit codes and no hidden prompts.'
+    # Reproduce the owner's actual Windows-owned failure without creating
+    # a WSL distro. The recovery response must classify and preserve data.
+    $registrationTimeout = Join-Path $fixture 'import-register-timeout.ps1'
+    Set-Content -LiteralPath $registrationTimeout -Encoding utf8NoBOM -Value @'
+Write-Output 'Fehlercode: Wsl/Service/RegisterDistro/WSAETIMEDOUT'
+exit 11
+'@
+    $arguments = @('-NoLogo','-NoProfile','-File', ('"{0}"' -f $registrationTimeout))
+    $timeoutMessage = ''
+    try {
+        Invoke-AiwObservedWslImport -Executable $pwsh -Arguments $arguments -LogDirectory $diag -InstallLocation $virtualDisk -HeartbeatSeconds 1
+    }
+    catch {
+        $timeoutMessage = $_.Exception.Message
+    }
+    Assert-True ($timeoutMessage.Contains('REGISTERING')) 'WSL registration timeout must be classified distinctly'
+    Assert-True ($timeoutMessage.Contains('before Linux packages')) 'WSL failure must not be blamed on NemoClaw'
+    Assert-True ($timeoutMessage.Contains('did not impose a 30-second timeout')) 'No false AIW timeout must be claimed'
+    Assert-True ($timeoutMessage.Contains('Do not run wsl --shutdown')) 'Do not recommend stopping productive WSL'
+    Assert-True ((@(Get-ChildItem -LiteralPath $diag -Filter '*empty-stdin.txt')).Count -eq 0) 'Timeout mock leaked temporary stdin'
+    Write-Host '[OK] Observed WSL import: heartbeat, logs, upstream registration timeout diagnosis, no destructive recovery.'
 }
 finally {
     Remove-Item -LiteralPath $fixture -Recurse -Force -ErrorAction SilentlyContinue
