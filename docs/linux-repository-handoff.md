@@ -262,3 +262,50 @@ performed by the offline regression. Re-run the **same** Windows AIW installer
 from the updated draft PR after CI; if the guest verifier actually returned a
 nonzero exit code, its diagnostic output will now be visible and AIW will
 still stop without automatic vendor reinstalls.
+
+
+## Onboarding preflight #05 — reused historical no-GPU resolution (22 Nov 2026)
+
+The owner chose `Y` for first Hermes onboarding after the **new** Linux
+host had verified successfully. NVIDIA NemoClaw `v0.0.145` stopped at
+`[1/8] Preflight checks`: Ubuntu 26.04 host-release qualification
+**warning** plus `NVIDIA Container Toolkit is missing` **blocking**
+GPU integration finding. The Windows launcher claimed
+`GPU passthrough is disabled (--no-gpu)` but accidentally invoked the
+official `nemohermes onboard` command **without** passing `--no-gpu`.
+
+This is a **regression of a previously resolved configuration**:
+On 15–16 Nov the initial WSL native-Docker attempt hit the same toolkit
+finding; passing `--no-gpu` correctly bypassed the irrelevant GPU gate
+for remotely served models, revealing the separate **native Docker in
+WSL** qualification problem. The subsequent Ubuntu 26.04 + native
+rootless Podman 5.7 host was able to onboard Hermes and successfully
+complete gateway/OpenRouter smoke testing. CUDA/CDI was unnecessary for
+that mode. No GPU toolkit installation is authorized here. Local
+Windows dispatcher inference likewise does not require GPU passthrough
+into the Hermes sandbox.
+
+The existing *Linux* operator at pinned checkout
+`bin/aiw-nemo onboard` already implements the reviewed solution:
+`NEMOCLAW_GATEWAY_RUNTIME=podman`, `NEMOCLAW_NO_EXPRESS=1`,
+`vendor_hermes onboard --no-gpu "$@"`, and rootless socket preflight.
+**Root cause:** the *Windows* onboarding prompt bypassed this Linux
+operator and called the vendor CLI directly.
+
+**Correction in Windows Draft PR #85:** Windows delegates both first
+and resumed onboarding via `/bin/bash <pinned Linux checkout>/bin/aiw-nemo
+onboard [--resume]`, preserving `--no-gpu` through the existing
+Linux-owned profile without redundant Windows-side policy. Windows
+still stops transcript before official credential prompts. New Windows
+offline regression rejects the previous direct vendor bypass.
+No previously installed Linux runtime, distro or sandbox is modified.
+
+NVIDIA v0.0.145's host-readiness source treats Ubuntu releases other
+than 24.04 as **warning** (`host.os.release_unqualified`), not a
+standalone fatal failure. Its onboarding admission policy explicitly
+waives GPU-toolkit/CDI findings for CPU-only `--no-gpu` intent.
+**Remaining acceptance risks:** actual v0.0.145 onboarding and
+gateway/sandbox restart persistence under Ubuntu 26.04 + rootless
+Podman require live owner validation. The prior missing loopback alias
+`169.254.2.2/32` after Windows restart is a separate unresolved
+lifecycle/network issue; this preflight fix makes no claim to solve it.
