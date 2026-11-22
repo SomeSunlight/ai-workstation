@@ -2,8 +2,9 @@
   "schemaVersion": 1,
   "project": "ai-workstation-linux",
   "repository": "https://github.com/SomeSunlight/ai-workstation-linux.git",
-  "commit": "6dc45a81d8f5a305ec9f159584db3e181df83985",
+  "commit": "d6265f696e21f3c39fa442adcab1dc630e938cd9",
   "contract": "linux-native-install-status-verify-v1",
   "workdir": "ai-workstation-linux",
-  "note": "Linux Draft PR #7 NemoClaw v0.0.145 source pin, for isolated test only. Repin to the accepted merged Linux commit before live Windows cutover; never auto-follow a branch."
+  "note": "Linux Draft PR #7 corrected NVIDIA source-checkout build identity. One-time interrupted-install continuation from reviewed candidate 6dc45a8 to fixed candidate, no vendor upgrade. Update immutable pin to accepted Linux squash-merge commit before production cutover.",
+  "resumeFromCommit": "6dc45a81d8f5a305ec9f159584db3e181df83985"
 }
