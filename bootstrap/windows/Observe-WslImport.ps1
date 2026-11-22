@@ -3,6 +3,27 @@
 # Never delete a WSL distro, timeout-kill or change global WSL settings.
 Set-StrictMode -Version Latest
 
+# Pure classification of stable WSL error identifiers. This is diagnostic
+# only: no retry, host service restart, distro termination or cleanup.
+function Get-AiwWslImportFailureMessage {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][int]$ExitCode,
+        [AllowEmptyString()][string]$OutputText = ''
+    )
+    if ($OutputText.Contains('RegisterDistro/WSAETIMEDOUT')) {
+        return @(
+            "Microsoft WSL timed out while REGISTERING the new distribution (RegisterDistro/WSAETIMEDOUT; exit code $ExitCode)."
+            'The failure occurred in WSL before Linux packages, Podman or NemoClaw could install.'
+            'AIW did not impose a 30-second timeout. Do not retry repeatedly or clean an unregistered VHDX automatically.'
+            'Read-only diagnostics: wsl --list --verbose; wsl -d Ubuntu-24.04 --exec /bin/true; wsl -d AIW-Nemo --exec /bin/true.'
+            'Do not run wsl --shutdown, terminate other WSL distributions, or restart the WSL service automatically.'
+            'Preserve the WSL stdout/stderr logs for a later Microsoft WSL diagnostic trace.'
+        ) -join ' '
+    }
+    return "WSL import failed (exit code $ExitCode)."
+}
+
 function Invoke-AiwObservedWslImport {
     [CmdletBinding()]
     param(
@@ -94,7 +115,15 @@ function Invoke-AiwObservedWslImport {
             }
         }
         if ($code -ne 0) {
-            throw "WSL import failed (exit code $code). See $stdoutFile and $stderrFile. No existing WSL distributions were deleted."
+            $failureText = @(
+                foreach ($file in @($stdoutFile, $stderrFile)) {
+                    if (Test-Path -LiteralPath $file -PathType Leaf) {
+                        Get-Content -LiteralPath $file -Raw -ErrorAction SilentlyContinue
+                    }
+                }
+            ) -join "`n"
+            $reason = Get-AiwWslImportFailureMessage -ExitCode $code -OutputText $failureText
+            throw "$reason See $stdoutFile and $stderrFile. No existing WSL distributions were deleted."
         }
     }
     finally {
