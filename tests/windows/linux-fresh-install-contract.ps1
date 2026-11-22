@@ -37,4 +37,32 @@ Require ($engine.Contains('if (-not $IndependentLinuxProject) { Ensure-WindowsSh
 Require ($engine.Contains('if ($IndependentLinuxProject) { Ensure-WindowsShortcuts }')) 'New shortcut creation must follow successful installer'
 Require (-not $entry.Contains('wsl --unregister')) 'Entrypoint must not unregister WSL'
 Require ($engine.Contains('Preserving global .wslconfig')) 'Global WSL configuration must be preserved'
+# Execute just the no-side-effect WSL helper in isolation, with a PowerShell
+# mock (never call native wsl.exe in this regression).
+$functionMatch = [regex]::Match($engine, '(?ms)^function Invoke-Wsl \{\r?\n.*?^\}')
+Require ($functionMatch.Success) 'WSL helper not found for direct exit-code regression'
+Invoke-Expression $functionMatch.Value
+$script:MockWslExitCode = 0
+function wsl.exe {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$NativeArgs)
+    Write-Output 'Linux verifier says: success'
+    $global:LASTEXITCODE = $script:MockWslExitCode
+}
+$result = @(Invoke-Wsl -AllowFailure -Arguments @('--offline-mock'))
+Require ($result.Count -eq 1) 'Linux stdout polluted scalar WSL return value'
+Require ($result[0] -is [int] -and $result[0] -eq 0) 'Successful WSL stdout falsely flagged as failed'
+$script:MockWslExitCode = 17
+$result = @(Invoke-Wsl -AllowFailure -Arguments @('--offline-mock'))
+Require ($result.Count -eq 1 -and $result[0] -is [int] -and $result[0] -eq 17) 'Failed WSL returned something other than its exit code'
+$threw = $false
+try {
+    Invoke-Wsl -Arguments @('--offline-mock')
+}
+catch {
+    $threw = $_.Exception.Message.Contains('exit code 17')
+}
+Require $threw 'Failed WSL command without AllowFailure was not rejected'
+Remove-Item Function:wsl.exe -ErrorAction SilentlyContinue
+Write-Host '[OK] Mocked WSL: native stdout visible, only numeric exit code returned; real failure rejected.'
+
 Write-Host '[OK] Windows fresh WSL installer: isolated target, immutable Linux handoff, verified install, no destructive operations.'
