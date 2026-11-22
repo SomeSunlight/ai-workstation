@@ -132,3 +132,57 @@ no Windows service CI; changing native Windows dispatcher requires no Linux
 Ansible/Podman CI. Native Linux works without Windows. The Windows Pinguin
 only invokes an explicitly selected Linux commit; does not silently update,
 reinstall, rebuild or destroy a sandbox. The old WSL test stays recoverable.
+
+
+## Fresh WSL provisioning is an AIW operation (2026-11-22)
+
+The original migration included only a read-only Linux handoff. The
+owner requires **reproducible fresh installation without manual WSL setup**.
+The Windows project therefore reuses the existing pinned-image
+`Install-AiWorkstation.ps1` Windows WSL importer, while **all Linux
+packages, rootless Podman, NVIDIA NemoClaw/OpenShell and Hermes bootstrap
+remain delegated to the independent Linux project**.
+
+From a reviewed Windows PR #85 checkout, one command performs the
+side-by-side candidate installation:
+
+```powershell
+./install-linux-workstation.ps1 -Action Install
+```
+
+Defaults: new WSL `AIW-Nemo-New` at `C:\WSL\AIW-Nemo-New`;
+user `moresunlight`. Options `-Action Status` and `-Action Verify`
+delegate via the existing immutable-pin Windows/Linux adapter.
+Owner can override name and location explicitly; no manually typed
+`wsl --install`, `git clone`, Ubuntu package list or standalone
+`nemohermes` installation commands are required.
+
+**Install flow:** confirm WSL version, protect registered historical distro
+names, require a fresh or AIW-independent-marked target, install the
+checksum-pinned Ubuntu 26.04.1 WSL image with the pre-existing monitored
+Windows importer, confirm actual guest `ID=ubuntu` and `VERSION_ID=26.04`,
+prepare this distribution's user/systemd and small system prerequisites,
+fetch `SomeSunlight/ai-workstation-linux` from `config/linux-project.json`
+at **exact Git commit** (no branch-following or overwrite of dirty checkout),
+then call the Linux project's official `./install.sh install` with its
+visible confirmation/sudo prompts. Verify that the Linux checkout, AIW
+receipt and NVIDIA vendor CLI build identity match the pin; only after
+successful verification generate the new distribution's two penguin
+shortcuts. Offer *separate, explicitly chosen* vendor NemoClaw onboarding;
+stop Windows transcription for any credential prompts.
+
+**Safety:** no `wsl --unregister`, no automatic Linux distro deletion or
+global WSL config overwrite, no sandbox rebuild/destroy, no unauthorized
+replacement of `AIW-Nemo`, `Ubuntu-24.04` (productive), or `Ubuntu-26.04`
+(historical, internally actually 24.04). An existing WSL installation
+cannot be adopted simply because its name or old Nemo profile matches.
+An interrupted explicitly marked new install may be resumed after review.
+
+The pin presently selects the exact reviewed **Linux Draft PR #7** commit
+`6dc45a81d8f5a305ec9f159584db3e181df83985` for **isolated testing
+only**. After successful Linux acceptance and owner squash-merge, update
+the Windows pin to the accepted immutable Linux *merge commit*. This
+draft Windows PR must not change the owner's active shortcuts or live
+old NemoClaw environment until separately accepted. Offline mocked
+CI proves source and refusal contracts; real Windows/WSL installation
+remains operator-driven.
