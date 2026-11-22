@@ -222,7 +222,11 @@ function Invoke-Wsl {
         [switch]$AllowFailure
     )
 
-    & wsl.exe @Arguments
+    # WSL stdout is operator/log text, never part of a scalar exit status.
+    # PowerShell function output otherwise combines native stdout with the
+    # returned numeric code, and `$code -ne 0` can falsely flag success.
+    # Out-Host streams diagnostics but keeps the success pipeline clean.
+    & wsl.exe @Arguments | Out-Host
     $code = $LASTEXITCODE
 
     if (-not $AllowFailure -and $code -ne 0) {
