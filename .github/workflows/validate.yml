@@ -118,6 +118,8 @@ jobs:
           sparse-checkout: |
             bootstrap/windows
             install-nemoclaw.ps1
+            install-linux-workstation.ps1
+            install.ps1
             aiw.cmd
             tests/windows
             tools/aiw-secret-windows.ps1
@@ -148,6 +150,9 @@ jobs:
       - name: Verify pinned Windows-to-Linux handoff without real WSL
         shell: pwsh
         run: ./tests/windows/linux-project-contract.ps1
+      - name: Verify fresh isolated Windows-to-Linux installation (offline)
+        shell: pwsh
+        run: ./tests/windows/linux-fresh-install-contract.ps1
       - name: Verify safe Ubuntu 24/26 Nemo test-distribution cleanup guard (offline)
         shell: pwsh
         run: ./tests/windows/nemoclaw-cleanup.ps1
@@ -163,7 +168,7 @@ jobs:
       - name: Parse native Windows Process Compose and DPAPI helper
         shell: pwsh
         run: |
-          foreach ($path in @('bootstrap/windows/NemoWslVersion.ps1', 'tests/windows/nemoclaw-wsl-version.ps1', 'bootstrap/windows/WslUserIdentity.ps1', 'tests/windows/nemoclaw-user-identity.ps1', 'bootstrap/windows/NemoWslRelease.ps1', 'tests/windows/nemoclaw-cleanup.ps1', 'bootstrap/windows/Remove-OldNemoWsl.ps1', 'bootstrap/windows/Observe-WslImport.ps1', 'tests/windows/nemoclaw-import.ps1', 'bootstrap/windows/Launch-NemoClaw.ps1', 'bootstrap/windows/Invoke-LinuxWorkstation.ps1', 'tests/windows/linux-project-contract.ps1', 'bootstrap/windows/Create-NemoClawShortcut.ps1', 'bootstrap/windows/Install-AiWorkstation.ps1', 'install-nemoclaw.ps1', 'tests/windows/nemoclaw-profile.ps1', 'bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1', 'tools/aiw-native-child.ps1', 'tools/aiw-native-health.ps1', 'tools/aiw-native-integrity.ps1', 'tests/windows/native-integrity.ps1', 'bootstrap/windows/Register-AiwCommand.ps1', 'tests/windows/native-host.ps1', 'tests/windows/native-aiw-command.ps1', 'tests/windows/s02-three-clients.ps1')) {
+          foreach ($path in @('bootstrap/windows/NemoWslVersion.ps1', 'tests/windows/nemoclaw-wsl-version.ps1', 'bootstrap/windows/WslUserIdentity.ps1', 'tests/windows/nemoclaw-user-identity.ps1', 'bootstrap/windows/NemoWslRelease.ps1', 'tests/windows/nemoclaw-cleanup.ps1', 'bootstrap/windows/Remove-OldNemoWsl.ps1', 'bootstrap/windows/Observe-WslImport.ps1', 'tests/windows/nemoclaw-import.ps1', 'bootstrap/windows/Launch-NemoClaw.ps1', 'bootstrap/windows/Invoke-LinuxWorkstation.ps1', 'tests/windows/linux-project-contract.ps1', 'bootstrap/windows/Create-NemoClawShortcut.ps1', 'bootstrap/windows/Install-AiWorkstation.ps1', 'install-nemoclaw.ps1', 'install-linux-workstation.ps1', 'install.ps1', 'tests/windows/linux-fresh-install-contract.ps1', 'tests/windows/nemoclaw-profile.ps1', 'bootstrap/windows/Services.ps1', 'tools/aiw-secret-windows.ps1', 'tools/aiw-download-windows.ps1', 'tools/aiw-native-child.ps1', 'tools/aiw-native-health.ps1', 'tools/aiw-native-integrity.ps1', 'tests/windows/native-integrity.ps1', 'bootstrap/windows/Register-AiwCommand.ps1', 'tests/windows/native-host.ps1', 'tests/windows/native-aiw-command.ps1', 'tests/windows/s02-three-clients.ps1')) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
