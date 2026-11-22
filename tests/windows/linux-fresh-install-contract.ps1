@@ -63,6 +63,9 @@ catch {
 }
 Require $threw 'Failed WSL command without AllowFailure was not rejected'
 Remove-Item Function:wsl.exe -ErrorAction SilentlyContinue
+# The mock intentionally set the session-native exit code to 17. Reset the
+# test harness state so pwsh does not itself finish with the mocked failure.
+$global:LASTEXITCODE = 0
 Write-Host '[OK] Mocked WSL: native stdout visible, only numeric exit code returned; real failure rejected.'
 
 Write-Host '[OK] Windows fresh WSL installer: isolated target, immutable Linux handoff, verified install, no destructive operations.'
