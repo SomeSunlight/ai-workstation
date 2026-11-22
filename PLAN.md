@@ -57,6 +57,20 @@ for sampled websites while legitimate LLM communication succeeded.
 
 ---
 
+## Issue #83 — NemoClaw Hermes operator recovery / penguin (2026-11-18)
+
+**Scope:** operator-reported Hermes incident documentation + minimal existing AIW-Nemo menu convenience and shortcut-only repair. Owner-controlled Windows/WSL, NemoClaw, OpenShell, Podman, Hermes, Caddy/Dispatcher and all existing data **untouched**. No automatic rebuild/destroy/reinstall/provider migration, new agent supervisor or repository split. Based on current main. Operator approves Draft PR before squash merge.
+
+- [x] Read #77/#79/#80, existing AIW-Nemo launcher/shortcut code, real owner incident findings and upstream pinned NemoClaw lifecycle reference.
+- [x] Preserve all supported observed Hermes install/restart and Dispatcher incidents in a short, privacy-safe `docs/nemoclaw-recovery.md` with normal launch/stop and exceptional recovery, export, and what not to do.
+- [x] Add minimal direct `nemohermes` launch/stop/status/recover operator entries in `bin/aiw-nemo`, with no state machine, no restart policy, and normal valid sandbox names; keep old menu entry numbers stable.
+- [x] Make Windows `install-nemoclaw.ps1 -Action Shortcuts` work without a branch lookup/reinstallation; reuse existing desktop/start-menu mascot icon and refuse foreign shortcuts.
+- [x] Add proportionate offline tests for CLI dispatch and shortcut-only scope; confirm no host-specific data in repo changes.
+- [x] Open [Draft PR #84](https://github.com/SomeSunlight/ai-workstation/pull/84), inspect scope (only operator docs + thin menu/shortcut changes); previous exact-head CI successful. All actual Windows/WSL trials, final approval/squash-merge and cleanup remain operator-controlled.
+- [ ] Confirm exact-head GitHub Actions after final documentation and plan checkpoint (do not assume in-progress = green).
+
+---
+
 ## Issue #71 — OpenShell first-flight reproduction and #69 research handoff (2026-11-14)
 
 **Scope of this documentation-only PR:** capture the operator-proven OpenShell v0.1.8 / Goose 1.59.0 WSL journey in a sanitized, repeatable runbook; update no runtime, source context, provider credentials, Docker/WSL configuration, or host. Integration architecture, security qualification, legacy migration and new features belong in #71's later scoped PRs. Owner squash-merges only after review.

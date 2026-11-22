@@ -36,6 +36,10 @@ Windows / AIW: WSL-Import, Ubuntu, Version-Pins, Installationsaufruf
 
 AIW betreibt **keine eigene Session-, Container-, Provider-, Modell- oder Policy-Verwaltung** über diesem Stack. Für tägliche Bedienung, Providerwechsel, Backup/Snapshot, Logs und Agentenstart hat NemoClaw bereits native Kommandos. Der alte Docker/Goose-Stack bleibt als **separate Legacy-Option** unberührt, solange seine Ablösung nicht ausdrücklich beschlossen und unter realer Arbeit verifiziert wurde.
 
+## Neustart, Stop und Fehlerbehebung (aktualisierter Praxisbefund)
+
+Die [Hermes-Recovery-Anleitung](nemoclaw-recovery.md) dokumentiert den aktuellen Betreiberstand vom 18. November 2026: neue Sandbox `testhermes01` mit lokalem Dispatcher, konkrete Crash-/Rebuild-Probleme, tägliches Starten/Stoppen, Port-Forwarding-Recovery, Rückbaugrenzen und die Wiederherstellung des vorhandenen Windows-Pinguins. **Für alltägliche Bedienung immer diese aktuelle Anleitung verwenden**; die ursprünglichen `testsandbox01`/OpenRouter-Schritte unten sind die historische Erstinstallation.
+
 ## Der erste echte Hermes-Test
 
 **Einfachster Einstieg:** Unter Windows den Desktop-Pinguin **NemoClaw Hermes (AIW-Nemo)** öffnen. Im angezeigten AIW-Menü `4) Connect to my Hermes sandbox` wählen und als Namen **`testsandbox01`** eingeben. Damit öffnet NemoClaw eine Shell *innerhalb* dieser Sandbox. Dort:
