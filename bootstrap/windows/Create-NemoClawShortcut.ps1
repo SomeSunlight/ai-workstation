@@ -24,7 +24,11 @@ if ($IndependentLinuxProject) {
         $manifest.project -cne 'ai-workstation-linux' -or
         $manifest.contract -cne 'linux-native-install-status-verify-v1' -or
         $manifest.repository -cne 'https://github.com/SomeSunlight/ai-workstation-linux.git' -or
-        [string]$manifest.workdir -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,62}
+        [string]$manifest.workdir -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$') {
+        throw 'Invalid independent Linux project manifest; shortcut not created.'
+    }
+    $linuxWorkdir = [string]$manifest.workdir
+}
 $wslExe = Join-Path $env:WINDIR 'System32\wsl.exe'
 $pwshExe = Join-Path $PSHOME 'pwsh.exe'
 $shell = New-Object -ComObject WScript.Shell
