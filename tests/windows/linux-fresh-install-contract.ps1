@@ -11,7 +11,8 @@ $pin = Get-Content -LiteralPath (Join-Path $root 'config/linux-project.json') -R
 function Require([bool]$ok, [string]$message) {
     if (-not $ok) { throw $message }
 }
-Require ($pin.commit -ceq '6dc45a81d8f5a305ec9f159584db3e181df83985') 'Candidate must be reviewed Linux Draft PR #7 commit'
+Require ($pin.commit -ceq 'd6265f696e21f3c39fa442adcab1dc630e938cd9') 'Candidate must be corrected Linux Draft PR #7 commit'
+Require ($pin.resumeFromCommit -ceq '6dc45a81d8f5a305ec9f159584db3e181df83985') 'Only the exact prior installer candidate can resume'
 Require ($entry.Contains("DistroName = 'AIW-Nemo-New'")) 'Fresh distro default missing'
 Require ($entry.Contains('-IndependentLinuxProject')) 'New entrypoint does not select pinned Linux'
 Require ($public.Contains('IndependentLinuxProject = $IndependentLinuxProject')) 'Nemo wrapper did not forward mode'
@@ -24,6 +25,12 @@ Require ($engine.Contains('26[.]04')) 'Guest Ubuntu 26.04 required version missi
 Require ($engine.Contains('git clone "$url" "$path"')) 'Independent checkout not cloned from pinned authority'
 Require ($engine.Contains('git -C "$path" checkout --detach "$commit"')) 'Immutable checked-out commit missing'
 Require ($engine.Contains('Linux source revision differs from immutable pin')) 'Wrong-pin refusal absent'
+Require ($engine.Contains('git -C "$path" fetch --no-tags origin "$commit"')) 'Explicit, pinned Git fetch for interrupted install is missing'
+Require ($engine.Contains('"$current" == "$resume_from"')) 'Automatic upgrade of unreviewed checkouts must be refused'
+Require ($engine.Contains('Linux checkout is dirty; no update attempted')) 'Dirty source migration is not refused'
+Require ($engine.Contains('Existing NemoClaw install receipt found')) 'Already installed NemoClaw is not detected for resume'
+Require ($engine.Contains("'./install.sh', 'register-cli'")) 'Missing idempotent CLI finish without reinstall'
+Require ($engine.Contains('No automatic reinstall or upgrade performed')) 'Failed verification must not trigger installer mutations'
 Require ($engine.Contains("'./install.sh', 'install'")) 'Linux-owned install command not delegated'
 Require ($engine.Contains("Invoke-LinuxWorkstation.ps1') -Action Verify")) 'Linux read-only verifier not called after installation'
 Require ($engine.Contains('if (-not $IndependentLinuxProject) { Ensure-WindowsShortcuts }')) 'Shortcut order must preserve original legacy path'
