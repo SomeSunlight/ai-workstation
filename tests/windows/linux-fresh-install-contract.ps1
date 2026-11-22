@@ -11,8 +11,10 @@ $pin = Get-Content -LiteralPath (Join-Path $root 'config/linux-project.json') -R
 function Require([bool]$ok, [string]$message) {
     if (-not $ok) { throw $message }
 }
-Require ($pin.commit -ceq '7c858a6daac83af01bed727c6c4c437f5f5d81f5') 'Candidate must be corrected Linux Draft PR #7 commit'
-Require ($pin.resumeFromCommit -ceq '6dc45a81d8f5a305ec9f159584db3e181df83985') 'Only the exact prior installer candidate can resume'
+Require ($pin.commit -ceq 'd4020aa2da26597c8c1eb2a81f9346cccc47a723') 'Windows must pin the actual squash-merged Linux main commit'
+Require ($pin.resumeFromCommit -ceq '7c858a6daac83af01bed727c6c4c437f5f5d81f5') 'Only the clean, known installed Linux PR #7 candidate may migrate after reversed merges'
+Require ($pin.commit -cne $pin.resumeFromCommit) 'Pin transition must not be a no-op'
+Require (-not ($pin.resumeFromCommit -ceq '6dc45a81d8f5a305ec9f159584db3e181df83985')) 'Do not allow earlier unverified install candidate to skip directly to production'
 Require ($entry.Contains("DistroName = 'AIW-Nemo-New'")) 'Fresh distro default missing'
 Require ($entry.Contains('-IndependentLinuxProject')) 'New entrypoint does not select pinned Linux'
 Require ($public.Contains('IndependentLinuxProject = $IndependentLinuxProject')) 'Nemo wrapper did not forward mode'

@@ -362,3 +362,59 @@ squash commit**, rerun Windows CI, and only then owner squash-merges
 Windows PR #85. Preserve old distributions until explicit separate
 cleanup authorization; do not combine with the separate NVIDIA
 upstream bug task.
+
+
+## 2026-11-23 — Post-squash pin reconciliation (merge order reversed)
+
+The owner squash-merged **Windows PR #85 first** (Windows `main` commit
+`777a07054add9fecdd0209efdae61751a9a81293`), then **Linux PR #7**
+(Linux `main` commit
+`d4020aa2da26597c8c1eb2a81f9346cccc47a723`). Both merges
+succeeded; only the cross-repository immutable Git pin remained pointing
+at the pre-squash Linux candidate
+`7c858a6daac83af01bed727c6c4c437f5f5d81f5`.
+
+**No broken runtime:** `AIW-Nemo-New` and the operational Hermes sandbox
+`testhermes04` are unaffected. The Linux source checkout can still be at
+its original detached candidate revision; the strict Windows read-only
+adapter will correctly reject it once the immutable pin is changed.
+
+This narrowly scoped follow-up changes only the Windows Linux manifest
+and pin assertions. The new pin is the **actual Linux `main` squash
+commit**, with `resumeFromCommit` set to the **single known installed
+old candidate**. The installer already performs all of the needed
+checks: isolated distro identity, expected origin, clean working tree,
+exact old SHA, explicit fetch of exact new SHA, then strict verification
+of the result. Other old/unrecognized or dirty source checkouts remain
+blocked. The pinned source files for NVIDIA Ansible install, verifier,
+Linux operator and version metadata were compared by Git blob identity;
+**all are identical** before/after the Linux squash. Only release-history
+and documentation changed. This is not a NemoClaw/OpenShell or Podman
+upgrade.
+
+**Owner action only after the follow-up PR is squash-merged** and the
+Windows checkout is refreshed. A read-only `-Action Verify` is *not*
+the first step, because it correctly rejects the pre-squash SHA. Instead
+invoke the existing bounded installer with NVIDIA onboarding disabled:
+
+```powershell
+cd C:\\Services\\AI\\ai-workstation
+git switch main
+git pull --ff-only origin main
+.\\install-linux-workstation.ps1 -Action Install -SkipOnboarding
+```
+
+This uses the reviewed one-time clean source pin migration, then
+read-only Linux host verification, user-local CLI registration and
+shortcut refresh. The existing NVIDIA install receipt means no
+vendor-package reinstall or re-onboarding is authorized. It may still
+inspect and preserve the known WSL distro configuration as usual; it
+will **fail closed** if the checkout is dirty or unrecognized. It must
+not unregister any distro, mutate the `testhermes04` sandbox, or
+silently start another Hermes onboarding session. The owner can choose
+to do the bounded checkout migration later; there is no reason to
+interrupt a running Hermes session merely to change Git metadata.
+
+Do not delete or migrate the old `Ubuntu-24.04`, `Ubuntu-26.04` or
+`AIW-Nemo` distributions. The separate NVIDIA Podman gateway-loopback
+upstream issue remains open in Linux Issue #3.

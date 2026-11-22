@@ -1,3 +1,36 @@
+## 2026-11-23 — Post-merge SHA reconciliation (reversed release order)
+
+**Observed:** Owner squash-merged [Windows PR #85](https://github.com/SomeSunlight/ai-workstation/pull/85)
+as `777a07054add9fecdd0209efdae61751a9a81293` *before*
+[Linux PR #7](https://github.com/SomeSunlight/ai-workstation-linux/pull/7),
+which landed as `d4020aa2da26597c8c1eb2a81f9346cccc47a723`.
+Both merges are healthy; Windows `config/linux-project.json` still pinned
+the old feature head `7c858a6daac83af01bed727c6c4c437f5f5d81f5`.
+The strict revision guard would reject the installed pre-squash checkout
+after simply repinning Windows, as designed.
+
+**Safe minimal follow-up:** separate Windows [#78](https://github.com/SomeSunlight/ai-workstation/issues/78)
+pin-repair PR rooted at merged Windows `main`. Select the *actual* merged
+Linux `main` SHA and explicitly allow only the existing **clean** previous
+candidate to advance once via the already implemented interrupted-install
+handoff. No change to Linux `main` or Windows/WSL/Podman runtime code.
+Compared core Git blob IDs across the old installed candidate and new
+Linux squash: version pins, Linux operator, installer, Ansible tasks and
+build-identity tests **identical**. New and unknown/dirty source states
+remain rejected; no vendor update or re-onboarding.
+
+**Next owner step after small Windows follow-up PR passes CI and is
+squash-merged:** refresh local Windows `main` and call
+`./install-linux-workstation.ps1 -Action Install -SkipOnboarding` once.
+This performs the bounded source pin handoff followed by the
+non-reinstalling receipt verifier, CLI registration and shortcut refresh.
+Do **not** call read-only `Status` / `Verify` first after the
+manifest is repinned if the WSL checkout still has the old SHA. No
+need to stop `testhermes04` just to change source metadata.
+Preserve all old WSL distributions; NVIDIA bug follow-up remains separate.
+
+---
+
 ## 2026-11-23 — Windows AIW -> independent Linux v0.0.145: owner acceptance / squash-merge order
 
 **Owner LIVE accepted.** Independent Windows `./install-linux-workstation.ps1 -Action Install`
