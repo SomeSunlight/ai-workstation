@@ -1113,8 +1113,13 @@ function Invoke-NemoOnboarding {
         return
     }
     $linuxOnboard = if ($IndependentLinuxProject) {
+        # Remote/local dispatcher inference uses the GPU on the inference
+        # server, not GPU passthrough into Hermes' OpenShell sandbox.
+        # NVIDIA v0.0.145 makes the container toolkit preflight blocking
+        # unless CPU-only onboarding is explicitly selected. The displayed
+        # --no-gpu promise must also reach the real CLI invocation.
         $suffix = if ($answer -in @('r', 'R')) { ' --resume' } else { '' }
-        "export NEMOCLAW_GATEWAY_RUNTIME=podman NEMOCLAW_DISABLE_TELEMETRY=1; exec ~/.local/bin/nemohermes onboard$suffix"
+        "export NEMOCLAW_GATEWAY_RUNTIME=podman NEMOCLAW_DISABLE_TELEMETRY=1; exec ~/.local/bin/nemohermes onboard$suffix --no-gpu"
     }
     elseif ($answer -in @('r', 'R')) {
         'cd ~/ai-workstation && bash ./bin/aiw-nemo onboard --resume'
